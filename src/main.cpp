@@ -350,6 +350,9 @@ void loop()
         Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
         Serial.printf("pot:%f ", potmeter_value);
         Serial.printf("vrefint:%f ", read_vrefint(&currentSense));
+        Serial.printf("Ia:%f ", currentSense.getPhaseCurrents().a);
+        Serial.printf("Ib:%f ", currentSense.getPhaseCurrents().b);
+        Serial.printf("Ic:%f ", currentSense.getPhaseCurrents().c);
         Serial.println();
     }
 

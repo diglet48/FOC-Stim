@@ -187,6 +187,15 @@ float read_potentiometer(CurrentSense *currentSense)
 
 float read_vrefint(CurrentSense *currentSense)
 {
-    float adc_volts = _readADCVoltageLowSide(0, currentSense->params);
+    float adc_volts = _readADCVoltageLowSide(ADC_CHANNEL_VREFINT, currentSense->params);
     return adc_volts;
+}
+
+float read_temperature_internal(CurrentSense *currentSense)
+{
+    float v = _readADCVoltageLowSide(ADC_CHANNEL_TEMPSENSOR_ADC1, currentSense->params);
+    float t1 = float(*TEMPSENSOR_CAL1_ADDR) / 4096 * TEMPSENSOR_CAL_VREFANALOG / 1000;
+    float t2 = float(*TEMPSENSOR_CAL2_ADDR) / 4096 * TEMPSENSOR_CAL_VREFANALOG / 1000;
+    float p = (t1 - v) / (t1 - t2);
+    return 30 + p * 100;
 }

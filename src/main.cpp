@@ -349,6 +349,7 @@ void loop()
         Serial.printf("F_mrac:%.0f ", iters_per_sec);
         Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
         Serial.printf("pot:%f ", potmeter_value);
+        Serial.printf("vrefint:%f ", read_vrefint(&currentSense));
         Serial.println();
     }
 

@@ -184,3 +184,9 @@ float read_potentiometer(CurrentSense *currentSense)
     float adc_volts = _readADCVoltageLowSide(A_POTENTIOMETER, currentSense->params);
     return adc_volts;
 }
+
+float read_vrefint(CurrentSense *currentSense)
+{
+    float adc_volts = _readADCVoltageLowSide(0, currentSense->params);
+    return adc_volts;
+}

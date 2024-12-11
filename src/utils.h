@@ -22,4 +22,6 @@ float read_temperature(CurrentSense *currentSense);
 
 float read_potentiometer(CurrentSense *currentSense);
 
+float read_vrefint(CurrentSense *currentSense);
+
 #endif // FOCSTIM_UTILS_H

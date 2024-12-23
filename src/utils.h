@@ -22,4 +22,8 @@ float read_temperature(CurrentSense *currentSense);
 
 float read_potentiometer(CurrentSense *currentSense);
 
+void init_led_internal();
+
+void write_led_internal(bool state);
+
 #endif // FOCSTIM_UTILS_H

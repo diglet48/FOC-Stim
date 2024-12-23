@@ -184,3 +184,13 @@ float read_potentiometer(CurrentSense *currentSense)
     float adc_volts = _readADCVoltageLowSide(A_POTENTIOMETER, currentSense->params);
     return adc_volts;
 }
+
+void init_led_internal()
+{
+    pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void write_led_internal(bool state)
+{
+    digitalWrite(LED_BUILTIN, state);
+}

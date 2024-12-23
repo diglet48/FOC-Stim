@@ -104,6 +104,8 @@ void setup()
 
     // print status to let the computer know we have rebooted.
     print_status();
+    init_led_internal();
+    write_led_internal(1);
 
     Serial.println("- init driver");
     bldc_driver.voltage_power_supply = STIM_PSU_VOLTAGE;
@@ -150,6 +152,7 @@ void loop()
     static Clock vbus_high_clock;
     static uint32_t pulse_counter = 0;
     static float actual_pulse_frequency = 0;
+    static bool led_status = true;
 
     // do comms
     bool dirty = tcode.update_from_serial();
@@ -194,6 +197,10 @@ void loop()
     // keepalive timer. Stop playing if no messages have been received for some time.
     if (dirty) {
         keepalive_clock.reset();
+
+        // toggle the LED every time serial comms is received.
+        led_status = !led_status;
+        write_led_internal(led_status);
     }
     keepalive_clock.step();
     if (keepalive_clock.time_seconds > 2 && status_playing) {

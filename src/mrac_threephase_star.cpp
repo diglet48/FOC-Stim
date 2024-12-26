@@ -82,7 +82,7 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse)
         xHat_b += dt * (A * xHat_b + B * r_b);
 
         // compute pwm center
-        float center = STIM_PSU_VOLTAGE;
+        float center = STIM_PSU_VOLTAGE / 2;
         float offset = min(0.f, (STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE) - (center + u_high));
         center = center + offset;
 

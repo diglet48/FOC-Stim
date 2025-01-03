@@ -3,7 +3,7 @@
 #include <SimpleFOC.h>
 #include <config.h>
 
-#include "..\.pio\libdeps\disco_b_g431b_esc1\Simple FOC\src\drivers\hardware_specific\stm32\stm32_mcu.h"
+#include "drivers/hardware_specific/stm32/stm32_mcu.h"
 
 void ThreePhaseDriver::init(BLDCDriver *driver, CurrentSense *current_sense)
 {

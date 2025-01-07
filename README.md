@@ -17,7 +17,7 @@ BOM:
 * 12v power supply (0.5A minimum)
 * 3x transformer (XICON 42TU200-RC suggested)
 * 3x inductor (220µH, 1A)
-* 3x ceramic caps (10µF 50v)
+* 3x ceramic caps (10µF 25v)
 
 When selecting an inductor, look for saturation current about 1A and flat inductance-current curve in the datasheet. Some options:
 * KEMET SBCP-11HY221H. 80HY or 14HY series also a possibility.

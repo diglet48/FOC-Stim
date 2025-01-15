@@ -22,8 +22,8 @@ BOM:
 When selecting an inductor, look for saturation current about 1A and flat inductance-current curve in the datasheet. Some options:
 * KEMET SBCP-11HY221H. 80HY or 14HY series also a possibility.
 * Fastron 09HVP or 09HCP series.
-* Coilcraft RFB0810 or RFB1010 or RFS1317 series
-* Coilcraft DR0608-224L, usable if cramped for space
+* Coilcraft RFB0810 or RFB1010 or RFS1317 series.
+* Coilcraft DR0608-224L, usable if cramped for space but the saturation current isn't quite as high as I'd like.
 
 
 A panel-mount USB micro-B is useful if you want to make this into a nice box.

@@ -6,9 +6,9 @@ FOC-Stim uses the [T-Code](https://github.com/multiaxis/TCode-Specification) pro
 
 # Boot process
 
-Once the device is ready to accept commands, it will print `"Device ready. Awaiting DSTART.\r\n"`.
+The device will periodically print a status message `status: 4\r\n`. The status message contains information about the boot status, vbus and play status. See the source code for details.
 
-Send `DSTART` to start pulse generation, `DSTOP` to stop.
+Once the device has booted and vbus is up (indicated by status message), send `DSTART` to start pulse generation, `DSTOP` to stop.
 
 Version string can be received with `D0`. It is highly recommended to check for an exact version string.
 
@@ -26,8 +26,9 @@ These metrics are defined:
 * `V_bus`: power supply input voltage.
 * `V_drive`: actual voltage used to drive the circuit. Limited to about 80% of `V_bus`.
 * `F_pulse`: actual pulse frequency.
-* `F_mrac`:  control frequency.
 * `temp`: temperature of the onboard NTC in degrees celsius.
+* `pot`: value of the potentiometer, in scale from 0 to 1.
+
 
 # Keepalive
 

@@ -100,7 +100,7 @@ public:
 
     void init(ThreePhaseDriver *driver, CurrentSense *currentSense, EmergencyStop *emergencyStop);
 
-    void play_pulse(ThreephasePulseBuffer *pulse);
+    void play_pulse(ThreephasePulseBuffer *pulse, float estop_current_limit);
 
     void interrupt_fn();
 
@@ -148,6 +148,7 @@ public:
     float current_max_neutral = 0;
     float current_max_left = 0;
     float current_max_right = 0;
+    float estop_current_limit = 0;
 
     volatile struct {
         // the voltages to be written to pwm by the interrupt

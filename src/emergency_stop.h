@@ -11,10 +11,6 @@ public:
 
     void init(BLDCDriver6PWM *driver, CurrentSense *current_sense, void (*debug_fn)());
 
-    // check if current sensors are within safe limits
-    void check_current_limits();
-    void check_current_limits(float a, float b, float c);
-
     // check if VBUS is within safe limits
     void check_vbus_overvoltage();
 

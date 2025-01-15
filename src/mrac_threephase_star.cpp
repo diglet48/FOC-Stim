@@ -21,8 +21,10 @@ void MRACThreephaseStar::init(ThreePhaseDriver *driver, CurrentSense *currentSen
     this->emergencyStop = emergencyStop;
 }
 
-void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse)
+void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_current_limit)
 {
+    this->estop_current_limit = estop_current_limit;
+
     constexpr float dt = 1.f/STIM_PWM_FREQ;
     float t = 0;
     float xHat_a = 0;
@@ -127,10 +129,11 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse)
         emergencyStop->trigger_emergency_stop();
         while(1) {
             int adc_index = (interrupt_index - 3 + context_size) % context_size;
-            Serial.printf("current limit exceeded: %f %f %f. Restart device to proceed\r\n", 
+            Serial.printf("current limit exceeded: %f %f %f. Limit was %f. Restart device to proceed\r\n",
             context[adc_index].adc_current_neutral,
             context[adc_index].adc_current_left,
-            context[adc_index].adc_current_right);
+            context[adc_index].adc_current_right,
+            estop_current_limit);
             delay(5000);
         }
     }
@@ -185,9 +188,9 @@ void MRACThreephaseStar::interrupt_fn()
     interrupt_index++;
 
     // check current limits
-    if (abs(currents.neutral) > ESTOP_CURRENT_LIMIT ||
-        abs(currents.left) > ESTOP_CURRENT_LIMIT ||
-        abs(currents.right) > ESTOP_CURRENT_LIMIT)
+    if (abs(currents.neutral) > estop_current_limit ||
+        abs(currents.left) > estop_current_limit ||
+        abs(currents.right) > estop_current_limit)
     {
         driver->set_pwm_voltage(0, 0, 0);
         current_limit_exceeded = true;

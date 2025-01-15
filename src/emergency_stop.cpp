@@ -17,29 +17,6 @@ void EmergencyStop::init(BLDCDriver6PWM *driver, CurrentSense *current_sense, vo
     this->debug_fn = debug_fn;
 }
 
-void EmergencyStop::check_current_limits()
-{
-    PhaseCurrent_s currents = currentSense->getPhaseCurrents();
-    float mid = (currents.a + currents.b + currents.c) / 3;
-    float a = currents.a - mid;
-    float b = currents.b - mid;
-    float c = currents.c - mid;
-    check_current_limits(b, c, a);
-}
-
-void EmergencyStop::check_current_limits(float neutral, float left, float right)
-{
-    if (max({abs(neutral), abs(left), abs(right)}) > ESTOP_CURRENT_LIMIT)
-    {
-        trigger_emergency_stop();
-        while (1)
-        {
-            Serial.printf("current limit exceeded: %f %f %f. Restart device to proceed\r\n", neutral, left, right);
-            delay(5000);
-        }
-    }
-}
-
 void EmergencyStop::check_vbus_overvoltage()
 {
     float vbus = read_vbus(currentSense);

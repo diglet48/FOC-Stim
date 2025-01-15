@@ -2,8 +2,8 @@
 #define FOCSTIM_CONFIG_H
 
 // current limits
-#define TCODE_MAX_CURRENT 1.0f                          // in amps
-#define ESTOP_CURRENT_LIMIT (TCODE_MAX_CURRENT + 0.20f) // Needs about .20f to account for measurement noise.
+#define TCODE_MAX_CURRENT 1.2f              // in amps
+#define ESTOP_CURRENT_LIMIT_MARGIN 0.2f     // accounts for measurement noise
 
 // board temperature limits
 #define MAXIMUM_TEMPERATURE 80.f    // degrees celsius.

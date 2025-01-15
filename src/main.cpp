@@ -42,7 +42,7 @@ void print_status() {
 
 void tcode_D0() {
     Serial.println();
-    Serial.printf("version: FOC-Stim 0.4\r\n");
+    Serial.printf("version: FOC-Stim 0.5\r\n");
     print_status();
 }
 
@@ -69,7 +69,7 @@ struct
     TCodeAxis alpha{"L0", 0, -1, 1};
     TCodeAxis beta{"L1", 0, -1, 1};
     TCodeAxis volume{"V0", 0, 0, TCODE_MAX_CURRENT};
-    TCodeAxis carrier_frequency{"A0", 800, 500, 1500};
+    TCodeAxis carrier_frequency{"A0", 800, 500, 2000};
     TCodeAxis pulse_frequency{"A1", 50, 1, 100};
     TCodeAxis pulse_width{"A2", 6, 3, 20};
     TCodeAxis pulse_rise{"A3", 5, 2, 10};
@@ -160,7 +160,6 @@ void loop()
     // safety checks
     emergencyStop.check_temperature();
     emergencyStop.check_vbus_overvoltage();
-    emergencyStop.check_current_limits();   // not really needed since all phases connected to ground at this point.
 
     // check vbus, stop playing if vbus is too low.
     float vbus = read_vbus(&currentSense);
@@ -277,7 +276,7 @@ void loop()
     traceline->dt_compute = total_pulse_length_timer.dt_micros;
 
     // play the pulse
-    mrac.play_pulse(&pulse_threephase);
+    mrac.play_pulse(&pulse_threephase, pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
     total_pulse_length_timer.step();
 
     // store stats

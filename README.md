@@ -10,25 +10,7 @@ Powered by SimpleFOC.
 
 # Hardware setup
 
-BOM:
-
-* B-G431B-ESC1
-* USB cable
-* 12v power supply (0.5A minimum)
-* 3x transformer (XICON 42TU200-RC suggested)
-* 3x inductor (220µH, 1A)
-* 3x ceramic caps (10µF 25v)
-
-When selecting an inductor, look for saturation current about 1A and flat inductance-current curve in the datasheet. Some options:
-* KEMET SBCP-11HY221H. 80HY or 14HY series also a possibility.
-* Fastron 09HVP or 09HCP series.
-* Coilcraft RFB0810 or RFB1010 or RFS1317 series.
-* Coilcraft DR0608-224L, usable if cramped for space but the saturation current isn't quite as high as I'd like.
-
-
-A panel-mount USB micro-B is useful if you want to make this into a nice box.
-[USB Micro-B](https://www.sparkfun.com/products/15464)
-or [USB B](https://www.sparkfun.com/products/15463).
+For component selection, refer to the [Bill of materials](docs/BOM.md).
 
 How to wire:
 
@@ -56,7 +38,7 @@ Inspect `FOC-Stim/src/config.h` to configure the current limits.
 
 # Control
 
-Control over serial with Restim.
+Control over USB with Restim.
 
 View live stats with teleplot.
 

@@ -36,6 +36,9 @@ How to wire:
 
 `U`, `V`, `W` are the 3 outputs on the board, with `U` being the one closest to the potentiometer.
 
+The side of the transformer marked with black sharpie should be connected to the board-side.
+The primary, indicated with a "P", is the output side.
+
 ![](docs/images/breadboard.jpg)
 
 # Software setup

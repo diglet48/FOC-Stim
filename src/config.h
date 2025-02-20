@@ -22,7 +22,7 @@
 
 // initial conditions and limits for the model
 #define MODEL_RESISTANCE_INIT 2.0f
-#define MODEL_RESISTANCE_MIN 0.8f
+#define MODEL_RESISTANCE_MIN 0.7f
 #define MODEL_RESISTANCE_MAX 15.0f
 #define MODEL_INDUCTANCE_INIT 450e-6f
 #define MODEL_INDUCTANCE_MIN 80e-6f

@@ -17,7 +17,7 @@ Ordering on mouser is recommended because the transformer is very difficult to f
   * Kemet SBCP-11HY221H. 80HY or 14HY series also possible [mouser](https://mouser.com/ProductDetail/KEMET/SBCP-11HY221H?qs=pfd5qewlna6%252BrMZ%252BQtyB1g%3D%3D)
   * Coilcraft RFB1010-221L [mouser](https://mouser.com/ProductDetail/Coilcraft/RFB1010-221L?qs=ZYnrCdKdyecpj3R4Spi0Qw%3D%3D)
   * Coilcraft RFS1317-224KL [mouser](https://mouser.com/ProductDetail/Coilcraft/RFS1317-224KL?qs=W38ilblRkRlSN%2FG2x%2FRvWA%3D%3D)
-  * If neither are available, look for: inductance 180-470µH (220µH preferred), saturation current >1A minimum >1.3A preferred, flat inductance-current curve in the datasheet.
+  * If neither are available, look for: inductance 180-470µH (220µH preferred), saturation current 0.8A minimum 1.3A preferred, flat inductance-current curve in the datasheet.
 
 
 * 3x capacitor
@@ -38,7 +38,7 @@ Easy to find locally. You might not need all of these components.
 
 
 * DC barrel jack
-  * part ???
+  * Kubiconn 163-MJ22-EX [mouser search](https://eu.mouser.com/c/connectors/power-connectors/dc-power-connectors/?inside%20contact%20diameter=2%20mm~~2.1%20mm&mounting%20style=Panel&outside%20contact%20diameter=5.5%20mm&product=Jacks&instock=y&rp=connectors%2Fpower-connectors%2Fdc-power-connectors%7C~Inside%20Contact%20Diameter)
 
 
 * Power switch
@@ -67,6 +67,6 @@ Easy to find locally. You might not need all of these components.
 
 
 * Electrode connectors
-  * My preference is 3x 4mm banana connectors, but some use 3.5mm audio jacks.
-  * Banana connectors: ???
-  * audio jack: [mouser](https://mouser.com/ProductDetail/Same-Sky/SJ5-43502PM?qs=WyjlAZoYn52%252BIiPG9eebPg%3D%3D)
+  * My preference is 3x 4mm banana connectors, but some use a single 3.5mm audio jack.
+  * Banana connectors: mouser calls these "Test Sockets 4MM"
+  * audio jack: [mouser](https://mouser.com/ProductDetail/Same-Sky/SJ5-43502PM?qs=WyjlAZoYn52%252BIiPG9eebPg%3D%3D), [mouser](https://mouser.com/ProductDetail/Adam-Tech/ASJ-165-M-G-HDW-1?qs=HoCaDK9Nz5db8cIJnMDZYw%3D%3D)

@@ -22,7 +22,7 @@ Ordering on mouser is recommended because the transformer is very difficult to f
 
 * 3x capacitor
   * FG18X5R1E106MRT06 [mouser](https://mouser.com/ProductDetail/TDK/FG18X5R1E106MRT06?qs=LtAzLad%252BoeWpVdbzeG4%252B8Q%3D%3D)
-  * Many other options available. Must be ceramic, look for 4.7µH-10µH (10µH preferred), >25v
+  * Many other options available. Must be ceramic, look for 4.7µF-10µF (10µF preferred), >25v
 
 
 

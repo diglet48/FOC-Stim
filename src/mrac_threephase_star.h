@@ -2,6 +2,7 @@
 #define FOCSTIM_MRAC_THREEPHASE_STAR_H
 
 #include <stdint.h>
+#include <functional>
 
 #include "config.h"
 
@@ -98,7 +99,7 @@ public:
 
     MRACThreephaseStar();
 
-    void init(ThreePhaseDriver *driver, CurrentSense *currentSense, EmergencyStop *emergencyStop);
+    void init(std::function<void()> emergency_stop_fn);
 
     void play_pulse(ThreephasePulseBuffer *pulse, float estop_current_limit);
 
@@ -130,9 +131,6 @@ public:
     void perform_model_update_step();
 
 
-    ThreePhaseDriver *driver = nullptr;
-    CurrentSense *currentSense = nullptr;
-    EmergencyStop *emergencyStop = nullptr;
 
     // MRAC variables.
     float Kr = 1;                 // feedforward gain, true inductance = L = L0 * Kr
@@ -177,6 +175,8 @@ public:
 
     volatile bool buffer_underrun_detected = false;
     volatile bool current_limit_exceeded = false;
+
+    std::function<void()> emergency_stop_fn;
 };
 
 #endif // FOCSTIM_MRAC_THREEPHASE_STAR_H

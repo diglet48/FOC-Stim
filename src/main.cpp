@@ -1,26 +1,20 @@
 #include <Arduino.h>
-#include <SimpleFOC.h>
 
+#include "foc_utils.h"
 #include "tcode.h"
 #include "utils.h"
 #include "stim_clock.h"
 #include "pulse/threephase_pulse_buffer.h"
 #include "mrac_threephase_star.h"
-#include "threephase_driver.h"
 #include "config.h"
-#include "emergency_stop.h"
 #include "trace.h"
 
-BLDCDriver6PWM bldc_driver = BLDCDriver6PWM(A_PHASE_UH, A_PHASE_UL, A_PHASE_VH, A_PHASE_VL, A_PHASE_WH, A_PHASE_WL);
-// Gain calculation shown at https://community.simplefoc.com/t/b-g431b-esc1-current-control/521/21
-LowsideCurrentSense currentSense = LowsideCurrentSense(0.003f, -64.0f / 7.0f, A_OP1_OUT, A_OP2_OUT, A_OP3_OUT);
+#include "bsp/bsp.h"
 
 MRACThreephaseStar mrac{};
 ThreephasePulseBuffer pulse_threephase{};
 Trace trace{};
-ThreePhaseDriver threephase_driver{};
 
-EmergencyStop emergencyStop{};
 
 static bool status_booted = false;
 static bool status_vbus = false;
@@ -95,50 +89,24 @@ void estop_triggered()
 
 void setup()
 {
-    // use monitoring with serial
     Serial.begin(115200);
-    Serial.println("- begin setup");
-    // enable more verbose output for debugging
-    // comment out if not needed
-    // SimpleFOCDebug::enable(&Serial);
+    Serial.println("BSP init");
+    BSP_Init();
 
     // print status to let the computer know we have rebooted.
     print_status();
-    init_led_internal();
-    write_led_internal(1);
+    BSP_WriteStatusLED(1);
 
-    Serial.println("- init driver");
-    bldc_driver.voltage_power_supply = STIM_PSU_VOLTAGE;
-    bldc_driver.pwm_frequency = STIM_PWM_FREQ;
-    bldc_driver.init();
-
-    Serial.println("- init emergency stop");
-    emergencyStop.init(&bldc_driver, &currentSense, &estop_triggered);
-
-    Serial.println("- init current sense");
-    currentSense.linkDriver(&bldc_driver);
-    int current_sense_err = currentSense.init();
-    if (current_sense_err != 1)
-    {
-        Serial.println("- init current sense failed!");
-        emergencyStop.trigger_emergency_stop();
-        while (1)
-        {
-        }
-    }
-    bldc_driver.enable();
-
-    threephase_driver.init(&bldc_driver, &currentSense);
-
-    Serial.printf("- init mrac\r\n");
-    mrac.init(&threephase_driver, &currentSense, &emergencyStop);
+    mrac.init(&estop_triggered);
 
     status_booted = true;
-    float vbus = read_vbus(&currentSense);
+    float vbus = BSP_ReadVBus();
     if (vbus > STIM_PSU_VOLTAGE_MIN) {
         status_vbus = true;
     }
     print_status();
+
+    BSP_EnableOutputs();
 }
 
 void loop()
@@ -158,17 +126,34 @@ void loop()
     bool dirty = tcode.update_from_serial();
 
     // safety checks
-    emergencyStop.check_temperature();
-    emergencyStop.check_vbus_overvoltage();
+    float temperature = BSP_ReadTemperatureOnboardNTC();
+    if (temperature >= MAXIMUM_TEMPERATURE) {
+        BSP_DisableOutputs();
+        while (1)
+        {
+            Serial.printf("temperature limit exceeded %.2f. Current temperature=%.2f. Restart device to proceed\r\n",
+                          temperature, BSP_ReadTemperatureOnboardNTC());
+            delay(5000);
+        }
+    }
 
+    float vbus = BSP_ReadVBus();
+    if (vbus >= STIM_PSU_VOLTAGE_MAX) {
+        BSP_DisableOutputs();
+        while (1)
+        {
+            Serial.printf("V_BUS overvoltage detected %.2f. Current V_BUS=%.2f. Restart device to proceed\r\n",
+                          vbus, BSP_ReadVBus());
+            delay(5000);
+        }
+    }
+    
     // check vbus, stop playing if vbus is too low.
-    float vbus = read_vbus(&currentSense);
     if (vbus < STIM_PSU_VOLTAGE_MIN) {
         vbus_high_clock.reset();
 
         // vbus changed high->low.
         if (status_vbus) {
-            read_vbus(&currentSense);
             status_vbus = false;
             status_playing = false;
             Serial.printf("V_BUS under-voltage detected (V_BUS = %.2f). Stopping pulse generation.\r\n", vbus);
@@ -199,7 +184,7 @@ void loop()
 
         // toggle the LED every time serial comms is received.
         led_status = !led_status;
-        write_led_internal(led_status);
+        BSP_WriteStatusLED(led_status);
     }
     keepalive_clock.step();
     if (keepalive_clock.time_seconds > 2 && status_playing) {
@@ -209,7 +194,7 @@ void loop()
     }
 
     // correct for drift in the current sense circuit
-    threephase_driver.adjust_offsets();
+    BSP_AdjustCurrentSenseOffsets();
 
     // DSTART / DSTOP
     if (! status_playing) {
@@ -227,7 +212,7 @@ void loop()
     MainLoopTraceLine *traceline = trace.next_main_loop_line();
     total_pulse_length_timer.reset();
     traceline->t_start = total_pulse_length_timer.last_update_time;
-
+    
     // calculate stats
     pulse_counter++;
     actual_pulse_frequency_clock.step();
@@ -254,7 +239,7 @@ void loop()
     pulse_total_duration = pulse_active_duration + pulse_pause_duration;
 
     // mix in potmeter
-    float potmeter_voltage = read_potentiometer(&currentSense);
+    float potmeter_voltage = BSP_ReadPotentiometer();
     float potmeter_value = inverse_lerp(potmeter_voltage, POTMETER_ZERO_PERCENT_VOLTAGE, POTMETER_HUNDRED_PERCENT_VOLTAGE);
     pulse_amplitude *= potmeter_value;
 
@@ -336,8 +321,8 @@ void loop()
     if ((pulse_counter + 8) % 20 == 0)
     {
         Serial.print("$");
-        Serial.printf("V_BUS:%.2f ", read_vbus(&currentSense));
-        Serial.printf("temp:%.1f ", read_temperature(&currentSense));
+        Serial.printf("V_BUS:%.2f ", BSP_ReadVBus());
+        Serial.printf("temp:%.1f ", BSP_ReadTemperatureOnboardNTC());
         Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
         Serial.printf("model_steps:%i ", mrac.pwm_write_index);
         Serial.printf("model_skips:%i ", mrac.skipped_update_steps);

@@ -6,8 +6,6 @@ FOC stands for Field Oriented Control, an algorithm for controlling motors, refe
 It utilizes MRAC (model reference adaptive control) to generate consistent current-controlled waveforms
 as environment conditions change.
 
-Powered by SimpleFOC.
-
 # Hardware setup
 
 For component selection, refer to the [Bill of materials](docs/BOM.md).

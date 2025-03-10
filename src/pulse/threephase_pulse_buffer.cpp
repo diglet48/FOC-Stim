@@ -1,8 +1,10 @@
 #include "pulse/threephase_pulse_buffer.h"
 
+#include <Arduino.h>
 #include <math.h>
 #include <cstdint>
 
+#include "foc_utils.h"
 #include "config.h"
 #include "utils.h"
 
@@ -35,7 +37,7 @@ static void get_calibration_coefs(
         // scaling_contant()
         float norm1 = norm(1 + s * a * a, s * a * b);
         float norm2 = norm(1 + s * b * b, s * a * b);
-        float scaling_constant = 1.f / max({norm1, norm2});
+        float scaling_constant = 1.f / std::max(norm1, norm2);
 
         // scale_in_arbitrary_direction()
         *s11 = (1 + s * a * a) * scaling_constant;
@@ -60,7 +62,7 @@ void ThreephasePulseBuffer::create_pulse(
         r = 1;
     }
 
-    // https://github.com/diglet48/restim/wiki/technical-documentation
+    // https://github.com/diglet48/restim/wiki/software-basics
     // base projection matrix in ab space
     float a11 = 0.5f * (2 - r + alpha);
     float a12 = 0.5f * beta;

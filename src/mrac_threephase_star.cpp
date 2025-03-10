@@ -2,10 +2,8 @@
 
 #include <math.h>
 
-#include <SimpleFOC.h>
-
-#include "threephase_driver.h"
-#include "emergency_stop.h"
+#include "foc_utils.h"
+#include "bsp/bsp.h"
 #include "utils.h"
 #include "pulse/threephase_pulse_buffer.h"
 
@@ -14,12 +12,11 @@ MRACThreephaseStar::MRACThreephaseStar()
 {
 }
 
-void MRACThreephaseStar::init(ThreePhaseDriver *driver, CurrentSense *currentSense, EmergencyStop *emergencyStop)
+void MRACThreephaseStar::init(std::function<void()> emergency_stop_fn)
 {
-    this->driver = driver;
-    this->currentSense = currentSense;
-    this->emergencyStop = emergencyStop;
+    this->emergency_stop_fn = emergency_stop_fn;
 }
+
 
 void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_current_limit)
 {
@@ -31,7 +28,7 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_cu
     float xHat_b = 0;
 
     // take hardware out of safe state
-    driver->pwm_to_center();
+    BSP_SetPWM3Atomic(0.5f, 0.5f, 0.5f);
 
     // init interrupt variables
     pwm_write_index = 0;
@@ -41,7 +38,7 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_cu
     buffer_underrun_detected = false;
 
     // attach the interrupt
-    driver->attach_interrupt([this]{
+    BSP_AttachPWMInterrupt([this]{
         this->interrupt_fn();
     });
 
@@ -110,7 +107,7 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_cu
     } while (t < pulse->pulse_duration + 100e-6f && !buffer_underrun_detected && !current_limit_exceeded);
 
     if (buffer_underrun_detected && !current_limit_exceeded) {
-        emergencyStop->trigger_emergency_stop();
+        BSP_DisableOutputs();
         Serial.printf("buffer underrun\r\n");
         Serial.printf("interrupt index: %i\r\n", interrupt_index);
         Serial.printf("pwm write index: %i\r\n", pwm_write_index);
@@ -126,7 +123,8 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_cu
     }
 
     if (current_limit_exceeded) {
-        emergencyStop->trigger_emergency_stop();
+        BSP_DisableOutputs();
+        this->emergency_stop_fn();
         while(1) {
             int adc_index = (interrupt_index - 3 + context_size) % context_size;
             Serial.printf("current limit exceeded: %f %f %f. Limit was %f. Restart device to proceed\r\n",
@@ -139,8 +137,8 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_cu
     }
 
     // detach interrupt and configure hardware in safe state
-    driver->detach_interrupt();
-    driver->pwm_to_ground();
+    BSP_AttachPWMInterrupt(nullptr);
+    BSP_SetPWM3Atomic(0, 0, 0);
 }
 
 void MRACThreephaseStar::interrupt_fn()
@@ -156,43 +154,43 @@ void MRACThreephaseStar::interrupt_fn()
 
     // buffer underrun: pwm buffer not populated fast enough
     if (interrupt_index >= pwm_write_index) {
-        driver->set_pwm_voltage(0, 0, 0);
+        BSP_SetPWM3(0, 0, 0);
         buffer_underrun_detected = true;
         return;
     }
 
     // write the new pwm values
     int pwm_index = interrupt_index % context_size;
-    driver->set_pwm_voltage(
-        context[pwm_index].pwm_voltage_neutral,
-        context[pwm_index].pwm_voltage_left,
-        context[pwm_index].pwm_voltage_right
+    BSP_SetPWM3(
+        context[pwm_index].pwm_voltage_neutral / STIM_PSU_VOLTAGE,
+        context[pwm_index].pwm_voltage_left / STIM_PSU_VOLTAGE,
+        context[pwm_index].pwm_voltage_right / STIM_PSU_VOLTAGE
     );
 
     // read adc values
     int adc_index = (interrupt_index - 2 + context_size) % context_size;    // ADC is lagged by 2 pwm cycles.
-    ThreePhaseCurrents currents = driver->get_currents();
-    context[adc_index].adc_current_neutral = currents.neutral;
-    context[adc_index].adc_current_left = currents.left;
-    context[adc_index].adc_current_right = currents.right;
+    Vec3f currents = BSP_ReadPhaseCurrents3();
+    context[adc_index].adc_current_neutral = currents.a;
+    context[adc_index].adc_current_left = currents.b;
+    context[adc_index].adc_current_right = currents.c;
 
     // log stats
     currents.normalize();
-    current_squared_neutral += currents.neutral * currents.neutral * (1.f/STIM_PWM_FREQ);
-    current_squared_left += currents.left * currents.left * (1.f/STIM_PWM_FREQ);
-    current_squared_right += currents.right * currents.right * (1.f/STIM_PWM_FREQ);
-    current_max_neutral = max(current_max_neutral, abs(currents.neutral));
-    current_max_left = max(current_max_left, abs(currents.left));
-    current_max_right = max(current_max_right, abs(currents.right));
+    current_squared_neutral += currents.a * currents.a * (1.f/STIM_PWM_FREQ);
+    current_squared_left += currents.b * currents.b * (1.f/STIM_PWM_FREQ);
+    current_squared_right += currents.c * currents.c * (1.f/STIM_PWM_FREQ);
+    current_max_neutral = max(current_max_neutral, abs(currents.a));
+    current_max_left = max(current_max_left, abs(currents.b));
+    current_max_right = max(current_max_right, abs(currents.c));
 
     interrupt_index++;
 
     // check current limits
-    if (abs(currents.neutral) > estop_current_limit ||
-        abs(currents.left) > estop_current_limit ||
-        abs(currents.right) > estop_current_limit)
+    if (abs(currents.a) > estop_current_limit ||
+        abs(currents.b) > estop_current_limit ||
+        abs(currents.c) > estop_current_limit)
     {
-        driver->set_pwm_voltage(0, 0, 0);
+        BSP_DisableOutputs();
         current_limit_exceeded = true;
         return;
     }

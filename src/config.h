@@ -9,11 +9,11 @@
 #define MAXIMUM_TEMPERATURE 100.f    // degrees celsius.
 
 // supply voltage and pwm
-#define STIM_PWM_FREQ 38000 // switching frequency is twice this frequency
+#define STIM_PWM_FREQ 50000 // switching frequency is twice this frequency
 #define STIM_PSU_VOLTAGE 12.0f
 #define STIM_PSU_VOLTAGE_MIN 11.5f // e-stop if exceeded
 #define STIM_PSU_VOLTAGE_MAX 15.0f // e-stop if exceeded
-#define STIM_PWM_MINIMUM_OFF_TIME 4e-6f // limited by pwm-rejection of current sense. Experimentally determined to be 3.15us.
+#define STIM_PWM_MINIMUM_OFF_TIME 3e-6f // limited by pwm-rejection of current sense. Experimentally determined to be 2.6us.
 #define STIM_PWM_MAX_DUTY_CYCLE float(1 - STIM_PWM_MINIMUM_OFF_TIME * STIM_PWM_FREQ)
 
 // potentiometer volume control

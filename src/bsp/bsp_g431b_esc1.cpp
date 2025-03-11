@@ -7,12 +7,31 @@
 #include <Arduino.h>
 
 
+/*
+# maximum duty cycle.
+
+The maximum duty cycle is limited by the current sense sampling in 2 ways:
+- Before sampling starts, there must be some time for the hardware lines to stabilize.
+I measured this to be 1.3µs after FET OFF on the ESC1.
+- Once sampling started, there must be sufficient off-time to take all
+the required measurements. The required time depends on the sample time
+and number of ADC measurements.
+
+At 6.5 sampletime, 4 measurements can be performed in 1.4µs (6.5 * 4 + 10.5 * 3) / (170e6 / 4)
+*/
 
 #define ADC_VOLTAGE 3.3f
 #define ADC_SCALE   4095
 
 #define DEAD_TIME_NS    300
-// #define DEAD_TIME_NS 1e9 / (STIM_PWM_FREQ * 2)  // simpleFOC default
+
+#define ADC1_CHANNEL_OPAMP1         ADC_CHANNEL_3   // PA2, right output 'c'
+#define ADC1_CHANNEL_OPAMP3         ADC_CHANNEL_12  // PB1, left output 'b'
+#define ADC1_CHANNEL_POTENTIOMETER  ADC_CHANNEL_11  // PB12
+#define ADC1_CHANNEL_ONBOARD_NTC    ADC_CHANNEL_5   // PB14
+
+#define ADC2_CHANNEL_OPAMP2         ADC_CHANNEL_3   // PA6, center output 'a'
+#define ADC2_CHANNEL_VBUS           ADC_CHANNEL_1   // PA0
 
 
 static TIM_TypeDef *const pwm_timer = TIM1;
@@ -29,27 +48,35 @@ struct BSP {
     DMA_HandleTypeDef dma2;
 
     union {
-        uint16_t adc1_buffer[5];
+        uint16_t adc1_buffer[8];
         struct {
-            volatile uint16_t current_b;        // ADC1_IN12 = PB1 = OP3_OUT, output on corner of board. "left"
-            volatile uint16_t current_c;        // ADC1_IN3  = PA2 = OP1_OUT, output closest to pot. "right"
-            volatile uint16_t potentiometer;    // ADC1_IN11 = PB12
-            volatile uint16_t onboard_ntc;      // ADC1_IN15 = PB14
-            volatile uint16_t vbus;             // ADC1_IN1  = PA0
-            // TODO: vrefint
-            // todo: TS
+            volatile uint16_t current_b;        // output on corner of board. "left"
+            volatile uint16_t current_c;        // output closest to pot. "right"
+            volatile uint16_t current_b2;       // multisample
+            volatile uint16_t current_c2;
+            volatile uint16_t potentiometer;
+            volatile uint16_t onboard_ntc;
+            volatile uint16_t v_ts;
+            volatile uint16_t vrefint;
         };
     };
     union {
-        uint16_t adc2_buffer[1];
+        uint16_t adc2_buffer[5];
         struct {
-            volatile uint16_t current_a;        // ADC2_IN3 = PA6 = OP2_OUT, middle output. "center" or "neutral"
+            volatile uint16_t current_a;        // middle output. "center" or "neutral"
+            volatile uint16_t current_a2;       // multisample
+            volatile uint16_t current_a3;
+            volatile uint16_t current_a4;
+            volatile uint16_t vbus;
         };
     };
 
-    float current_a_offset;
-    float current_b_offset;
-    float current_c_offset;
+    float current_a_offset;     // times 4
+    float current_b_offset;     // times 2
+    float current_c_offset;     // times 2
+
+    float vrefint_filtered;     // raw adc value (12 bits)
+    float analog_voltage;       // volts
 
     std::function<void()> pwm_callback;
 } bsp;
@@ -171,7 +198,6 @@ void configureOpamp(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def)
 
 void initOpamp()
 {
-    // 28100 bytes
     configureOpamp(&bsp.opamp1, OPAMP1);
     configureOpamp(&bsp.opamp2, OPAMP2);
     configureOpamp(&bsp.opamp3, OPAMP3);
@@ -330,7 +356,7 @@ void MX_DMA_Init(void)
     // Enable external clock for ADC12
     RCC_PeriphCLKInitTypeDef PeriphClkInit;
     PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC12;
-    PeriphClkInit.Adc12ClockSelection = RCC_ADC12CLKSOURCE_PLL;
+    PeriphClkInit.Adc12ClockSelection = RCC_ADC12CLKSOURCE_PLL; // 170mhz
     HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
 }
 
@@ -354,23 +380,11 @@ void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Chan
     __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
 }
 
-/**
- * @brief ADC1 Initialization Function
- * @param None
- * @retval None
- */
 void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
 {
-    /* USER CODE BEGIN ADC1_Init 0 */
-
-    /* USER CODE END ADC1_Init 0 */
-
     ADC_MultiModeTypeDef multimode = {0};
     ADC_ChannelConfTypeDef sConfig = {0};
 
-    /* USER CODE BEGIN ADC1_Init 1 */
-
-    /* USER CODE END ADC1_Init 1 */
     /** Common config
      */
     hadc1->Instance = ADC1;
@@ -382,7 +396,7 @@ void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
     hadc1->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc1->Init.LowPowerAutoWait = DISABLE;
     hadc1->Init.ContinuousConvMode = DISABLE;
-    hadc1->Init.NbrOfConversion = 5;
+    hadc1->Init.NbrOfConversion = 8;
     hadc1->Init.DiscontinuousConvMode = DISABLE;
     hadc1->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO;
     hadc1->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
@@ -403,97 +417,93 @@ void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
         Serial.printf("HAL_ADCEx_MultiModeConfigChannel failed!");
         Error_Handler();
     }
-    /** Configure Regular Channel
-     */
-    sConfig.Channel = ADC_CHANNEL_12; // ADC1_IN12 = PB1 = OP3_OUT
+
+    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+    sConfig.OffsetNumber = ADC_OFFSET_NONE;
+    sConfig.Offset = 0;
+
+    // OPAMP3
+    sConfig.Channel = ADC1_CHANNEL_OPAMP3;
     sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
-    sConfig.SingleDiff = ADC_SINGLE_ENDED;
-    sConfig.OffsetNumber = ADC_OFFSET_NONE;
-    sConfig.Offset = 0;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-    /** Configure Regular Channel
-     */
-    sConfig.Channel = ADC_CHANNEL_3; // ADC1_IN3 = PA2 = OP1_OUT
+    // OPAMP1
+    sConfig.Channel = ADC1_CHANNEL_OPAMP1;
     sConfig.Rank = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-
-    //******************************************************************
-    // Temp, Poti ....
-    /* Configure Regular Channel (PB12, Potentiometer)
-     */
-    sConfig.Channel = ADC_CHANNEL_11;
+    // OPAMP3 (2x)
+    sConfig.Channel = ADC1_CHANNEL_OPAMP3;
     sConfig.Rank = ADC_REGULAR_RANK_3;
-    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;
-    sConfig.SingleDiff = ADC_SINGLE_ENDED;
-    sConfig.OffsetNumber = ADC_OFFSET_NONE;
-    sConfig.Offset = 0;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-
-    /** Configure Regular Channel (PB14, Temperature)
-     */
-    sConfig.Channel = ADC_CHANNEL_5;
+    // OPAMP1 (2x)
+    sConfig.Channel = ADC1_CHANNEL_OPAMP1;
     sConfig.Rank = ADC_REGULAR_RANK_4;
-    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;
-    sConfig.SingleDiff = ADC_SINGLE_ENDED;
-    sConfig.OffsetNumber = ADC_OFFSET_NONE;
-    sConfig.Offset = 0;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-
-    /** Configure Regular Channel (PA0, vbus)
-     */
-    sConfig.Channel = ADC_CHANNEL_1;
+    // potentiometer
+    sConfig.Channel = ADC1_CHANNEL_POTENTIOMETER;
     sConfig.Rank = ADC_REGULAR_RANK_5;
-    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;
-    sConfig.SingleDiff = ADC_SINGLE_ENDED;
-    sConfig.OffsetNumber = ADC_OFFSET_NONE;
-    sConfig.Offset = 0;
+    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;   // 1.36µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-    /* USER CODE BEGIN ADC1_Init 2 */
-
-    /* USER CODE END ADC1_Init 2 */
+    // temperature (onboard NTC)
+    sConfig.Channel = ADC1_CHANNEL_ONBOARD_NTC;
+    sConfig.Rank = ADC_REGULAR_RANK_6;
+    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;   // 1.36µs
+    if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
+    // temperature (internal)
+    sConfig.Channel = ADC_CHANNEL_TEMPSENSOR_ADC1;
+    sConfig.Rank = ADC_REGULAR_RANK_7;
+    sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;   // ~6µs
+    if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
+    // vref internal
+    sConfig.Channel = ADC_CHANNEL_VREFINT;
+    sConfig.Rank = ADC_REGULAR_RANK_8;
+    sConfig.SamplingTime = ADC_SAMPLETIME_24CYCLES_5;   // ~1.36µs
+    if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
 }
 
-/**
- * @brief ADC2 Initialization Function
- * @param None
- * @retval None
- */
 void MX_ADC2_Init(ADC_HandleTypeDef *hadc2)
 {
-    /* USER CODE BEGIN ADC2_Init 0 */
-
-    /* USER CODE END ADC2_Init 0 */
-
     ADC_ChannelConfTypeDef sConfig = {0};
 
-    /* USER CODE BEGIN ADC2_Init 1 */
-
-    /* USER CODE END ADC2_Init 1 */
     /** Common config
      */
     hadc2->Instance = ADC2;
-    hadc2->Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV16;
+    hadc2->Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV4;
     hadc2->Init.Resolution = ADC_RESOLUTION_12B;
     hadc2->Init.DataAlign = ADC_DATAALIGN_RIGHT;
     hadc2->Init.GainCompensation = 0;
@@ -501,7 +511,7 @@ void MX_ADC2_Init(ADC_HandleTypeDef *hadc2)
     hadc2->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc2->Init.LowPowerAutoWait = DISABLE;
     hadc2->Init.ContinuousConvMode = DISABLE;
-    hadc2->Init.NbrOfConversion = 1;
+    hadc2->Init.NbrOfConversion = 5;
     hadc2->Init.DiscontinuousConvMode = DISABLE;
     hadc2->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO;
     hadc2->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
@@ -513,22 +523,57 @@ void MX_ADC2_Init(ADC_HandleTypeDef *hadc2)
         Serial.printf("HAL_ADC_Init failed!\n");
         Error_Handler();
     }
-    /** Configure Regular Channel
-     */
-    sConfig.Channel = ADC_CHANNEL_3; // ADC2_IN3 = PA6
-    sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
     sConfig.OffsetNumber = ADC_OFFSET_NONE;
     sConfig.Offset = 0;
+
+
+    // OPAMP2
+    sConfig.Channel = ADC2_CHANNEL_OPAMP2;
+    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-    /* USER CODE BEGIN ADC2_Init 2 */
-
-    /* USER CODE END ADC2_Init 2 */
+    // OPAMP2 (2x)
+    sConfig.Channel = ADC2_CHANNEL_OPAMP2;
+    sConfig.Rank = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
+    if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
+    // OPAMP2 (3x)
+    sConfig.Channel = ADC2_CHANNEL_OPAMP2;
+    sConfig.Rank = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
+    if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
+    // OPAMP2 (4x)
+    sConfig.Channel = ADC2_CHANNEL_OPAMP2;
+    sConfig.Rank = ADC_REGULAR_RANK_4;
+    sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
+    if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
+    // vbus
+    sConfig.Channel = ADC2_CHANNEL_VBUS;
+    sConfig.Rank = ADC_REGULAR_RANK_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;   // 1.36µs
+    if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
 }
 
 void initADC()
@@ -557,31 +602,27 @@ void initADC()
 void calibrateCurrentSenseOffsets() {
     float shunt = 0.003f;
     float gain = -64.0f / 7.0f;
+    uint32_t delay = 1000000 / PWM_FREQUENCY + 1;
 
     uint32_t a_sum = 0;
     uint32_t b_sum = 0;
     uint32_t c_sum = 0;
+    uint32_t vref_sum = 0;
+    delayMicroseconds(delay);
     int NUM_TRIALS = 1000;
     for (int i = 0; i < NUM_TRIALS; i++) {
-        delayMicroseconds(50);
-        a_sum += bsp.current_a;
-        b_sum += bsp.current_b;
-        c_sum += bsp.current_c;
+        delayMicroseconds(delay);
+        a_sum += bsp.current_a + bsp.current_a2 + bsp.current_a3 + bsp.current_a4;
+        b_sum += bsp.current_b + bsp.current_b2;
+        c_sum += bsp.current_c + bsp.current_c2;
+        vref_sum += bsp.vrefint;
     }
 
-    a_sum /= NUM_TRIALS;
-    b_sum /= NUM_TRIALS;
-    c_sum /= NUM_TRIALS;
-
-    float factor = ADC_VOLTAGE / ADC_SCALE;
-
-    Serial.printf("avg voltage a: %f\r\n", a_sum * factor);
-    Serial.printf("avg voltage b: %f\r\n", b_sum * factor);
-    Serial.printf("avg voltage c: %f\r\n", c_sum * factor);
-
-    bsp.current_a_offset = a_sum;
-    bsp.current_b_offset = b_sum;
-    bsp.current_c_offset = c_sum;
+    bsp.current_a_offset = float(a_sum) / NUM_TRIALS;
+    bsp.current_b_offset = float(b_sum) / NUM_TRIALS;
+    bsp.current_c_offset = float(c_sum) / NUM_TRIALS;
+    bsp.vrefint_filtered = float(vref_sum) / NUM_TRIALS;
+    bsp.analog_voltage = ((uint32_t)(*VREFINT_CAL_ADDR) / bsp.vrefint_filtered) * (VREFINT_CAL_VREF * .001f);
 }
 
 extern "C"
@@ -632,6 +673,8 @@ void BSP_Init()
     LL_TIM_SetTriggerOutput(pwm_timer, LL_TIM_TRGO_UPDATE);
 
     // start the timer
+    // note: starting/stopping the timer may result in loss of synchronization
+    // with the ADC DMA, depending on state of the DIR bit.
     pwm_timer->CR1 |= TIM_CR1_CEN;
 
     calibrateCurrentSenseOffsets();
@@ -683,12 +726,17 @@ Vec3f BSP_ReadPhaseCurrents3()
 {
     float shunt = 0.003f;
     float gain = -64.0f / 7.0f;
-    float factor = ADC_VOLTAGE / ADC_SCALE / gain / shunt;
+    float factor_a = ADC_VOLTAGE / ADC_SCALE / gain / shunt / 4;
+    float factor_bc = ADC_VOLTAGE / ADC_SCALE / gain / shunt / 2;
+
+    float ca = bsp.current_a + bsp.current_a2 + bsp.current_a3 + bsp.current_a4;
+    float cb = bsp.current_b + bsp.current_b2;
+    float cc = bsp.current_c + bsp.current_c2;
 
     return Vec3f(
-        (bsp.current_a - bsp.current_a_offset) * factor,
-        (bsp.current_b - bsp.current_b_offset) * factor,
-        (bsp.current_c - bsp.current_c_offset) * factor);
+        (ca - bsp.current_a_offset) * factor_a,
+        (cb - bsp.current_b_offset) * factor_bc,
+        (cc - bsp.current_c_offset) * factor_bc);
 }
 
 float BSP_ReadPotentiometer()
@@ -699,14 +747,14 @@ float BSP_ReadPotentiometer()
 
 float BSP_ReadTemperatureOnboardNTC()
 {
-    float factor = ADC_VOLTAGE / ADC_SCALE;
+    float factor = bsp.analog_voltage / ADC_SCALE;
     return ntc_voltage_to_temp(bsp.onboard_ntc * factor);
 }
 
 float BSP_ReadVBus()
 {
     float multiplier = (18 + 169) / 18.f;
-    float factor = ADC_VOLTAGE / ADC_SCALE * multiplier;
+    float factor = bsp.analog_voltage / ADC_SCALE * multiplier;
     return bsp.vbus * factor;
 }
 
@@ -714,9 +762,14 @@ void BSP_AdjustCurrentSenseOffsets()
 {
     // automatically correct for drift in the current sense circuit.
     float gain = 1.f/1000;
-    bsp.current_a_offset += (bsp.current_a - bsp.current_a_offset) * gain;
-    bsp.current_b_offset += (bsp.current_b - bsp.current_b_offset) * gain;
-    bsp.current_c_offset += (bsp.current_c - bsp.current_c_offset) * gain;
+    bsp.current_a_offset += (bsp.current_a + bsp.current_a2 + bsp.current_a3 + bsp.current_a4 - bsp.current_a_offset) * gain;
+    bsp.current_b_offset += (bsp.current_b + bsp.current_b2 - bsp.current_b_offset) * gain;
+    bsp.current_c_offset += (bsp.current_c + bsp.current_c2 - bsp.current_c_offset) * gain;
+
+    // correct for vref drift
+    gain = 1.f/1000;
+    bsp.vrefint_filtered += (bsp.vrefint - bsp.vrefint_filtered) * gain;
+    bsp.analog_voltage = ((uint32_t)(*VREFINT_CAL_ADDR) / bsp.vrefint_filtered) * (VREFINT_CAL_VREF * .001f);
 }
 
 void BSP_WriteStatusLED(bool on)
@@ -724,16 +777,16 @@ void BSP_WriteStatusLED(bool on)
     digitalWrite(LED_BUILTIN, on);
 }
 
-// float BSP_ReadTemperatureInternal()
-// {
-//     float ts_data = bsp.v_ts * (3.272f / TEMPSENSOR_CAL_VREFANALOG * 1000);
-//     float offset = TEMPSENSOR_CAL1_TEMP;
-//     float slope = (TEMPSENSOR_CAL2_TEMP - TEMPSENSOR_CAL1_TEMP) / float((*TEMPSENSOR_CAL2_ADDR - *TEMPSENSOR_CAL1_ADDR));
-//     float temp = offset + (ts_data - *TEMPSENSOR_CAL1_ADDR) * slope;
-//     return temp;
-// }
+float BSP_ReadTemperatureInternal()
+{
+    float ts_data = bsp.v_ts * (bsp.analog_voltage / TEMPSENSOR_CAL_VREFANALOG * 1000);
+    float offset = TEMPSENSOR_CAL1_TEMP;
+    float slope = (TEMPSENSOR_CAL2_TEMP - TEMPSENSOR_CAL1_TEMP) / float((*TEMPSENSOR_CAL2_ADDR - *TEMPSENSOR_CAL1_ADDR));
+    float temp = offset + (ts_data - *TEMPSENSOR_CAL1_ADDR) * slope;
+    return temp;
+}
 
-// float BSP_ReadChipAnalogVoltage()
-// {
-//     return __LL_ADC_CALC_VREFANALOG_VOLTAGE(bsp.vrefint, LL_ADC_RESOLUTION_12B) * 0.001f;
-// }
+float BSP_ReadChipAnalogVoltage()
+{
+    return bsp.analog_voltage;
+}

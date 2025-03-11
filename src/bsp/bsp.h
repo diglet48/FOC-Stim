@@ -36,9 +36,9 @@ Vec3f BSP_ReadPhaseCurrents3();
 // Vec4f BSP_ReadPhaseCurrents4();
 
 // various sensors
-// float BSP_ReadTemperatureInternal();
+float BSP_ReadTemperatureInternal();
 // float BSP_ReadVMSenseVoltage();
-// float BSP_ReadChipAnalogVoltage();
+float BSP_ReadChipAnalogVoltage();
 float BSP_ReadPotentiometer();
 float BSP_ReadTemperatureOnboardNTC();
 float BSP_ReadVBus();

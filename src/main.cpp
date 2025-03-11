@@ -322,7 +322,9 @@ void loop()
     {
         Serial.print("$");
         Serial.printf("V_BUS:%.2f ", BSP_ReadVBus());
-        Serial.printf("temp:%.1f ", BSP_ReadTemperatureOnboardNTC());
+        Serial.printf("temp_board:%.1f ", BSP_ReadTemperatureOnboardNTC());
+        Serial.printf("temp_stm32:%.1f ", BSP_ReadTemperatureInternal());
+        Serial.printf("V_ref:%.3f ", BSP_ReadChipAnalogVoltage());
         Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
         Serial.printf("model_steps:%i ", mrac.pwm_write_index);
         Serial.printf("model_skips:%i ", mrac.skipped_update_steps);

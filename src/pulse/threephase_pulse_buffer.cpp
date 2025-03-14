@@ -144,7 +144,7 @@ void ThreephasePulseBuffer::create_pulse(
         float l = c11 * cos + c12 * sin;
         float r = c21 * cos + c22 * sin;
 
-        float pulse_envelope, pulse_envelope_d;
+        float pulse_envelope;
         if (t <= rise_end) {    // rising
             // env = sin(t * carrier_frequency / pulse_rise * pi / 2)
             _sincos(t * (carrier_frequency / pulse_rise) * _PI_2, &sin, &cos);

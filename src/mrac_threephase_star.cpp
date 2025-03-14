@@ -9,6 +9,8 @@
 
 
 MRACThreephaseStar::MRACThreephaseStar()
+    :   current_squared(0, 0, 0)
+    ,   current_max(0, 0, 0)
 {
 }
 
@@ -44,12 +46,11 @@ void MRACThreephaseStar::play_pulse(ThreephasePulseBuffer *pulse, float estop_cu
 
     // Run model, feed pwm values to the interrupt
     do {
-        float desired_current_neutral, desired_current_left;
-        pulse->get(t, &desired_current_neutral, &desired_current_left);
+        Vec2f desired_current = pulse->get(t);
 
         // calculate r from: desired = xhat + dt * (A * xhat + B * r)
-        float r_a = ((desired_current_neutral - xHat_a) / dt - A * xHat_a) * (1/B);
-        float r_b = ((desired_current_left - xHat_b) / dt - A * xHat_b) * (1/B);
+        float r_a = ((desired_current.a - xHat_a) / dt - A * xHat_a) * (1/B);
+        float r_b = ((desired_current.b - xHat_b) / dt - A * xHat_b) * (1/B);
 
         // real hardware control signal = u = -Kx * xHat + Kr * r
         float u_ad = (+2 * Ka * xHat_a) - (1 * Kb * xHat_b) + (Kc * xHat_a + Kc * xHat_b);
@@ -175,13 +176,16 @@ void MRACThreephaseStar::interrupt_fn()
     context[adc_index].adc_current_right = currents.c;
 
     // log stats
-    currents.normalize();
-    current_squared_neutral += currents.a * currents.a * (1.f/STIM_PWM_FREQ);
-    current_squared_left += currents.b * currents.b * (1.f/STIM_PWM_FREQ);
-    current_squared_right += currents.c * currents.c * (1.f/STIM_PWM_FREQ);
-    current_max_neutral = max(current_max_neutral, abs(currents.a));
-    current_max_left = max(current_max_left, abs(currents.b));
-    current_max_right = max(current_max_right, abs(currents.c));
+    current_squared = Vec3f(
+        current_squared.a + currents.a * currents.a,
+        current_squared.b + currents.b * currents.b,
+        current_squared.c + currents.c * currents.c
+    );
+    current_max = Vec3f(
+        max(current_max.a, abs(currents.a)),
+        max(current_max.b, abs(currents.b)),
+        max(current_max.c, abs(currents.c))
+    );
 
     interrupt_index++;
 
@@ -196,6 +200,25 @@ void MRACThreephaseStar::interrupt_fn()
     }
 }
 
+Vec3f MRACThreephaseStar::estimate_rms_current(float dt)
+{
+    dt = dt * STIM_PWM_FREQ;
+#if CURRENT_SENSE_SCALE == CURRENT_SENSE_SCALE_FULL
+    return Vec3f(
+        sqrtf(current_squared.a / dt),
+        sqrtf(current_squared.b / dt),
+        sqrtf(current_squared.c / dt)
+    );
+#elif CURRENT_SENSE_SCALE == CURRENT_SENSE_SCALE_HALF
+    return Vec3f(
+        sqrtf(current_squared.a / dt) * _SQRT2,
+        sqrtf(current_squared.b / dt) * _SQRT2,
+        sqrtf(current_squared.c / dt) * _SQRT2
+    );
+#else
+#error "CURRENT_SENSE_SCALE" not defined.
+#endif
+}
 
 void MRACThreephaseStar::print_debug_stats()
 {
@@ -203,9 +226,10 @@ void MRACThreephaseStar::print_debug_stats()
     Serial.printf("\r\n");
     Serial.printf("\r\n");
     Serial.printf("L %f\r\n", estimate_inductance());
-    Serial.printf("R_n %f\r\n", estimate_resistance_neutral());
-    Serial.printf("R_l %f\r\n", estimate_resistance_left());
-    Serial.printf("R_r %f\r\n", estimate_resistance_right());
+    Vec3f resistance = estimate_resistance();
+    Serial.printf("R_n %f\r\n", resistance.a);
+    Serial.printf("R_l %f\r\n", resistance.b);
+    Serial.printf("R_r %f\r\n", resistance.c);
     Serial.printf("index Va Vb Vc Ia Ib Ic xHat_a xHat_b xHat_c r_a r_b r_c\r\n");
     for (int i = 0; i < interrupt_index; i++) {
         float mid_voltage = (context[i].pwm_voltage_neutral + context[i].pwm_voltage_left + context[i].pwm_voltage_right) / 3;
@@ -238,16 +262,16 @@ void MRACThreephaseStar::perform_model_update_step()
     float x_a = context[index].adc_current_neutral;
     float x_b = context[index].adc_current_left;
     float x_c = context[index].adc_current_right;
-    float midpoint = (x_a + x_b + x_c) / 3;
-    x_a -= midpoint;
-    x_b -= midpoint;
     float xHat_a = context[index].xHat_a;
     float xHat_b = context[index].xHat_b;
+    float xHat_c = -(xHat_a + xHat_b);
     float r_a = context[index].r_a;
     float r_b = context[index].r_b;
+    float r_c = -(r_a + r_b);
 
     float error_a = x_a - xHat_a;
     float error_b = x_b - xHat_b;
+    float error_c = x_c - xHat_c;
 
     const float dt = 1.f/STIM_PWM_FREQ;
 
@@ -255,16 +279,37 @@ void MRACThreephaseStar::perform_model_update_step()
     const float gamma1 = -.1f * (speed * P * B * dt);
     const float gamma2 = .05f * (speed * P * B * dt);
 
+#if CURRENT_SENSE_SCALE == CURRENT_SENSE_SCALE_FULL
     // do Kx += dt * gamma * x * err^T * P * B;
     // code below does not follow the textbook equation, but seems to work best....
     Ka += gamma1 * (xHat_a * error_a);
     Kb += gamma1 * (xHat_b * error_b);
-    Kc += gamma1 * ((xHat_a + xHat_b) * (error_a + error_b)); // = xHat_c * error_c
+    Kc += gamma1 * (xHat_c * error_c);
 
     // do kr += dt * gamma * r * err^T * P * B;
     Kr += gamma2 * (r_a * error_a);
     Kr += gamma2 * (r_b * error_b);
-    Kr += gamma2 * (r_a + r_b) * (error_a + error_b); // = r_c * error_c
+    Kr += gamma2 * (r_c * error_c);
+#elif CURRENT_SENSE_SCALE == CURRENT_SENSE_SCALE_HALF
+    // do Kx += dt * gamma * x * err^T * P * B;
+    // code below does not follow the textbook equation, but seems to work best....
+    if (xHat_a < 0)
+        Ka += gamma1 * (xHat_a * error_a);
+    if (xHat_b < 0)
+        Kb += gamma1 * (xHat_b * error_b);
+    if (xHat_c < 0)
+        Kc += gamma1 * (xHat_c * error_c);
+
+    // do kr += dt * gamma * r * err^T * P * B;
+    if (xHat_a < 0)
+        Kr += gamma2 * (r_a * error_a);
+    if (xHat_b < 0)
+        Kr += gamma2 * (r_b * error_b);
+    if (xHat_c < 0)
+        Kr += gamma2 * (r_c * error_c);
+#else
+#error "CURRENT_SENSE_SCALE" not defined.
+#endif
 
     Kr = _constrain(Kr, L_min / L0, L_max / L0);
     const float minimum = (R0 * Kr - R_max) / 3;

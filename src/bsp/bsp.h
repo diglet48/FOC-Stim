@@ -1,15 +1,14 @@
 #ifndef FOCSTIM_BSP_H
 #define FOCSTIM_BSP_H
 
+#include "bsp/bsp_options.h"
+#include "bsp/bsp_g431b_esc1.h"
+#include "bsp/bsp_g747re_max22213_shield.h"
 #include "vec.h"
 #include <functional>
 
-void BSP_Init();
 
-void BSP_EnableOutputs();
-void BSP_DisableOutputs();
-// void BSP_SetOutputState(bool a, bool b, bool c);     
-// void BSP_SetOutputState(bool a, bool b, bool c, bool d);
+void BSP_Init();
 
 /*
 PWM notes on g431b-ESC1 and MAX22213 shield:
@@ -25,26 +24,33 @@ At pwm peak the following occurs:
 */
 void BSP_AttachPWMInterrupt(std::function<void()>);
 
-// 3-pwm control functions
-void BSP_SetPWM3(float a, float b, float c);    // duty cycle
+void BSP_DisableOutputs();
+
+// three outputs interface
+void BSP_OutputEnable(bool a, bool b, bool c);      // enable or high-z
+void BSP_SetPWM3(float a, float b, float c);        // duty cycle 0-1, internally clamped.
 void BSP_SetPWM3Atomic(float a, float b, float c);
 Vec3f BSP_ReadPhaseCurrents3();
 
-// 4-pwm control functions
-// void BSP_OutputEnable4(bool a, bool b, bool c, bool d);
-// void BSP_SetPWM4(float a, float b, float c, float d);
-// Vec4f BSP_ReadPhaseCurrents4();
 
-// various sensors
-float BSP_ReadTemperatureInternal();
-// float BSP_ReadVMSenseVoltage();
-float BSP_ReadChipAnalogVoltage();
-float BSP_ReadPotentiometer();
-float BSP_ReadTemperatureOnboardNTC();
-float BSP_ReadVBus();
+// four outputs interface
+#ifdef BSP_ENABLE_FOURPHASE
+void BSP_OutputEnable(bool a, bool b, bool c, bool d);
+void BSP_SetPWM4(float a, float b, float c, float d);
+void BSP_SetPWM4Atomic(float a, float b, float c, float d);
+Vec4f BSP_ReadPhaseCurrents4();
+#endif
+
+
 
 void BSP_AdjustCurrentSenseOffsets();
 
+// various sensors
+float BSP_ReadTemperatureInternal();    // stm32 internal temperature sensor.
+float BSP_ReadTemperatureOnboardNTC();  // onboard temperature sensor (ESC1)
+float BSP_ReadChipAnalogVoltage();      // stm32 vdda
+float BSP_ReadPotentiometer();
+float BSP_ReadVBus();
 
 void BSP_WriteStatusLED(bool on);
 

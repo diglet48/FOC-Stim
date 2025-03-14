@@ -1,4 +1,5 @@
 #include "bsp.h"
+#if defined(ARDUINO_B_G431B_ESC1)
 
 #include "config.h"
 #include "utils.h"
@@ -92,6 +93,8 @@ static void enableInterruptWithPrio(IRQn_Type intr, int prio)
 
 void initGPIO()
 {
+    // TODO: bemf pins disable?
+
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -147,10 +150,6 @@ void initPwm()
     // only generate interrupt on timer overflow, not EGR
     pwm_timer->CR1 |= TIM_CR1_URS;
 
-    // Enable update interrupt.
-    // TODO: disable interrupt when no callback active to save some cycles
-    pwm_timer->DIER |= TIM_DIER_UIE;
-
     // setup deadtime.
     uint32_t dead_time = __LL_TIM_CALC_DEADTIME(SystemCoreClock, LL_TIM_GetClockDivision(pwm_timer), DEAD_TIME_NS);
     if (dead_time>255) dead_time = 255;
@@ -164,8 +163,13 @@ void initPwm()
     pwm_timer->BDTR &= ~TIM_BDTR_OSSI;
     pwm_timer->BDTR |= TIM_BDTR_OSSR;
 
+    // enable ADC trigger on update event.
+    pwm_timer->CR2 |= LL_TIM_TRGO_UPDATE;
+
+    // main output enable
+    pwm_timer->BDTR |= TIM_BDTR_MOE;
+
     enableInterruptWithPrio(TIM1_UP_TIM16_IRQn, 0);
-    // TIM1_BRK_TIM15_IRQn --> TIM1_BRK_TIM15_IRQHandler
 }
 
 void configureOpamp(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def)
@@ -202,7 +206,6 @@ void initOpamp()
     configureOpamp(&bsp.opamp2, OPAMP2);
     configureOpamp(&bsp.opamp3, OPAMP3);
 }
-
 
 /**
  * @brief OPAMP MSP Initialization
@@ -339,28 +342,7 @@ void HAL_OPAMP_MspDeInit(OPAMP_HandleTypeDef *hopamp)
     }
 }
 
-/**
- * Enable DMA controller clock
- */
-void MX_DMA_Init(void)
-{
-    /* DMA controller clock enable */
-    __HAL_RCC_DMAMUX1_CLK_ENABLE();
-    __HAL_RCC_DMA1_CLK_ENABLE();
-    __HAL_RCC_DMA2_CLK_ENABLE();
-
-    /* DMA interrupt init */
-    // enableInterruptWithPrio(DMA1_Channel1_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel2_IRQn, 0);
-
-    // Enable external clock for ADC12
-    RCC_PeriphCLKInitTypeDef PeriphClkInit;
-    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC12;
-    PeriphClkInit.Adc12ClockSelection = RCC_ADC12CLKSOURCE_PLL; // 170mhz
-    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
-}
-
-void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Channel_TypeDef *channel, uint32_t request)
+void configureDMA(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Channel_TypeDef *channel, uint32_t request)
 {
     hdma_adc->Instance = channel;
     hdma_adc->Init.Request = request;
@@ -380,7 +362,36 @@ void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Chan
     __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
 }
 
-void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
+void initDMA(void)
+{
+    /* DMA controller clock enable */
+    __HAL_RCC_DMAMUX1_CLK_ENABLE();
+    __HAL_RCC_DMA1_CLK_ENABLE();
+
+    /* DMA interrupt init */
+    // enableInterruptWithPrio(DMA1_Channel1_IRQn, 0);
+    // enableInterruptWithPrio(DMA1_Channel2_IRQn, 0);
+
+    configureDMA(&bsp.adc1, &bsp.dma1, DMA1_Channel1, DMA_REQUEST_ADC1);
+    configureDMA(&bsp.adc2, &bsp.dma2, DMA1_Channel2, DMA_REQUEST_ADC2);
+
+    HAL_StatusTypeDef status;
+    status = HAL_ADC_Start_DMA(&bsp.adc1, (uint32_t *)bsp.adc1_buffer, sizeof(bsp.adc1_buffer) / 2);
+    if (status != HAL_OK)
+    {
+        Serial.printf("DMA start adc2 failed, %i\n", status);
+        Error_Handler();
+    }
+
+    status = HAL_ADC_Start_DMA(&bsp.adc2, (uint32_t *)bsp.adc2_buffer, sizeof(bsp.adc2_buffer) / 2);
+    if (status != HAL_OK)
+    {
+        Serial.printf("DMA start adc3 failed, %i\n", status);
+        Error_Handler();
+    }
+}
+
+void configureADC1(ADC_HandleTypeDef *hadc1)
 {
     ADC_MultiModeTypeDef multimode = {0};
     ADC_ChannelConfTypeDef sConfig = {0};
@@ -388,7 +399,7 @@ void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
     /** Common config
      */
     hadc1->Instance = ADC1;
-    hadc1->Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV16;
+    hadc1->Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV4;
     hadc1->Init.Resolution = ADC_RESOLUTION_12B;
     hadc1->Init.DataAlign = ADC_DATAALIGN_RIGHT;
     hadc1->Init.GainCompensation = 0;
@@ -479,7 +490,7 @@ void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
     // temperature (internal)
     sConfig.Channel = ADC_CHANNEL_TEMPSENSOR_ADC1;
     sConfig.Rank = ADC_REGULAR_RANK_7;
-    sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;   // ~6µs
+    sConfig.SamplingTime = ADC_SAMPLETIME_92CYCLES_5;   // ~2.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
@@ -488,7 +499,7 @@ void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
     // vref internal
     sConfig.Channel = ADC_CHANNEL_VREFINT;
     sConfig.Rank = ADC_REGULAR_RANK_8;
-    sConfig.SamplingTime = ADC_SAMPLETIME_24CYCLES_5;   // ~1.36µs
+    sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;   // ~6µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
         Serial.printf("HAL_ADC_ConfigChannel failed!");
@@ -496,7 +507,7 @@ void MX_ADC1_Init(ADC_HandleTypeDef *hadc1)
     }
 }
 
-void MX_ADC2_Init(ADC_HandleTypeDef *hadc2)
+void configureADC2(ADC_HandleTypeDef *hadc2)
 {
     ADC_ChannelConfTypeDef sConfig = {0};
 
@@ -578,10 +589,14 @@ void MX_ADC2_Init(ADC_HandleTypeDef *hadc2)
 
 void initADC()
 {
-    __HAL_RCC_ADC12_CLK_ENABLE();
+    // Enable external clock for ADC12
+    RCC_PeriphCLKInitTypeDef PeriphClkInit;
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC12;
+    PeriphClkInit.Adc12ClockSelection = RCC_ADC12CLKSOURCE_PLL; // 170mhz
+    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
 
-    MX_ADC1_Init(&bsp.adc1);
-    MX_ADC2_Init(&bsp.adc2);
+    configureADC1(&bsp.adc1);
+    configureADC2(&bsp.adc2);
 
     // Calibrate the ADCs
     HAL_StatusTypeDef status;
@@ -647,47 +662,42 @@ void BSP_Init()
 {
     initGPIO();
     initPwm();
-    MX_DMA_Init();
     initADC();
     initOpamp();
+    initDMA();
 
-    MX_DMA1_Init(&bsp.adc1, &bsp.dma1, DMA1_Channel1, DMA_REQUEST_ADC1);
-    MX_DMA1_Init(&bsp.adc2, &bsp.dma2, DMA1_Channel2, DMA_REQUEST_ADC2);
-
-    HAL_StatusTypeDef status;
-    status = HAL_ADC_Start_DMA(&bsp.adc1, (uint32_t *)bsp.adc1_buffer, sizeof(bsp.adc1_buffer) / 2);
-    if (status != HAL_OK)
-    {
-        Serial.printf("DMA start adc2 failed, %i\n", status);
-        Error_Handler();
-    }
-
-    status = HAL_ADC_Start_DMA(&bsp.adc2, (uint32_t *)bsp.adc2_buffer, sizeof(bsp.adc2_buffer) / 2);
-    if (status != HAL_OK)
-    {
-        Serial.printf("DMA start adc3 failed, %i\n", status);
-        Error_Handler();
-    }
-
-    // enable tim dma trigger
-    LL_TIM_SetTriggerOutput(pwm_timer, LL_TIM_TRGO_UPDATE);
-
-    // start the timer
-    // note: starting/stopping the timer may result in loss of synchronization
-    // with the ADC DMA, depending on state of the DIR bit.
+    // enable timer. DIR bit aligns timer update event with either peak or through.
     pwm_timer->CR1 |= TIM_CR1_CEN;
 
     calibrateCurrentSenseOffsets();
 }
 
-void BSP_EnableOutputs()
-{
-    pwm_timer->BDTR |= TIM_BDTR_MOE;
+void BSP_DisableOutputs() {
+    BSP_OutputEnable(false, false, false);
 }
 
-void BSP_DisableOutputs()
+void BSP_OutputEnable(bool a, bool b, bool c)
 {
-    pwm_timer->BDTR &= ~TIM_BDTR_MOE;
+    if (c) {
+        pwm_timer->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE);
+    } else {
+        pwm_timer->CCER &= ~(TIM_CCER_CC1E | TIM_CCER_CC1NE);
+    }
+    if (a) {
+        pwm_timer->CCER |= (TIM_CCER_CC2E | TIM_CCER_CC2NE);
+    } else {
+        pwm_timer->CCER &= ~(TIM_CCER_CC2E | TIM_CCER_CC2NE);
+    }
+    if (b) {
+        pwm_timer->CCER |= (TIM_CCER_CC3E | TIM_CCER_CC3NE);
+    } else {
+        pwm_timer->CCER &= ~(TIM_CCER_CC3E | TIM_CCER_CC3NE);
+    }
+    if (a || b || c) {
+        pwm_timer->BDTR |= TIM_BDTR_MOE;
+    } else {
+        pwm_timer->BDTR &= ~TIM_BDTR_MOE;
+    }
 }
 
 void BSP_AttachPWMInterrupt(std::function<void()> fn)
@@ -701,6 +711,12 @@ void BSP_AttachPWMInterrupt(std::function<void()> fn)
     __DSB();
     __ISB();
     __enable_irq();
+
+    if (bsp.pwm_callback) {
+        pwm_timer->DIER |= TIM_DIER_UIE;
+    } else {
+        pwm_timer->DIER &= ~TIM_DIER_UIE;
+    }
     // tmp destructor called about here
 }
 
@@ -729,14 +745,19 @@ Vec3f BSP_ReadPhaseCurrents3()
     float factor_a = ADC_VOLTAGE / ADC_SCALE / gain / shunt / 4;
     float factor_bc = ADC_VOLTAGE / ADC_SCALE / gain / shunt / 2;
 
-    float ca = bsp.current_a + bsp.current_a2 + bsp.current_a3 + bsp.current_a4;
-    float cb = bsp.current_b + bsp.current_b2;
-    float cc = bsp.current_c + bsp.current_c2;
+    float ca = float(bsp.current_a + bsp.current_a2 + bsp.current_a3 + bsp.current_a4);
+    float cb = float(bsp.current_b + bsp.current_b2);
+    float cc = float(bsp.current_c + bsp.current_c2);
+
+    ca = (ca - bsp.current_a_offset) * factor_a;
+    cb = (cb - bsp.current_b_offset) * factor_bc;
+    cc = (cc - bsp.current_c_offset) * factor_bc;
+    float midpoint = (ca + cb + cc) * (1.0f/3);
 
     return Vec3f(
-        (ca - bsp.current_a_offset) * factor_a,
-        (cb - bsp.current_b_offset) * factor_bc,
-        (cc - bsp.current_c_offset) * factor_bc);
+        (ca - midpoint),
+        (cb - midpoint),
+        (cc - midpoint));
 }
 
 float BSP_ReadPotentiometer()
@@ -790,3 +811,5 @@ float BSP_ReadChipAnalogVoltage()
 {
     return bsp.analog_voltage;
 }
+
+#endif

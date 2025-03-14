@@ -4,13 +4,11 @@
 #include <stdint.h>
 #include <functional>
 
+#include "vec.h"
 #include "config.h"
 
 
-class BLDCDriver;
-class CurrentSense;
 class EmergencyStop;
-class ThreePhaseDriver;
 class ThreephasePulseBuffer;
 
 /*
@@ -111,20 +109,15 @@ public:
         // The true inductance is actually dt / ln(1 - dt / (L0 * Kr))
     }
 
-    float estimate_resistance_neutral()
-    {
-        return (R0 * Kr - 3 * Ka);
+    Vec3f estimate_resistance() {
+        return Vec3f(
+            (R0 * Kr - 3 * Ka),
+            (R0 * Kr - 3 * Kb),
+            (R0 * Kr - 3 * Kc)
+        );
     }
 
-    float estimate_resistance_left()
-    {
-        return (R0 * Kr - 3 * Kb);
-    }
-
-    float estimate_resistance_right()
-    {
-        return (R0 * Kr - 3 * Kc);
-    }
+    Vec3f estimate_rms_current(float dt);
 
     void print_debug_stats();
 
@@ -140,14 +133,11 @@ public:
 
     // log stats
     float v_drive_max = 0;
-    float current_squared_neutral = 0;
-    float current_squared_left = 0;
-    float current_squared_right = 0;
-    float current_max_neutral = 0;
-    float current_max_left = 0;
-    float current_max_right = 0;
+    Vec3f current_squared;
+    Vec3f current_max;
     float estop_current_limit = 0;
 
+    // TODO: not volatile
     volatile struct {
         // the voltages to be written to pwm by the interrupt
         // indices before 'pwm_write_index' are valid.
@@ -162,10 +152,10 @@ public:
         float adc_current_right;
 
         // variables needed for update step
-        float xHat_a;
-        float xHat_b;
-        float r_a;
-        float r_b;
+        float xHat_a;   // current a according to model
+        float xHat_b;   // current b according to model
+        float r_a;      // reference control signal
+        float r_b;      // reference control signal
     } context[context_size];
 
     volatile int pwm_write_index = 0;

@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "utils.h"
+#include "vec.h"
 
 class ThreephasePulseBuffer
 {
@@ -24,20 +25,21 @@ public:
         float left_right_calibration);
 
     // inline for speed
-    void get(float t, float *neutral, float *left)
+    Vec2f get(float t)
     {
         float integral, remainder;
         remainder = modff((t / pulse_duration) * THREEPHASE_PULSE_BUFFER_SIZE, &integral);
         uint32_t i = integral;
         if ((i + 1) >= THREEPHASE_PULSE_BUFFER_SIZE || t < 0)
         {
-            *neutral = 0;
-            *left = 0;
+            return Vec2f(0, 0);
         }
         else
         {
-            *neutral = a[i] + remainder * (a[i + 1] - a[i]);
-            *left = b[i] + remainder * (b[i + 1] - b[i]);
+            return Vec2f(
+                a[i] + remainder * (a[i + 1] - a[i]),
+                b[i] + remainder * (b[i + 1] - b[i])
+            );
         }
     }
 

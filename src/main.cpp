@@ -105,8 +105,7 @@ void setup()
         status_vbus = true;
     }
     print_status();
-
-    BSP_EnableOutputs();
+    BSP_OutputEnable(true, true, true);
 }
 
 void loop()
@@ -270,22 +269,23 @@ void loop()
 
     traceline->skipped_update_steps = mrac.skipped_update_steps;
     traceline->v_drive_max = mrac.v_drive_max;
-    traceline->max_recorded_current_neutral = mrac.current_max_neutral;
-    traceline->max_recorded_current_left = mrac.current_max_left;
-    traceline->max_recorded_current_right = mrac.current_max_right;
+    traceline->max_recorded_current_neutral = mrac.current_max.a;
+    traceline->max_recorded_current_left = mrac.current_max.b;
+    traceline->max_recorded_current_right = mrac.current_max.c;
 
-    traceline->R_neutral = mrac.estimate_resistance_neutral();
-    traceline->R_left = mrac.estimate_resistance_left();
-    traceline->R_right = mrac.estimate_resistance_right();
+    auto resistance = mrac.estimate_resistance();
+    traceline->R_neutral = resistance.a;
+    traceline->R_left = resistance.b;
+    traceline->R_right = resistance.c;
     traceline->L = mrac.estimate_inductance();
 
     // occasionally print some stats..
     if ((pulse_counter + 0) % 10 == 0)
     {
         Serial.print("$");
-        Serial.printf("R_neutral:%.2f ", mrac.estimate_resistance_neutral());
-        Serial.printf("R_left:%.2f ", mrac.estimate_resistance_left());
-        Serial.printf("R_right:%.2f ", mrac.estimate_resistance_right());
+        Serial.printf("R_neutral:%.2f ", resistance.a);
+        Serial.printf("R_left:%.2f ", resistance.b);
+        Serial.printf("R_right:%.2f ", resistance.c);
         Serial.printf("L:%.2f ", mrac.estimate_inductance() * 1e6f);
         Serial.println();
     }
@@ -293,14 +293,12 @@ void loop()
     {
         Serial.print("$");
         Serial.printf("V_drive:%.2f ", mrac.v_drive_max);
-        Serial.printf("I_max_a:%f ", abs(mrac.current_max_neutral));
-        Serial.printf("I_max_b:%f ", abs(mrac.current_max_left));
-        Serial.printf("I_max_c:%f ", abs(mrac.current_max_right));
+        Serial.printf("I_max_a:%f ", abs(mrac.current_max.a));
+        Serial.printf("I_max_b:%f ", abs(mrac.current_max.b));
+        Serial.printf("I_max_c:%f ", abs(mrac.current_max.c));
         Serial.println();
         mrac.v_drive_max = 0;
-        mrac.current_max_neutral = 0;
-        mrac.current_max_left = 0;
-        mrac.current_max_right = 0;
+        mrac.current_max = Vec3f(0, 0, 0);
     }
     if ((pulse_counter + 4) % 10 == 0)
     {
@@ -309,22 +307,22 @@ void loop()
     if ((pulse_counter + 6) % 10 == 0)
     {   
         rms_current_clock.step();
+        auto rms = mrac.estimate_rms_current(rms_current_clock.dt_seconds);
         Serial.print("$");
-        Serial.printf("rms_neutral:%f ", sqrtf(mrac.current_squared_neutral / rms_current_clock.dt_seconds));
-        Serial.printf("rms_left:%f ", sqrtf(mrac.current_squared_left / rms_current_clock.dt_seconds));
-        Serial.printf("rms_right:%f ", sqrtf(mrac.current_squared_right / rms_current_clock.dt_seconds));
+        Serial.printf("rms_neutral:%f ", rms.a);
+        Serial.printf("rms_left:%f ", rms.b);
+        Serial.printf("rms_right:%f ", rms.c);
+        // Serial.printf("rms_zzz:%f ", rms.d);
         Serial.println();
-        mrac.current_squared_neutral = 0;
-        mrac.current_squared_left = 0;
-        mrac.current_squared_right = 0;
+        mrac.current_squared = Vec3f(0, 0, 0);
     }
     if ((pulse_counter + 8) % 20 == 0)
     {
         Serial.print("$");
         Serial.printf("V_BUS:%.2f ", BSP_ReadVBus());
-        Serial.printf("temp_board:%.1f ", BSP_ReadTemperatureOnboardNTC());
-        Serial.printf("temp_stm32:%.1f ", BSP_ReadTemperatureInternal());
-        Serial.printf("V_ref:%.3f ", BSP_ReadChipAnalogVoltage());
+        Serial.printf("temp_board:%.2f ", BSP_ReadTemperatureOnboardNTC());
+        Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureInternal());
+        Serial.printf("V_ref:%.5f ", BSP_ReadChipAnalogVoltage());
         Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
         Serial.printf("model_steps:%i ", mrac.pwm_write_index);
         Serial.printf("model_skips:%i ", mrac.skipped_update_steps);

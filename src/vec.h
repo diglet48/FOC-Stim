@@ -1,6 +1,14 @@
 #ifndef FOCSTIM_VEC_H
 #define FOCSTIM_VEC_H
 
+struct Vec2f {
+    Vec2f(float a, float b)
+        : a(a), b(b) {}
+
+    float a;
+    float b;
+};
+
 struct Vec3f {
     Vec3f(float a, float b, float c)
         : a(a), b(b), c(c) {}

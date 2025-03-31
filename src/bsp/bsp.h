@@ -1,9 +1,8 @@
 #ifndef FOCSTIM_BSP_H
 #define FOCSTIM_BSP_H
 
-#include "bsp/bsp_options.h"
-#include "bsp/bsp_g431b_esc1.h"
-#include "bsp/bsp_g747re_max22213_shield.h"
+#include "bsp/config_g431b_esc1.h"
+#include "bsp/config_g474re_max22213_shield.h"
 #include "vec.h"
 #include <functional>
 
@@ -56,7 +55,10 @@ void BSP_WriteStatusLED(bool on);
 
 
 
-
+#if defined(ARDUINO_NUCLEO_G474RE)
+void BSP_SetSleep(bool sleep);  // sleep pin to MAX22213. low = device sleeps.
+bool BSP_ReadFault();           // Fault pin to MAX22213. Active low.
+#endif
 
 
 

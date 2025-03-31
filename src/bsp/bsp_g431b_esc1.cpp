@@ -1,7 +1,6 @@
-#include "bsp.h"
 #if defined(ARDUINO_B_G431B_ESC1)
+#include "bsp.h"
 
-#include "config.h"
 #include "utils.h"
 
 #include "stm32g4xx_hal.h"

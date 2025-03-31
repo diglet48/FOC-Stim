@@ -4,16 +4,23 @@
 #include "tcode.h"
 #include "utils.h"
 #include "stim_clock.h"
-#include "pulse/threephase_pulse_buffer.h"
-#include "mrac_threephase_star.h"
-#include "config.h"
 #include "trace.h"
+#include "complex.h"
+#include "signals/threephase_math.h"
+#include "signals/threephase_model.h"
+#include "signals/fourphase_math.h"
+#include "signals/fourphase_model.h"
 
 #include "bsp/bsp.h"
 
-MRACThreephaseStar mrac{};
-ThreephasePulseBuffer pulse_threephase{};
+
 Trace trace{};
+
+#if defined(BSP_ENABLE_THREEPHASE)
+ThreephaseModel model{};
+#elif defined(BSP_ENABLE_FOURPHASE)
+FourphaseModel model{};
+#endif
 
 
 static bool status_booted = false;
@@ -62,6 +69,7 @@ struct
 {
     TCodeAxis alpha{"L0", 0, -1, 1};
     TCodeAxis beta{"L1", 0, -1, 1};
+    TCodeAxis gamma{"L2", 0, -1, 1};
     TCodeAxis volume{"V0", 0, 0, TCODE_MAX_CURRENT};
     TCodeAxis carrier_frequency{"A0", 800, 500, 2000};
     TCodeAxis pulse_frequency{"A1", 50, 1, 100};
@@ -71,6 +79,10 @@ struct
     TCodeAxis calib_center{"C0", 0, -10, 10};
     TCodeAxis calib_ud{"C1", 0, -10, 10};
     TCodeAxis calib_lr{"C2", 0, -10, 10};
+    TCodeAxis calib_4a{"C3", 0, -10, 10};
+    TCodeAxis calib_4b{"C4", 0, -10, 10};
+    TCodeAxis calib_4c{"C5", 0, -10, 10};
+    TCodeAxis calib_4d{"C6", 0, -10, 10};
 } axes;
 struct {
     TCodeDeviceCommand d0{"0", &tcode_D0};
@@ -83,13 +95,14 @@ TCode tcode(reinterpret_cast<TCodeAxis *>(&axes), sizeof(axes) / sizeof(TCodeAxi
 
 void estop_triggered()
 {
-    mrac.print_debug_stats();
     trace.print_mainloop_trace();
+    model.debug_stats_teleplot();
 }
 
 void setup()
 {
     Serial.begin(115200);
+    delay(100);
     Serial.println("BSP init");
     BSP_Init();
 
@@ -97,7 +110,8 @@ void setup()
     print_status();
     BSP_WriteStatusLED(1);
 
-    mrac.init(&estop_triggered);
+    // TODO:
+    model.init(&estop_triggered);
 
     status_booted = true;
     float vbus = BSP_ReadVBus();
@@ -105,7 +119,13 @@ void setup()
         status_vbus = true;
     }
     print_status();
+
+
+#if defined(BSP_ENABLE_THREEPHASE)
     BSP_OutputEnable(true, true, true);
+#elif defined(BSP_ENABLE_FOURPHASE)
+    BSP_OutputEnable(true, true, true, true);
+#endif
 }
 
 void loop()
@@ -221,6 +241,7 @@ void loop()
     uint32_t t0 = micros();
     float pulse_alpha = axes.alpha.get_remap(t0);
     float pulse_beta = axes.beta.get_remap(t0);
+    float pulse_gamma = axes.gamma.get_remap(t0);
     float pulse_amplitude = axes.volume.get_remap(t0); // pulse amplitude in amps
     float pulse_carrier_frequency = axes.carrier_frequency.get_remap(t0);
     float pulse_frequency = axes.pulse_frequency.get_remap(t0);
@@ -232,6 +253,11 @@ void loop()
     float calibration_lr = axes.calib_lr.get_remap(t0);
     float calibration_ud = axes.calib_ud.get_remap(t0);
 
+    float calibration_4a = axes.calib_4a.get_remap(t0);
+    float calibration_4b = axes.calib_4b.get_remap(t0);
+    float calibration_4c = axes.calib_4c.get_remap(t0);
+    float calibration_4d = axes.calib_4d.get_remap(t0);
+
     float pulse_active_duration = pulse_width / pulse_carrier_frequency;
     float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);
     pulse_pause_duration *= float_rand(1 - pulse_interval_random, 1 + pulse_interval_random);
@@ -242,63 +268,115 @@ void loop()
     float potmeter_value = inverse_lerp(potmeter_voltage, POTMETER_ZERO_PERCENT_VOLTAGE, POTMETER_HUNDRED_PERCENT_VOLTAGE);
     pulse_amplitude *= potmeter_value;
 
-    // pre-compute the new pulse
-    pulse_threephase.create_pulse(
-        pulse_amplitude,
-        pulse_alpha,
-        pulse_beta,
-        pulse_carrier_frequency,
-        pulse_width,
-        pulse_rise,
-        calibration_center,
-        calibration_ud,
-        calibration_lr);
-
     // store stats
     traceline->amplitude = pulse_amplitude;
     total_pulse_length_timer.step();
     traceline->dt_compute = total_pulse_length_timer.dt_micros;
 
+
+    static bool polarity = false;
+    static float random_start_angle;
+#ifndef THREEPHASE_PULSE_DEFEAT_RANDOMIZATION
+    polarity = !polarity;
+    random_start_angle = _normalizeAngle(random_start_angle + (_2PI * 19 / 97)); // ~1/5
+#endif
+
+
+#if defined(BSP_ENABLE_THREEPHASE)
+    ComplexThreephasePoints points3 = project_threephase(
+        pulse_amplitude,
+        pulse_alpha,
+        pulse_beta,
+        calibration_center,
+        calibration_ud,
+        calibration_lr,
+        polarity,
+        random_start_angle);
+
+    model.play_pulse(points3.p1, points3.p2, points3.p3, 
+        pulse_carrier_frequency,
+        pulse_width, pulse_rise,
+        pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
+#elif defined(BSP_ENABLE_FOURPHASE)
+    ComplexFourphasePoints points4 = project_fourphase(
+        pulse_amplitude,
+        pulse_alpha, pulse_beta, pulse_gamma,
+        calibration_center,
+        calibration_4a, calibration_4b, calibration_4c, calibration_4d,
+        polarity,
+        random_start_angle);
+
+    model.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4, 
+        pulse_carrier_frequency,
+        pulse_width, pulse_rise,
+        pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
+#endif
+
+    if (pulse_counter % 3 == 0) {
+        Serial.printf("$");
+        Serial.printf("Za:%f:%f|xy ", model.z1.a, model.z1.b);
+        Serial.printf("Zb:%f:%f|xy ", model.z2.a, model.z2.b);
+        Serial.printf("Zc:%f:%f|xy ", model.z3.a, model.z3.b);
+#if defined(BSP_ENABLE_FOURPHASE)
+        Serial.printf("Zd:%f:%f|xy ", model.z4.a, model.z4.b);
+#endif
+        Serial.printf("Z0:%f:%f|xy ", 0.f, 0.f);
+    
+//         Serial.printf("L1:%.1f ", model.z1.b / (_2PI * 1000) * 1e6f);
+//         Serial.printf("L2:%.1f ", model.z2.b / (_2PI * 1000) * 1e6f);
+//         Serial.printf("L3:%.1f ", model.z3.b / (_2PI * 1000) * 1e6f);
+// #if defined(BSP_ENABLE_FOURPHASE)
+//         Serial.printf("L4:%.1f ", model.z4.b / (_2PI * 1000) * 1e6f);
+// #endif
+    
+        Serial.println();
+    }
+
     // play the pulse
-    mrac.play_pulse(&pulse_threephase, pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
     total_pulse_length_timer.step();
 
     // store stats
     Clock stats_timer;
     traceline->dt_play = total_pulse_length_timer.dt_micros;
 
-    traceline->skipped_update_steps = mrac.skipped_update_steps;
-    traceline->v_drive_max = mrac.v_drive_max;
-    traceline->max_recorded_current_neutral = mrac.current_max.a;
-    traceline->max_recorded_current_left = mrac.current_max.b;
-    traceline->max_recorded_current_right = mrac.current_max.c;
+    // traceline->skipped_update_steps = mrac.skipped_update_steps;
+    // traceline->v_drive_max = mrac.v_drive_max;
+    // traceline->max_recorded_current_neutral = mrac.current_max.a;
+    // traceline->max_recorded_current_left = mrac.current_max.b;
+    // traceline->max_recorded_current_right = mrac.current_max.c;
 
-    auto resistance = mrac.estimate_resistance();
-    traceline->R_neutral = resistance.a;
-    traceline->R_left = resistance.b;
-    traceline->R_right = resistance.c;
-    traceline->L = mrac.estimate_inductance();
+    // auto resistance = mrac.estimate_resistance();
+    // traceline->R_neutral = resistance.a;
+    // traceline->R_left = resistance.b;
+    // traceline->R_right = resistance.c;
+    // traceline->L = mrac.estimate_inductance();
 
     // occasionally print some stats..
-    if ((pulse_counter + 0) % 10 == 0)
+    // if ((pulse_counter + 0) % 10 == 0)
+    // {
+    //     Serial.print("$");
+    //     Serial.printf("R_neutral:%.2f ", resistance.a);
+    //     Serial.printf("R_left:%.2f ", resistance.b);
+    //     Serial.printf("R_right:%.2f ", resistance.c);
+    //     // Serial.printf("R_zzz:%.2f ", resistance.d);
+    //     Serial.printf("L:%.2f ", mrac.estimate_inductance() * 1e6f);
+    //     Serial.println();
+    // }
+    // if ((pulse_counter + 2) % 10 == 0)
+    if ((pulse_counter + 2) % 1 == 0)
     {
         Serial.print("$");
-        Serial.printf("R_neutral:%.2f ", resistance.a);
-        Serial.printf("R_left:%.2f ", resistance.b);
-        Serial.printf("R_right:%.2f ", resistance.c);
-        Serial.printf("L:%.2f ", mrac.estimate_inductance() * 1e6f);
+        Serial.printf("V_drive:%.3f ", model.v_drive_max);
+        Serial.printf("I_max_a:%f ", abs(model.current_max.a));
+        Serial.printf("I_max_b:%f ", abs(model.current_max.b));
+        Serial.printf("I_max_c:%f ", abs(model.current_max.c));
+#if defined(BSP_ENABLE_FOURPHASE)
+        Serial.printf("I_max_d:%f ", abs(model.current_max.d));
+#endif
+        Serial.printf("I_max_cmd:%f ", abs(pulse_amplitude));
         Serial.println();
-    }
-    if ((pulse_counter + 2) % 10 == 0)
-    {
-        Serial.print("$");
-        Serial.printf("V_drive:%.2f ", mrac.v_drive_max);
-        Serial.printf("I_max_a:%f ", abs(mrac.current_max.a));
-        Serial.printf("I_max_b:%f ", abs(mrac.current_max.b));
-        Serial.printf("I_max_c:%f ", abs(mrac.current_max.c));
-        Serial.println();
-        mrac.v_drive_max = 0;
-        mrac.current_max = Vec3f(0, 0, 0);
+        model.v_drive_max = 0;
+        model.current_max = {};
     }
     if ((pulse_counter + 4) % 10 == 0)
     {
@@ -307,14 +385,16 @@ void loop()
     if ((pulse_counter + 6) % 10 == 0)
     {   
         rms_current_clock.step();
-        auto rms = mrac.estimate_rms_current(rms_current_clock.dt_seconds);
+        auto rms = model.estimate_rms_current(rms_current_clock.dt_seconds);
         Serial.print("$");
-        Serial.printf("rms_neutral:%f ", rms.a);
-        Serial.printf("rms_left:%f ", rms.b);
-        Serial.printf("rms_right:%f ", rms.c);
-        // Serial.printf("rms_zzz:%f ", rms.d);
+        Serial.printf("rms_a:%f ", rms.a);
+        Serial.printf("rms_b:%f ", rms.b);
+        Serial.printf("rms_c:%f ", rms.c);
+#if defined(BSP_ENABLE_FOURPHASE)
+        Serial.printf("rms_d:%f ", rms.d);
+#endif
         Serial.println();
-        mrac.current_squared = Vec3f(0, 0, 0);
+        model.current_squared = {};
     }
     if ((pulse_counter + 8) % 20 == 0)
     {
@@ -324,11 +404,15 @@ void loop()
         Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureInternal());
         Serial.printf("V_ref:%.5f ", BSP_ReadChipAnalogVoltage());
         Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
-        Serial.printf("model_steps:%i ", mrac.pwm_write_index);
-        Serial.printf("model_skips:%i ", mrac.skipped_update_steps);
+        Serial.printf("model_steps:%i ", model.pulse_length_samples);
+        Serial.printf("model_skips:%i ", model.skipped_update_steps);
         Serial.printf("pot:%f ", potmeter_value);
         Serial.println();
     }
+
+    // if (pulse_interval_random > 0.1) {
+    //     model.debug_stats_teleplot();
+    // }
 
     stats_timer.step();
     traceline->dt_logs = stats_timer.dt_micros;

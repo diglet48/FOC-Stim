@@ -1,12 +1,18 @@
-#include "bsp_g474re_max22213_shield.h"
+#if defined(ARDUINO_NUCLEO_G474RE)
 #include "bsp.h"
 
 #include <Arduino.h>
 
-#if defined(ARDUINO_NUCLEO_G474RE)
-
 #define ADC_VOLTAGE 3.272f
 #define ADC_SCALE   4095
+
+#define MAX22213_RISEN 2000
+#if MAX22213_HFS == 0
+#define MAX22213_KISEN 7500     // HFS 0, max current 3A
+#else
+#define MAX22213_KISEN 3840     // HFS 1, max current 1.5A, higher resoution
+#endif
+
 
 /* ADC connections
 phase 1/A = PB0 / PB2   to opamp3. Internal output ADC2 and ADC3
@@ -634,19 +640,13 @@ void initDMA()
     /* DMA controller clock enable */
     __HAL_RCC_DMAMUX1_CLK_ENABLE();
     __HAL_RCC_DMA1_CLK_ENABLE();
-
-    /* DMA interrupt init */
-    // enableInterruptWithPrio(DMA1_Channel1_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel2_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel3_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel4_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel5_IRQn, 0);
-
+    
     configureDMA(&bsp.adc1, &bsp.dma1, DMA1_Channel1, DMA_REQUEST_ADC1);
     configureDMA(&bsp.adc2, &bsp.dma2, DMA1_Channel2, DMA_REQUEST_ADC2);
     configureDMA(&bsp.adc3, &bsp.dma3, DMA1_Channel3, DMA_REQUEST_ADC3);
     configureDMA(&bsp.adc4, &bsp.dma4, DMA1_Channel4, DMA_REQUEST_ADC4);
     configureDMA(&bsp.adc5, &bsp.dma5, DMA1_Channel5, DMA_REQUEST_ADC5);
+
 
     HAL_StatusTypeDef status;
     status = HAL_ADC_Start_DMA(&bsp.adc1, (uint32_t *)bsp.adc1_buffer, sizeof(bsp.adc1_buffer) / 2);
@@ -683,6 +683,14 @@ void initDMA()
         Serial.printf("DMA start adc5 failed, %i\n", status);
         Error_Handler();
     }
+
+    /* DMA interrupt init */
+    // enableInterruptWithPrio(DMA1_Channel1_IRQn, 0);
+    // enableInterruptWithPrio(DMA1_Channel2_IRQn, 0);
+    // enableInterruptWithPrio(DMA1_Channel3_IRQn, 0);
+    // enableInterruptWithPrio(DMA1_Channel4_IRQn, 0);
+    enableInterruptWithPrio(DMA1_Channel5_IRQn, 0);
+    DMA1_Channel5->CCR &= ~DMA_CCR_HTIE;    // enable only transfer complete interrupt.
 }
 
 void BSP_Init()
@@ -699,17 +707,23 @@ void BSP_Init()
 
 extern "C"
 {
-    // void DMA1_Channel1_IRQHandler(void)
-    // {
-    //     HAL_DMA_IRQHandler(&bsp.dma1);
-    // }
+    void DMA1_Channel5_IRQHandler(void)
+    {
+        // DMA1->IFCR = 0xFFFFFFFF;
+        if (DMA1->ISR | DMA_IFCR_CTCIF5) {
+            if (bsp.pwm_callback) {
+                bsp.pwm_callback();
+            }
+            DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CTCIF5 | DMA_IFCR_CHTIF5;
+        } else {
+            DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CHTIF5;
+        }
+        
+    }
 
     void TIM1_UP_TIM16_IRQHandler(void)
     {
         pwm_timer->SR &= ~TIM_SR_UIF;
-        if (bsp.pwm_callback) {
-            bsp.pwm_callback();
-        }
     }
 }
 
@@ -751,12 +765,12 @@ void BSP_AttachPWMInterrupt(std::function<void()> fn)
     __ISB();
     __enable_irq();
     
-    // enable/disable the pwm timer interrupt
-    if (bsp.pwm_callback) {
-        pwm_timer->DIER |= TIM_DIER_UIE;
-    } else {
-        pwm_timer->DIER &= ~TIM_DIER_UIE;
-    }
+    // // enable/disable the pwm timer interrupt
+    // if (bsp.pwm_callback) {
+    //     pwm_timer->DIER |= TIM_DIER_UIE;
+    // } else {
+    //     pwm_timer->DIER &= ~TIM_DIER_UIE;
+    // }
 
     // tmp destructor called about here
 }

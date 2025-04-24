@@ -29,7 +29,7 @@ void ThreephaseModel::init(std::function<void()> emergency_stop_fn) {
 }
 
 void ThreephaseModel::play_pulse(
-    Complex p1, Complex p2, Complex p3, 
+    Complex p1, Complex p2, Complex p3,
     float carrier_frequency,
     float pulse_width, float rise_time,
     float estop_current_limit)
@@ -58,7 +58,7 @@ void ThreephaseModel::play_pulse(
     for (int i = 0; i < CONTEXT_SIZE; i++) {
         context[i] = {};
     }
-    
+
     // compute voltage with these equations:
     // p1 * z1 = v1 - N
     // p2 * z2 = v2 - N
@@ -115,7 +115,7 @@ void ThreephaseModel::play_pulse(
         } else {
             envelope = Complex(1, 0);
         }
-        
+
         Complex q = proj * envelope.a;
         proj = proj * rotator;
         context[i % CONTEXT_SIZE].i1_cmd = (p1 * q).a;  // desired current, used for update step.
@@ -193,7 +193,7 @@ void ThreephaseModel::play_pulse(
         z2 = z2 * (1 + zz2);
         z3 = z3 * (1 + zz3);
     }
-    
+
     // apply impedance angle error
     {
         float zz1 = abs(dot(d1, p1)) * angle_error1 + abs(dot(d2, p1)) * angle_error2 + abs(dot(d3, p1)) * angle_error3;
@@ -236,7 +236,7 @@ void ThreephaseModel::debug_stats_teleplot()
     for (int i = start_index; i <= producer_index; i++) {
         const auto &c = context[i % CONTEXT_SIZE];
 
-        Serial.printf("$");
+        // Serial.printf("$");
         Serial.printf("v1:%u:%.2f|xy ", i, c.v1_cmd);
         Serial.printf("v2:%u:%.2f|xy ", i, c.v2_cmd);
         Serial.printf("v3:%u:%.2f|xy ", i, c.v3_cmd);
@@ -258,7 +258,7 @@ void ThreephaseModel::interrupt_fn()
     std::atomic_signal_fence(std::memory_order_acquire);
 
     if (interrupt_finished) {
-        return; 
+        return;
     }
     if (queued_items == 0) {
         if (i == 0) {
@@ -278,7 +278,7 @@ void ThreephaseModel::interrupt_fn()
             return; // wait for the queue to be populated with at least a few items before starting.
         }
     }
-    
+
     // compute duty cycle center
     float v_min = min({
         context[read_index].v1_cmd,
@@ -301,9 +301,9 @@ void ThreephaseModel::interrupt_fn()
         (context[read_index].v2_cmd + center) / STIM_PSU_VOLTAGE,
         (context[read_index].v3_cmd + center) / STIM_PSU_VOLTAGE
     );
-    
+
     // read currents
-    if (i >= 2) {    
+    if (i >= 2) {
         context[write_index].i1_meas = currents.a;
         context[write_index].i2_meas = currents.b;
         context[write_index].i3_meas = currents.c;
@@ -320,7 +320,7 @@ void ThreephaseModel::interrupt_fn()
             max(current_max.c, abs(currents.c))
         );
     }
-    
+
     // check current limits
     if (abs(currents.a) > current_limit ||
         abs(currents.b) > current_limit ||

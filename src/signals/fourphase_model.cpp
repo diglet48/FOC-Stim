@@ -251,7 +251,7 @@ void FourphaseModel::debug_stats_teleplot()
     for (int i = start_index; i <= producer_index; i++) {
         const auto &c = context[i % CONTEXT_SIZE];
 
-        // Serial.printf("$");
+        Serial.printf("$");
         Serial.printf("v1:%u:%.2f|xy ", i, c.v1_cmd);
         Serial.printf("v2:%u:%.2f|xy ", i, c.v2_cmd);
         Serial.printf("v3:%u:%.2f|xy ", i, c.v3_cmd);

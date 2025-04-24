@@ -2,6 +2,9 @@
 #include "bsp.h"
 
 #include <Arduino.h>
+#include <stm32g4xx_ll_dac.h>
+#include <stm32g4xx_ll_comp.h>
+#include <stm32g4xx_ll_exti.h>
 
 #define ADC_VOLTAGE 3.272f
 #define ADC_SCALE   4095
@@ -22,6 +25,7 @@ phase 4/D = PB13 / PA1  to opamp6. Internal output ADC4
 */
 
 #define ADC2_CHANNEL_VM_SENSE   ADC_CHANNEL_17; // PA4
+#define ADC2_CHANNEL_VSYS_SENSE   ADC_CHANNEL_6; // PC6
 
 
 #define A_FAULT 	PC3
@@ -44,6 +48,9 @@ phase 4/D = PB13 / PA1  to opamp6. Internal output ADC4
 #define A_SEN3_MINUS PB15
 #define A_SEN4_MINUS PA1
 #define A_VM_SENSE PA4
+
+#define A_BOOST_EN PB9
+#define A_VSYS_SENSE PC0
 
 
 static TIM_TypeDef *const pwm_timer = TIM1;
@@ -75,9 +82,10 @@ struct BSP {
         };
     };
     union {
-        uint16_t adc2_buffer[1];
+        uint16_t adc2_buffer[2];
         struct {
             volatile uint16_t vm_sense;  // TODO not trigger so often.
+            volatile uint16_t vsys_sense;
         };
     };
     union {
@@ -101,6 +109,9 @@ struct BSP {
     };
 
     std::function<void()> pwm_callback;
+
+    volatile int vsys_high_cycles = 0;
+    uint16_t boost_set_value = 4095;
 };
 
 BSP bsp = {};
@@ -112,9 +123,12 @@ static void enableInterruptWithPrio(IRQn_Type intr, int prio)
     NVIC_EnableIRQ(intr);
 }
 
-void initGPIO() 
+void initGPIO()
 {
     __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_DAC2_CLK_ENABLE();
+    __HAL_RCC_DAC3_CLK_ENABLE();
 
     // TODO: bootloader
 
@@ -127,6 +141,10 @@ void initGPIO()
     pinMode(A_EN2, OUTPUT);
     pinMode(A_EN3, OUTPUT);
     pinMode(A_EN4, OUTPUT);
+
+    pinMode(A_BOOST_EN, OUTPUT);
+    digitalWrite(A_BOOST_EN, 0);
+    pinMode(A_VSYS_SENSE, INPUT_ANALOG);
 
     LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
@@ -146,11 +164,27 @@ void initGPIO()
     LL_GPIO_ResetOutputPin(GPIOA, GPIO_InitStruct.Pin);
     LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+    // DAC
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_6;    // PA6
+    LL_GPIO_ResetOutputPin(GPIOA, GPIO_InitStruct.Pin);
+    LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+
+    // COMP
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_1;    // PC1
+    LL_GPIO_ResetOutputPin(GPIOC, GPIO_InitStruct.Pin);
+    LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
 
     // default states
     digitalWrite(A_HFS, MAX22213_HFS);
-    BSP_SetSleep(0);    
-    BSP_OutputEnable(false, false, false, false);    
+    BSP_SetSleep(0);
+    // BSP_OutputEnable(false, false, false, false);
+    BSP_OutputEnable(false, false, false);
 }
 
 void initPwm()
@@ -182,6 +216,9 @@ void initPwm()
     // TODO: test and implement
     // enable break source
     // pulse_timer->BDTR = TIM_BDTR_BK2E;
+
+    // enable update interrupt
+    pwm_timer->DIER |= TIM_DIER_UIE;
 
     // force outputs low after break event.
     pwm_timer->BDTR |= TIM_BDTR_OSSI;
@@ -360,9 +397,10 @@ void configureADC1(ADC_HandleTypeDef *hadc)
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
 
-    if (HAL_ADC_Init(hadc) != HAL_OK)
+    int status;
+    if ((status = HAL_ADC_Init(hadc)) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed!\n");
+        Serial.printf("HAL_ADC_Init failed! %i\r\n", status);
         Error_Handler();
     }
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -379,7 +417,7 @@ void configureADC1(ADC_HandleTypeDef *hadc)
         Error_Handler();
     }
     // internal stm32 temp sensor
-    sConfig.Channel = ADC_CHANNEL_TEMPSENSOR_ADC1; 
+    sConfig.Channel = ADC_CHANNEL_TEMPSENSOR_ADC1;
     sConfig.Rank = ADC_REGULAR_RANK_2;
     sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5; // ~6µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
@@ -404,7 +442,7 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc->Init.LowPowerAutoWait = DISABLE;
     hadc->Init.ContinuousConvMode = DISABLE;
-    hadc->Init.NbrOfConversion = 1;
+    hadc->Init.NbrOfConversion = 2;
     hadc->Init.DiscontinuousConvMode = DISABLE;
     hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
@@ -423,6 +461,15 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     // VM_SENSE
     sConfig.Channel = ADC2_CHANNEL_VM_SENSE
     sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5; // ~0.8µs
+    if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
+    {
+        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
+    // VSYS_sense
+    sConfig.Channel = ADC2_CHANNEL_VSYS_SENSE
+    sConfig.Rank = ADC_REGULAR_RANK_2;
     sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5; // ~0.8µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
@@ -635,12 +682,12 @@ void configureDMA(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Chan
     __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
 }
 
-void initDMA() 
+void initDMA()
 {
     /* DMA controller clock enable */
     __HAL_RCC_DMAMUX1_CLK_ENABLE();
     __HAL_RCC_DMA1_CLK_ENABLE();
-    
+
     configureDMA(&bsp.adc1, &bsp.dma1, DMA1_Channel1, DMA_REQUEST_ADC1);
     configureDMA(&bsp.adc2, &bsp.dma2, DMA1_Channel2, DMA_REQUEST_ADC2);
     configureDMA(&bsp.adc3, &bsp.dma3, DMA1_Channel3, DMA_REQUEST_ADC3);
@@ -654,15 +701,15 @@ void initDMA()
     {
         Serial.printf("DMA start adc1 failed, %i\n", status);
         Error_Handler();
-    } 
-    
+    }
+
     status = HAL_ADC_Start_DMA(&bsp.adc2, (uint32_t *)bsp.adc2_buffer, sizeof(bsp.adc2_buffer) / 2);
     if (status != HAL_OK)
     {
         Serial.printf("DMA start adc2 failed, %i\n", status);
         Error_Handler();
     }
-    
+
     status = HAL_ADC_Start_DMA(&bsp.adc3, (uint32_t *)bsp.adc3_buffer, sizeof(bsp.adc3_buffer) / 2);
     if (status != HAL_OK)
     {
@@ -690,7 +737,67 @@ void initDMA()
     // enableInterruptWithPrio(DMA1_Channel3_IRQn, 0);
     // enableInterruptWithPrio(DMA1_Channel4_IRQn, 0);
     enableInterruptWithPrio(DMA1_Channel5_IRQn, 0);
+    // DMA1_Channel2->CCR &= ~DMA_CCR_HTIE;    // enable only transfer complete interrupt.
     DMA1_Channel5->CCR &= ~DMA_CCR_HTIE;    // enable only transfer complete interrupt.
+}
+
+void initDAC()
+{
+    // DAC2_CH1, used for VMCONT
+    LL_DAC_InitTypeDef DAC_InitStruct = {
+        .TriggerSource = LL_DAC_TRIG_SOFTWARE,
+        .WaveAutoGeneration = LL_DAC_WAVE_AUTO_GENERATION_NONE,
+        .OutputBuffer = LL_DAC_OUTPUT_BUFFER_ENABLE,
+        .OutputConnection = LL_DAC_OUTPUT_CONNECT_GPIO,
+        .OutputMode = LL_DAC_OUTPUT_MODE_NORMAL
+    };
+    LL_DAC_Init(DAC2, LL_DAC_CHANNEL_1, &DAC_InitStruct);
+    LL_DAC_Enable(DAC2, LL_DAC_CHANNEL_1);
+    while (DAC2->SR & DAC_SR_DAC1RDY) {}    // wait until DAC is ready
+
+    // DAC3_CH1, used for COMP3
+    DAC_InitStruct = LL_DAC_InitTypeDef{
+        .TriggerSource = LL_DAC_TRIG_SOFTWARE,
+        .WaveAutoGeneration = LL_DAC_WAVE_AUTO_GENERATION_NONE,
+        .OutputBuffer = LL_DAC_OUTPUT_BUFFER_DISABLE,
+        .OutputConnection = LL_DAC_OUTPUT_CONNECT_INTERNAL,
+        .OutputMode = LL_DAC_OUTPUT_MODE_NORMAL
+    };
+    LL_DAC_Init(DAC3, LL_DAC_CHANNEL_1, &DAC_InitStruct);
+    LL_DAC_Enable(DAC3, LL_DAC_CHANNEL_1);
+    while (DAC3->SR & DAC_SR_DAC1RDY) {}    // wait until DAC is ready
+
+
+    DAC2->DHR12R1 = 4095;
+    DAC3->DHR12R1 = 4095;
+}
+
+void initCOMP()
+{
+    LL_COMP_InitTypeDef COMP_InitStruct = {
+        .InputPlus = LL_COMP_INPUT_PLUS_IO2,        // PC1
+        .InputMinus = LL_COMP_INPUT_MINUS_DAC3_CH1,
+        .InputHysteresis = LL_COMP_HYSTERESIS_NONE,
+        .OutputPolarity = LL_COMP_OUTPUT_LEVEL_HIGH,
+        .OutputBlankingSource = LL_COMP_BLANKINGSRC_NONE
+    };
+
+    LL_COMP_Init(COMP3, &COMP_InitStruct);
+    COMP3->CSR |= COMP_CSR_EN;
+}
+
+void initEXTI()
+{
+    // COMP3
+    LL_EXTI_InitTypeDef EXTI_InitStruct = {
+        .Line_0_31 = LL_EXTI_LINE_29,
+        .LineCommand = ENABLE,
+        .Mode = LL_EXTI_MODE_IT,
+        .Trigger = LL_EXTI_TRIGGER_FALLING
+    };
+    LL_EXTI_Init(&EXTI_InitStruct);
+
+    enableInterruptWithPrio(COMP1_2_3_IRQn, 0);
 }
 
 void BSP_Init()
@@ -700,7 +807,10 @@ void BSP_Init()
     initADC();
     initOpamp();
     initDMA();
-    
+    initDAC();
+    initCOMP();
+    initEXTI();
+
     // enable timer. DIR bit aligns timer update event with either peak or through.
     pwm_timer->CR1 |= TIM_CR1_CEN;
 }
@@ -709,21 +819,46 @@ extern "C"
 {
     void DMA1_Channel5_IRQHandler(void)
     {
-        // DMA1->IFCR = 0xFFFFFFFF;
-        if (DMA1->ISR | DMA_IFCR_CTCIF5) {
+        if (DMA1->ISR | DMA_ISR_TCIF5) {
             if (bsp.pwm_callback) {
                 bsp.pwm_callback();
             }
+
             DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CTCIF5 | DMA_IFCR_CHTIF5;
         } else {
             DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CHTIF5;
         }
-        
+    }
+
+    void COMP1_2_3_IRQHandler(void)
+    {
+        if (EXTI->PR1 & LL_EXTI_LINE_29) {
+            EXTI->PR1 = LL_EXTI_LINE_29;
+            EXTI->EMR1 |= LL_EXTI_LINE_29;  // mask interrupt to save cycles
+
+            // disable the boost
+            DAC2->DHR12R1 = 4095;
+            bsp.vsys_high_cycles = 0;
+        }
     }
 
     void TIM1_UP_TIM16_IRQHandler(void)
     {
         pwm_timer->SR &= ~TIM_SR_UIF;
+
+        bool vsys_high = bool(COMP3->CSR & COMP_CSR_VALUE_Msk);
+        bool interrupt_pending = bool(EXTI->PR1 & LL_EXTI_LINE_29);
+        if (vsys_high && !interrupt_pending) {
+            bsp.vsys_high_cycles++;
+        } else {
+            bsp.vsys_high_cycles = 0;
+        }
+
+        if (bsp.vsys_high_cycles >= 2) {
+            // enable boost
+            DAC2->DHR12R1 = bsp.boost_set_value;
+            EXTI->EMR1 &= ~LL_EXTI_LINE_29;  // enable comp interrupt
+        }
     }
 }
 
@@ -764,13 +899,6 @@ void BSP_AttachPWMInterrupt(std::function<void()> fn)
     __DSB();
     __ISB();
     __enable_irq();
-    
-    // // enable/disable the pwm timer interrupt
-    // if (bsp.pwm_callback) {
-    //     pwm_timer->DIER |= TIM_DIER_UIE;
-    // } else {
-    //     pwm_timer->DIER &= ~TIM_DIER_UIE;
-    // }
 
     // tmp destructor called about here
 }
@@ -866,7 +994,7 @@ float BSP_ReadPotentiometer()
     return 0;   // not supported
 }
 
-float BSP_ReadTemperatureOnboardNTC() 
+float BSP_ReadTemperatureOnboardNTC()
 {
     return 0;   // not supported
 }
@@ -883,9 +1011,41 @@ float BSP_ReadVBus()
     return adc_voltage * multiplier;
 }
 
+float BSP_ReadVSYS()
+{
+    float adc_voltage = bsp.vsys_sense * (ADC_VOLTAGE / ADC_SCALE);
+    const float multiplier = (10 + 10) / 10.f;
+    return adc_voltage * multiplier;
+}
+
 float BSP_ReadChipAnalogVoltage()
 {
     return __LL_ADC_CALC_VREFANALOG_VOLTAGE(bsp.vrefint, LL_ADC_RESOLUTION_12B) * 0.001f;
+}
+
+void BSP_SetBoostEnable(bool enable)
+{
+    digitalWrite(A_BOOST_EN, enable);
+}
+
+void BSP_SetBoostVoltage(float boost_voltage)
+{
+    // min ~12.0
+    // max ~36.5
+
+    float fb = 1.229f;
+    float rtop = 1000000;
+    float rbot = 47000;
+    float rdac = 133000;
+    float vdac = (fb * (1 + rtop / rbot + rtop / rdac) - boost_voltage) * (rdac / rtop);
+    int value = min(4095, max(0, int(vdac * (4095 / ADC_VOLTAGE))));
+
+    bsp.boost_set_value = value;
+}
+
+void BSP_SetBoostMinimumInputVoltage(float voltage)
+{
+    DAC3->DHR12R1 = (voltage / 2) * (ADC_SCALE / ADC_VOLTAGE);
 }
 
 #endif

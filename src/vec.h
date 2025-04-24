@@ -8,6 +8,10 @@ struct Vec2f {
     Vec2f(float a, float b)
     : a(a), b(b) {}
 
+    float norm() {
+        return sqrtf(a*a + b*b);
+    }
+
     float a;
     float b;
 };
@@ -31,11 +35,11 @@ struct Vec3f {
 
     Vec3f const operator+(const Vec3f &other) {
         return Vec3f(a + other.a, b + other.b, c + other.c);
-    }    
+    }
 
     friend float dot(Vec3f l, Vec3f r) {
         return l.a * r.a + l.b * r.b + l.c * r.c;
-    }    
+    }
 
     float a;
     float b;

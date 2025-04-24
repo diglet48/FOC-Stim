@@ -14,7 +14,7 @@ public:
     void init(std::function<void()> emergency_stop_fn);
 
     void play_pulse(
-        Complex p1, Complex p2, Complex p3, 
+        Complex p1, Complex p2, Complex p3,
         float carrier_frequency,
         float pulse_width, float rise_time,
         float estop_current_limit);

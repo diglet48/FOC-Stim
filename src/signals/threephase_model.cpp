@@ -138,8 +138,8 @@ void ThreephaseModel::play_pulse(
     }
     if (!interrupt_finished) {
         // add little tail of zero-voltage commands at the end of the pulse.
-        context[samples + 1 % CONTEXT_SIZE] = {};
-        context[samples + 2 % CONTEXT_SIZE] = {};
+        context[(samples + 1) % CONTEXT_SIZE] = {};
+        context[(samples + 2) % CONTEXT_SIZE] = {};
         producer_index = samples + 2;
     }
 
@@ -184,6 +184,11 @@ void ThreephaseModel::play_pulse(
         float zz1 = abs(dot(d1, p1)) * magnitude_error1 + abs(dot(d2, p1)) * magnitude_error2 + abs(dot(d3, p1)) * magnitude_error3;
         float zz2 = abs(dot(d1, p2)) * magnitude_error1 + abs(dot(d2, p2)) * magnitude_error2 + abs(dot(d3, p2)) * magnitude_error3;
         float zz3 = abs(dot(d1, p3)) * magnitude_error1 + abs(dot(d2, p3)) * magnitude_error2 + abs(dot(d3, p3)) * magnitude_error3;
+        // only take small step sizes to avoid oscillating behavior at high volume/pulsewidth
+        const float step_size =  .005f;
+        zz1 = _constrain(zz1, -step_size, 1/step_size);
+        zz2 = _constrain(zz2, -step_size, 1/step_size);
+        zz3 = _constrain(zz3, -step_size, 1/step_size);
         z1 = z1 * (1 + zz1);
         z2 = z2 * (1 + zz2);
         z3 = z3 * (1 + zz3);
@@ -362,8 +367,6 @@ void ThreephaseModel::perform_one_update_step()
     float dx2 = context[i_plus_one].i2_cmd - context[i_minus_one].i2_cmd;
     float dx3 = context[i_plus_one].i3_cmd - context[i_minus_one].i3_cmd;
 
-
-
 #if defined(CURRENT_SENSE_SCALE_FULL)
     const float minimum_current = infinityf();
 #elif defined(CURRENT_SENSE_SCALE_HALF)
@@ -372,8 +375,8 @@ void ThreephaseModel::perform_one_update_step()
 #error unknown current sense method
 #endif
 
-    float gamma1 = -0.1f;
-    float gamma2 = -0.1f;
+    float gamma1 = -0.005f;
+    float gamma2 = -0.01f;
     if (context[i].i1_cmd < minimum_current) {
         magnitude_error1 += gamma1 * (context[i].i1_cmd * err1);
         angle_error1 += gamma2 * (dx1 * err1);

@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <Arduino.h>
 
+#include "complex.h"
+
 struct MainLoopTraceLine
 {
     uint32_t t_start;
@@ -12,11 +14,15 @@ struct MainLoopTraceLine
     uint32_t dt_logs;
     int skipped_update_steps;
     float v_drive_max;
-    float max_recorded_current_neutral;
-    float max_recorded_current_left;
-    float max_recorded_current_right;
+    float i_max_a;
+    float i_max_b;
+    float i_max_c;
+    float i_max_d;
     float amplitude;
-    float R_neutral, R_left, R_right, L;
+    Complex Z_a;
+    Complex Z_b;
+    Complex Z_c;
+    Complex Z_d;
 };
 
 class Trace
@@ -50,28 +56,29 @@ public:
         }
         Serial.println();
         Serial.printf("mainloop signals:\r\n");
-        Serial.printf("   v_drive|   max I_N|   max I_L|   max I_R| amplitude|\r\n");
+        Serial.printf("   v_drive|   max I_a|   max I_b|   max I_c|   max I_d| amplitude|\r\n");
         for (int i = 0; i < MAINLOOP_NUM_ENTRIES; i++)
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
-            Serial.printf("%10f %10f %10f %10f %10f\r\n",
+            Serial.printf("%10f %10f %10f %10f %10f %10f\r\n",
                           p->v_drive_max,
-                          p->max_recorded_current_neutral,
-                          p->max_recorded_current_left,
-                          p->max_recorded_current_right,
+                          p->i_max_a,
+                          p->i_max_b,
+                          p->i_max_c,
+                          p->i_max_d,
                           p->amplitude);
         }
         Serial.println();
         Serial.printf("mainloop MRAC:\r\n");
-        Serial.printf(" R_neutral|    R_left|   R_right|         L|\r\n");
+        Serial.printf("       Z_a|       Z_b|       Z_c|       Z_d|         L|\r\n");
         for (int i = 0; i < MAINLOOP_NUM_ENTRIES; i++)
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
-            Serial.printf("%10f %10f %10f %10f\r\n",
-                          p->R_neutral,
-                          p->R_left,
-                          p->R_right,
-                          p->L);
+            Serial.printf("%10f %10f %10f %10f %10f\r\n",
+                          p->Z_a.norm(),
+                          p->Z_b.norm(),
+                          p->Z_c.norm(),
+                          p->Z_d.norm());
         }
         Serial.println();
     }

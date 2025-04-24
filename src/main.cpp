@@ -110,7 +110,6 @@ void setup()
     print_status();
     BSP_WriteStatusLED(1);
 
-    // TODO:
     model.init(&estop_triggered);
 
     status_booted = true;
@@ -125,6 +124,10 @@ void setup()
     BSP_OutputEnable(true, true, true);
 #elif defined(BSP_ENABLE_FOURPHASE)
     BSP_OutputEnable(true, true, true, true);
+    BSP_SetBoostVoltage(16);
+    BSP_SetBoostMinimumInputVoltage(3.8f + 0.2f);
+    // BSP_SetBoostMinimumInputVoltage(3.0f);
+    BSP_SetBoostEnable(true);
 #endif
 }
 
@@ -166,7 +169,7 @@ void loop()
             delay(5000);
         }
     }
-    
+
     // check vbus, stop playing if vbus is too low.
     if (vbus < STIM_PSU_VOLTAGE_MIN) {
         vbus_high_clock.reset();
@@ -231,7 +234,7 @@ void loop()
     MainLoopTraceLine *traceline = trace.next_main_loop_line();
     total_pulse_length_timer.reset();
     traceline->t_start = total_pulse_length_timer.last_update_time;
-    
+
     // calculate stats
     pulse_counter++;
     actual_pulse_frequency_clock.step();
@@ -242,6 +245,7 @@ void loop()
     float pulse_alpha = axes.alpha.get_remap(t0);
     float pulse_beta = axes.beta.get_remap(t0);
     float pulse_gamma = axes.gamma.get_remap(t0);
+
     float pulse_amplitude = axes.volume.get_remap(t0); // pulse amplitude in amps
     float pulse_carrier_frequency = axes.carrier_frequency.get_remap(t0);
     float pulse_frequency = axes.pulse_frequency.get_remap(t0);
@@ -268,12 +272,7 @@ void loop()
     float potmeter_value = inverse_lerp(potmeter_voltage, POTMETER_ZERO_PERCENT_VOLTAGE, POTMETER_HUNDRED_PERCENT_VOLTAGE);
     pulse_amplitude *= potmeter_value;
 
-    // store stats
-    traceline->amplitude = pulse_amplitude;
-    total_pulse_length_timer.step();
-    traceline->dt_compute = total_pulse_length_timer.dt_micros;
-
-
+    // random polarity
     static bool polarity = false;
     static float random_start_angle;
 #ifndef THREEPHASE_PULSE_DEFEAT_RANDOMIZATION
@@ -281,7 +280,14 @@ void loop()
     random_start_angle = _normalizeAngle(random_start_angle + (_2PI * 19 / 97)); // ~1/5
 #endif
 
+    // store stats
+    traceline->amplitude = pulse_amplitude;
+    total_pulse_length_timer.step();
+    traceline->dt_compute = total_pulse_length_timer.dt_micros;
 
+
+
+    // play the pulse
 #if defined(BSP_ENABLE_THREEPHASE)
     ComplexThreephasePoints points3 = project_threephase(
         pulse_amplitude,
@@ -293,7 +299,7 @@ void loop()
         polarity,
         random_start_angle);
 
-    model.play_pulse(points3.p1, points3.p2, points3.p3, 
+    model.play_pulse(points3.p1, points3.p2, points3.p3,
         pulse_carrier_frequency,
         pulse_width, pulse_rise,
         pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
@@ -306,13 +312,41 @@ void loop()
         polarity,
         random_start_angle);
 
-    model.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4, 
+    model.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4,
         pulse_carrier_frequency,
         pulse_width, pulse_rise,
         pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
 #endif
 
-    if (pulse_counter % 3 == 0) {
+
+    // store stats
+    total_pulse_length_timer.step();
+    traceline->dt_play = total_pulse_length_timer.dt_micros;
+
+
+    // store trace
+    {
+        traceline->skipped_update_steps = model.skipped_update_steps;
+        traceline->v_drive_max = model.v_drive_max;
+        auto current_max = model.current_max;
+        traceline->i_max_a = current_max.a;
+        traceline->i_max_b = current_max.b;
+        traceline->i_max_c = current_max.c;
+#if defined(BSP_ENABLE_FOURPHASE)
+        traceline->i_max_d = current_max.d;
+#endif
+
+        traceline->Z_a = model.z1;
+        traceline->Z_b = model.z2;
+        traceline->Z_c = model.z3;
+#if defined(BSP_ENABLE_FOURPHASE)
+        traceline->Z_d = model.z4;
+#endif
+    }
+
+
+    // print debug stats: impedance (xy)
+    if (pulse_counter % 10 == 0) {
         Serial.printf("$");
         Serial.printf("Za:%f:%f|xy ", model.z1.a, model.z1.b);
         Serial.printf("Zb:%f:%f|xy ", model.z2.a, model.z2.b);
@@ -321,52 +355,26 @@ void loop()
         Serial.printf("Zd:%f:%f|xy ", model.z4.a, model.z4.b);
 #endif
         Serial.printf("Z0:%f:%f|xy ", 0.f, 0.f);
-    
-//         Serial.printf("L1:%.1f ", model.z1.b / (_2PI * 1000) * 1e6f);
-//         Serial.printf("L2:%.1f ", model.z2.b / (_2PI * 1000) * 1e6f);
-//         Serial.printf("L3:%.1f ", model.z3.b / (_2PI * 1000) * 1e6f);
-// #if defined(BSP_ENABLE_FOURPHASE)
-//         Serial.printf("L4:%.1f ", model.z4.b / (_2PI * 1000) * 1e6f);
-// #endif
-    
         Serial.println();
     }
 
-    // play the pulse
-    total_pulse_length_timer.step();
-
-    // store stats
-    Clock stats_timer;
-    traceline->dt_play = total_pulse_length_timer.dt_micros;
-
-    // traceline->skipped_update_steps = mrac.skipped_update_steps;
-    // traceline->v_drive_max = mrac.v_drive_max;
-    // traceline->max_recorded_current_neutral = mrac.current_max.a;
-    // traceline->max_recorded_current_left = mrac.current_max.b;
-    // traceline->max_recorded_current_right = mrac.current_max.c;
-
-    // auto resistance = mrac.estimate_resistance();
-    // traceline->R_neutral = resistance.a;
-    // traceline->R_left = resistance.b;
-    // traceline->R_right = resistance.c;
-    // traceline->L = mrac.estimate_inductance();
-
-    // occasionally print some stats..
-    // if ((pulse_counter + 0) % 10 == 0)
-    // {
-    //     Serial.print("$");
-    //     Serial.printf("R_neutral:%.2f ", resistance.a);
-    //     Serial.printf("R_left:%.2f ", resistance.b);
-    //     Serial.printf("R_right:%.2f ", resistance.c);
-    //     // Serial.printf("R_zzz:%.2f ", resistance.d);
-    //     Serial.printf("L:%.2f ", mrac.estimate_inductance() * 1e6f);
-    //     Serial.println();
-    // }
-    // if ((pulse_counter + 2) % 10 == 0)
-    if ((pulse_counter + 2) % 1 == 0)
+    // print debug stats: resistance
+    if (pulse_counter % 10 == 2)
     {
         Serial.print("$");
-        Serial.printf("V_drive:%.3f ", model.v_drive_max);
+        Serial.printf("R_a:%.2f ", model.z1.a);
+        Serial.printf("R_b:%.2f ", model.z2.a);
+        Serial.printf("R_c:%.2f ", model.z3.a);
+#if defined(BSP_ENABLE_FOURPHASE)
+        Serial.printf("R_d:%.2f ", model.z4.a);
+#endif
+        Serial.println();
+    }
+
+    // print debug stats: max current
+    if (pulse_counter % 10 == 4)
+    {
+        Serial.print("$");
         Serial.printf("I_max_a:%f ", abs(model.current_max.a));
         Serial.printf("I_max_b:%f ", abs(model.current_max.b));
         Serial.printf("I_max_c:%f ", abs(model.current_max.c));
@@ -378,12 +386,10 @@ void loop()
         model.v_drive_max = 0;
         model.current_max = {};
     }
-    if ((pulse_counter + 4) % 10 == 0)
-    {
 
-    }
-    if ((pulse_counter + 6) % 10 == 0)
-    {   
+    // print debug stats: rms current
+    if (pulse_counter % 10 == 6)
+    {
         rms_current_clock.step();
         auto rms = model.estimate_rms_current(rms_current_clock.dt_seconds);
         Serial.print("$");
@@ -396,13 +402,23 @@ void loop()
         Serial.println();
         model.current_squared = {};
     }
-    if ((pulse_counter + 8) % 20 == 0)
+
+    // print debug stats: temp / volts
+    if (pulse_counter % 20 == 8)
     {
         Serial.print("$");
+        Serial.printf("V_drive:%.3f ", model.v_drive_max);
         Serial.printf("V_BUS:%.2f ", BSP_ReadVBus());
         Serial.printf("temp_board:%.2f ", BSP_ReadTemperatureOnboardNTC());
         Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureInternal());
         Serial.printf("V_ref:%.5f ", BSP_ReadChipAnalogVoltage());
+        Serial.println();
+    }
+
+    // print debug stats: misc
+    if (pulse_counter % 20 == 18)
+    {
+        Serial.print("$");
         Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
         Serial.printf("model_steps:%i ", model.pulse_length_samples);
         Serial.printf("model_skips:%i ", model.skipped_update_steps);
@@ -410,10 +426,13 @@ void loop()
         Serial.println();
     }
 
-    // if (pulse_interval_random > 0.1) {
-    //     model.debug_stats_teleplot();
-    // }
 
-    stats_timer.step();
-    traceline->dt_logs = stats_timer.dt_micros;
+    // DEBUG
+    if (pulse_interval_random > 0.1) {
+        model.debug_stats_teleplot();
+    }
+
+    // store stats
+    total_pulse_length_timer.step();
+    traceline->dt_logs = total_pulse_length_timer.dt_micros;
 }

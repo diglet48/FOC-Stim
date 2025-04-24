@@ -58,6 +58,10 @@ void BSP_WriteStatusLED(bool on);
 #if defined(ARDUINO_NUCLEO_G474RE)
 void BSP_SetSleep(bool sleep);  // sleep pin to MAX22213. low = device sleeps.
 bool BSP_ReadFault();           // Fault pin to MAX22213. Active low.
+void BSP_SetBoostEnable(bool enable);
+void BSP_SetBoostVoltage(float boost_voltage);
+void BSP_SetBoostMinimumInputVoltage(float voltage);
+float BSP_ReadVSYS();
 #endif
 
 

@@ -427,10 +427,10 @@ void loop()
     }
 
 
-    // DEBUG
-    if (pulse_interval_random > 0.1) {
-        model.debug_stats_teleplot();
-    }
+    // // DEBUG
+    // if (pulse_interval_random > 0.1) {
+    //     model.debug_stats_teleplot();
+    // }
 
     // store stats
     total_pulse_length_timer.step();

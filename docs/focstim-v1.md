@@ -22,7 +22,10 @@ correctly on some computers. It is highly recommended to update the ST-link firm
 Install Visual Studio Code with plugins `platformio` and `teleplot`,
 then build and upload the firmware, instructions below.
 
-Inspect `FOC-Stim/src/config.h` to configure the current limits.
+For this hardware, you must select project `env:disco_b_g431b_esc1`.
+
+If you find that the box is not powerful enough, the current limit can be increased by modifying `TCODE_MAX_CURRENT` in `FOC-Stim/src/bsp/config_g431b_esc1.h`.
+
 
 ![](/docs/images/pio.png)
 

@@ -3,6 +3,7 @@
 
 #include "bsp/config_g431b_esc1.h"
 #include "bsp/config_g474re_max22213_shield.h"
+#include "bsp/config_g474re_focstim_v3.h"
 #include "vec.h"
 #include <functional>
 
@@ -40,29 +41,47 @@ void BSP_SetPWM4Atomic(float a, float b, float c, float d);
 Vec4f BSP_ReadPhaseCurrents4();
 #endif
 
-
-
+#ifdef ARDUINO_B_G431B_ESC1
 void BSP_AdjustCurrentSenseOffsets();
+float BSP_ReadTemperatureOnboardNTC();  // onboard temperature sensor (ESC1)
+#endif
 
 // various sensors
-float BSP_ReadTemperatureInternal();    // stm32 internal temperature sensor.
-float BSP_ReadTemperatureOnboardNTC();  // onboard temperature sensor (ESC1)
+float BSP_ReadTemperatureSTM();         // stm32 internal temperature sensor.
 float BSP_ReadChipAnalogVoltage();      // stm32 vdda
-float BSP_ReadPotentiometer();
+float BSP_ReadPotentiometerPercentage();
 float BSP_ReadVBus();
 
+// LED
+#if defined(ARDUINO_B_G431B_ESC1)
 void BSP_WriteStatusLED(bool on);
+#elif defined(ARDUINO_FOCSTIM_V3)
+
+enum LedPattern {
+    Idle,
+    Error,
+    PlayingVeryLow,
+    PlayingLow,
+    PlayingMedium,
+    PlayingHigh,
+};
+void BSP_WriteLedPattern(LedPattern pattern);
+
+void BSP_WriteGreenLedBrightness(float a);
+void BSP_WriteRedLedBrightness(float a);
+#endif
 
 
-
-#if defined(ARDUINO_NUCLEO_G474RE)
-void BSP_SetSleep(bool sleep);  // sleep pin to MAX22213. low = device sleeps.
+#if defined(ARDUINO_NUCLEO_G474RE) || defined(ARDUINO_FOCSTIM_V3)
 bool BSP_ReadFault();           // Fault pin to MAX22213. Active low.
 void BSP_SetBoostEnable(bool enable);
 void BSP_SetBoostVoltage(float boost_voltage);
 void BSP_SetBoostMinimumInputVoltage(float voltage);
 float BSP_ReadVSYS();
+float BSP_BoostDutyCycle(); // debug, remove
+int BSP_AppTimerTicks();
 #endif
+
 
 
 

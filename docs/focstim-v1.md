@@ -24,7 +24,7 @@ then build and upload the firmware, instructions below.
 
 For this hardware, you must select project `env:disco_b_g431b_esc1`.
 
-If you find that the box is not powerful enough, the current limit can be increased by modifying `TCODE_MAX_CURRENT` in `FOC-Stim/src/bsp/config_g431b_esc1.h`.
+If you find that the box is not powerful enough, the current limit can be increased by modifying `BODY_CURRENT_MAX` in `FOC-Stim/src/bsp/config_g431b_esc1.h`.
 
 
 ![](/docs/images/pio.png)

@@ -17,7 +17,7 @@ public:
     void init(std::function<void()> emergency_stop_fn);
 
     void play_pulse(
-        Complex p1, Complex p2, Complex p3, Complex p4, 
+        Complex p1, Complex p2, Complex p3, Complex p4,
         float carrier_frequency,
         float pulse_width, float rise_time,
         float estop_current_limit);
@@ -36,20 +36,20 @@ public:
     Complex z3 = Complex(MODEL_RESISTANCE_INIT, 0);
     Complex z4 = Complex(MODEL_RESISTANCE_INIT, 0);
 
-    
+
     // log stats
     float v_drive_max = 0;
     float v_min = 0;
     float v_max = 0;
     Vec4f current_squared = Vec4f(0, 0, 0, 0);
     Vec4f current_max = Vec4f(0, 0, 0, 0);
-    
-    static constexpr int CONTEXT_SIZE = 512;
+
+    static constexpr int CONTEXT_SIZE = 256;
     static constexpr int max_producer_queue_length = 20;    // (producer_index - interrupt_index) % CONTEXT_SIZE
     static constexpr int min_producer_queue_length = 10;    // (producer_index - interrupt_index) % CONTEXT_SIZE
     static constexpr int interrupt_headstart = 20;          // (producer_index - interrupt_index) % CONTEXT_SIZE
     static constexpr int max_updater_lag = 50;              // (interrupt_index - updater_index)  % CONTEXT_SIZE
-    
+
     int producer_index;
     int updater_index;
     volatile int interrupt_index;

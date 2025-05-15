@@ -1,3 +1,5 @@
+#if defined(ARDUINO_B_G431B_ESC1)
+
 #include <Arduino.h>
 
 #include "foc_utils.h"
@@ -8,20 +10,12 @@
 #include "complex.h"
 #include "signals/threephase_math.h"
 #include "signals/threephase_model.h"
-#include "signals/fourphase_math.h"
-#include "signals/fourphase_model.h"
 
 #include "bsp/bsp.h"
 
-
 Trace trace{};
 
-#if defined(BSP_ENABLE_THREEPHASE)
 ThreephaseModel model{};
-#elif defined(BSP_ENABLE_FOURPHASE)
-FourphaseModel model{};
-#endif
-
 
 static bool status_booted = false;
 static bool status_vbus = false;
@@ -69,8 +63,8 @@ struct
 {
     TCodeAxis alpha{"L0", 0, -1, 1};
     TCodeAxis beta{"L1", 0, -1, 1};
-    TCodeAxis gamma{"L2", 0, -1, 1};
-    TCodeAxis volume{"V0", 0, 0, TCODE_MAX_CURRENT};
+    // TCodeAxis gamma{"L2", 0, -1, 1};
+    TCodeAxis volume{"V0", 0, 0, BODY_CURRENT_MAX * STIM_WINDING_RATIO};
     TCodeAxis carrier_frequency{"A0", 800, 500, 2000};
     TCodeAxis pulse_frequency{"A1", 50, 1, 100};
     TCodeAxis pulse_width{"A2", 6, 3, 20};
@@ -79,10 +73,10 @@ struct
     TCodeAxis calib_center{"C0", 0, -10, 10};
     TCodeAxis calib_ud{"C1", 0, -10, 10};
     TCodeAxis calib_lr{"C2", 0, -10, 10};
-    TCodeAxis calib_4a{"C3", 0, -10, 10};
-    TCodeAxis calib_4b{"C4", 0, -10, 10};
-    TCodeAxis calib_4c{"C5", 0, -10, 10};
-    TCodeAxis calib_4d{"C6", 0, -10, 10};
+    // TCodeAxis calib_4a{"C3", 0, -10, 10};
+    // TCodeAxis calib_4b{"C4", 0, -10, 10};
+    // TCodeAxis calib_4c{"C5", 0, -10, 10};
+    // TCodeAxis calib_4d{"C6", 0, -10, 10};
 } axes;
 struct {
     TCodeDeviceCommand d0{"0", &tcode_D0};
@@ -119,16 +113,7 @@ void setup()
     }
     print_status();
 
-
-#if defined(BSP_ENABLE_THREEPHASE)
     BSP_OutputEnable(true, true, true);
-#elif defined(BSP_ENABLE_FOURPHASE)
-    BSP_OutputEnable(true, true, true, true);
-    BSP_SetBoostVoltage(16);
-    BSP_SetBoostMinimumInputVoltage(3.8f + 0.2f);
-    // BSP_SetBoostMinimumInputVoltage(3.0f);
-    BSP_SetBoostEnable(true);
-#endif
 }
 
 void loop()
@@ -244,7 +229,7 @@ void loop()
     uint32_t t0 = micros();
     float pulse_alpha = axes.alpha.get_remap(t0);
     float pulse_beta = axes.beta.get_remap(t0);
-    float pulse_gamma = axes.gamma.get_remap(t0);
+    // float pulse_gamma = axes.gamma.get_remap(t0);
 
     float pulse_amplitude = axes.volume.get_remap(t0); // pulse amplitude in amps
     float pulse_carrier_frequency = axes.carrier_frequency.get_remap(t0);
@@ -257,10 +242,10 @@ void loop()
     float calibration_lr = axes.calib_lr.get_remap(t0);
     float calibration_ud = axes.calib_ud.get_remap(t0);
 
-    float calibration_4a = axes.calib_4a.get_remap(t0);
-    float calibration_4b = axes.calib_4b.get_remap(t0);
-    float calibration_4c = axes.calib_4c.get_remap(t0);
-    float calibration_4d = axes.calib_4d.get_remap(t0);
+    // float calibration_4a = axes.calib_4a.get_remap(t0);
+    // float calibration_4b = axes.calib_4b.get_remap(t0);
+    // float calibration_4c = axes.calib_4c.get_remap(t0);
+    // float calibration_4d = axes.calib_4d.get_remap(t0);
 
     float pulse_active_duration = pulse_width / pulse_carrier_frequency;
     float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);
@@ -268,8 +253,7 @@ void loop()
     pulse_total_duration = pulse_active_duration + pulse_pause_duration;
 
     // mix in potmeter
-    float potmeter_voltage = BSP_ReadPotentiometer();
-    float potmeter_value = inverse_lerp(potmeter_voltage, POTMETER_ZERO_PERCENT_VOLTAGE, POTMETER_HUNDRED_PERCENT_VOLTAGE);
+    float potmeter_value = BSP_ReadPotentiometerPercentage();
     pulse_amplitude *= potmeter_value;
 
     // random polarity
@@ -285,10 +269,7 @@ void loop()
     total_pulse_length_timer.step();
     traceline->dt_compute = total_pulse_length_timer.dt_micros;
 
-
-
     // play the pulse
-#if defined(BSP_ENABLE_THREEPHASE)
     ComplexThreephasePoints points3 = project_threephase(
         pulse_amplitude,
         pulse_alpha,
@@ -303,26 +284,10 @@ void loop()
         pulse_carrier_frequency,
         pulse_width, pulse_rise,
         pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
-#elif defined(BSP_ENABLE_FOURPHASE)
-    ComplexFourphasePoints points4 = project_fourphase(
-        pulse_amplitude,
-        pulse_alpha, pulse_beta, pulse_gamma,
-        calibration_center,
-        calibration_4a, calibration_4b, calibration_4c, calibration_4d,
-        polarity,
-        random_start_angle);
-
-    model.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4,
-        pulse_carrier_frequency,
-        pulse_width, pulse_rise,
-        pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
-#endif
-
 
     // store stats
     total_pulse_length_timer.step();
     traceline->dt_play = total_pulse_length_timer.dt_micros;
-
 
     // store trace
     {
@@ -332,16 +297,16 @@ void loop()
         traceline->i_max_a = current_max.a;
         traceline->i_max_b = current_max.b;
         traceline->i_max_c = current_max.c;
-#if defined(BSP_ENABLE_FOURPHASE)
-        traceline->i_max_d = current_max.d;
-#endif
+// #if defined(BSP_ENABLE_FOURPHASE)
+        // traceline->i_max_d = current_max.d;
+// #endif
 
         traceline->Z_a = model.z1;
         traceline->Z_b = model.z2;
         traceline->Z_c = model.z3;
-#if defined(BSP_ENABLE_FOURPHASE)
-        traceline->Z_d = model.z4;
-#endif
+// #if defined(BSP_ENABLE_FOURPHASE)
+        // traceline->Z_d = model.z4;
+// #endif
     }
 
 
@@ -351,9 +316,9 @@ void loop()
         Serial.printf("Za:%f:%f|xy ", model.z1.a, model.z1.b);
         Serial.printf("Zb:%f:%f|xy ", model.z2.a, model.z2.b);
         Serial.printf("Zc:%f:%f|xy ", model.z3.a, model.z3.b);
-#if defined(BSP_ENABLE_FOURPHASE)
-        Serial.printf("Zd:%f:%f|xy ", model.z4.a, model.z4.b);
-#endif
+// #if defined(BSP_ENABLE_FOURPHASE)
+        // Serial.printf("Zd:%f:%f|xy ", model.z4.a, model.z4.b);
+// #endif
         Serial.printf("Z0:%f:%f|xy ", 0.f, 0.f);
         Serial.println();
     }
@@ -365,9 +330,9 @@ void loop()
         Serial.printf("R_a:%.2f ", model.z1.a);
         Serial.printf("R_b:%.2f ", model.z2.a);
         Serial.printf("R_c:%.2f ", model.z3.a);
-#if defined(BSP_ENABLE_FOURPHASE)
-        Serial.printf("R_d:%.2f ", model.z4.a);
-#endif
+// #if defined(BSP_ENABLE_FOURPHASE)
+        // Serial.printf("R_d:%.2f ", model.z4.a);
+// #endif
         Serial.println();
     }
 
@@ -378,9 +343,9 @@ void loop()
         Serial.printf("I_max_a:%f ", abs(model.current_max.a));
         Serial.printf("I_max_b:%f ", abs(model.current_max.b));
         Serial.printf("I_max_c:%f ", abs(model.current_max.c));
-#if defined(BSP_ENABLE_FOURPHASE)
-        Serial.printf("I_max_d:%f ", abs(model.current_max.d));
-#endif
+// #if defined(BSP_ENABLE_FOURPHASE)
+        // Serial.printf("I_max_d:%f ", abs(model.current_max.d));
+// #endif
         Serial.printf("I_max_cmd:%f ", abs(pulse_amplitude));
         Serial.println();
         model.v_drive_max = 0;
@@ -396,9 +361,9 @@ void loop()
         Serial.printf("rms_a:%f ", rms.a);
         Serial.printf("rms_b:%f ", rms.b);
         Serial.printf("rms_c:%f ", rms.c);
-#if defined(BSP_ENABLE_FOURPHASE)
-        Serial.printf("rms_d:%f ", rms.d);
-#endif
+// #if defined(BSP_ENABLE_FOURPHASE)
+        // Serial.printf("rms_d:%f ", rms.d);
+// #endif
         Serial.println();
         model.current_squared = {};
     }
@@ -410,7 +375,7 @@ void loop()
         Serial.printf("V_drive:%.3f ", model.v_drive_max);
         Serial.printf("V_BUS:%.2f ", BSP_ReadVBus());
         Serial.printf("temp_board:%.2f ", BSP_ReadTemperatureOnboardNTC());
-        Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureInternal());
+        Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureSTM());
         Serial.printf("V_ref:%.5f ", BSP_ReadChipAnalogVoltage());
         Serial.println();
     }
@@ -436,3 +401,5 @@ void loop()
     total_pulse_length_timer.step();
     traceline->dt_logs = total_pulse_length_timer.dt_micros;
 }
+
+#endif

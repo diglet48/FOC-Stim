@@ -64,7 +64,7 @@ void FourphaseModel::play_pulse(
     for (int i = 0; i < CONTEXT_SIZE; i++) {
         context[i] = {};
     }
-    
+
     // compute voltage with these equations:
     // p1 * z1 = v1 - N
     // p2 * z2 = v2 - N
@@ -79,9 +79,9 @@ void FourphaseModel::play_pulse(
 
     // check for max vdrive
     float v_drive = find_v_drive(v1, v2, v3, v4);
-    if (v_drive > STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE) {
+    if (v_drive > STIM_PWM_MAX_VDRIVE) {
         // if vdrive is too high, reduce current/voltage
-        float factor = (STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE) / v_drive;
+        float factor = STIM_PWM_MAX_VDRIVE / v_drive;
         p1 = p1 * factor;
         p2 = p2 * factor;
         p3 = p3 * factor;
@@ -125,7 +125,7 @@ void FourphaseModel::play_pulse(
         } else {
             envelope = Complex(1, 0);
         }
-        
+
         Complex q = proj * envelope.a;
         proj = proj * rotator;
         context[i % CONTEXT_SIZE].i1_cmd = (p1 * q).a;  // desired current, used for update step.
@@ -198,12 +198,17 @@ void FourphaseModel::play_pulse(
         float zz2 = abs(dot(d1, p2)) * magnitude_error1 + abs(dot(d2, p2)) * magnitude_error2 + abs(dot(d3, p2)) * magnitude_error3 + abs(dot(d4, p2)) * magnitude_error4;
         float zz3 = abs(dot(d1, p3)) * magnitude_error1 + abs(dot(d2, p3)) * magnitude_error2 + abs(dot(d3, p3)) * magnitude_error3 + abs(dot(d4, p3)) * magnitude_error4;
         float zz4 = abs(dot(d1, p4)) * magnitude_error1 + abs(dot(d2, p4)) * magnitude_error2 + abs(dot(d3, p4)) * magnitude_error3 + abs(dot(d4, p4)) * magnitude_error4;
+        const float step_size =  .005f;
+        zz1 = _constrain(zz1, -step_size, 1/step_size);
+        zz2 = _constrain(zz2, -step_size, 1/step_size);
+        zz3 = _constrain(zz3, -step_size, 1/step_size);
+        zz4 = _constrain(zz4, -step_size, 1/step_size);
         z1 = z1 * (1 + zz1);
         z2 = z2 * (1 + zz2);
         z3 = z3 * (1 + zz3);
         z4 = z4 * (1 + zz4);
     }
-    
+
     // apply impedance angle error
     {
         float zz1 = abs(dot(d1, p1)) * angle_error1 + abs(dot(d2, p1)) * angle_error2 + abs(dot(d3, p1)) * angle_error3 + abs(dot(d4, p1)) * angle_error4;
@@ -276,7 +281,7 @@ void FourphaseModel::interrupt_fn()
     std::atomic_signal_fence(std::memory_order_acquire);
 
     if (interrupt_finished) {
-        return; 
+        return;
     }
     if (queued_items == 0) {
         if (i == 0) {
@@ -296,7 +301,7 @@ void FourphaseModel::interrupt_fn()
             return; // wait for the queue to be populated with at least a few items before starting.
         }
     }
-    
+
     // compute duty cycle center
     float v_min = min({
         context[read_index].v1_cmd,
@@ -310,21 +315,28 @@ void FourphaseModel::interrupt_fn()
         context[read_index].v3_cmd,
         context[read_index].v4_cmd,
     });
-    float center = STIM_PSU_VOLTAGE / 2;
-    if (center + v_max > (STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE)) {
-        center = (STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE) - v_max;
+    // float vbus = 15;
+#ifdef STIM_DYNAMIC_VOLTAGE
+    float vbus = BSP_ReadVBus();
+    vbus = max(vbus, STIM_PWM_MAX_VDRIVE);
+#else
+    float vbus = STIM_PSU_VOLTAGE;
+#endif
+    float center = vbus / 2;
+    if (center + v_max > (vbus * STIM_PWM_MAX_DUTY_CYCLE)) {
+        center = (vbus * STIM_PWM_MAX_DUTY_CYCLE) - v_max;
     }
 
     // write pwm
     BSP_SetPWM4(
-        (context[read_index].v1_cmd + center) / STIM_PSU_VOLTAGE,
-        (context[read_index].v2_cmd + center) / STIM_PSU_VOLTAGE,
-        (context[read_index].v3_cmd + center) / STIM_PSU_VOLTAGE,
-        (context[read_index].v4_cmd + center) / STIM_PSU_VOLTAGE
+        (context[read_index].v1_cmd + center) / vbus,
+        (context[read_index].v2_cmd + center) / vbus,
+        (context[read_index].v3_cmd + center) / vbus,
+        (context[read_index].v4_cmd + center) / vbus
     );
-    
+
     // read currents
-    if (i >= 2) {    
+    if (i >= 2) {
         context[write_index].i1_meas = currents.a;
         context[write_index].i2_meas = currents.b;
         context[write_index].i3_meas = currents.c;
@@ -344,7 +356,7 @@ void FourphaseModel::interrupt_fn()
             max(current_max.d, abs(currents.d))
         );
     }
-    
+
     // check current limits
     if (abs(currents.a) > current_limit ||
         abs(currents.b) > current_limit ||
@@ -393,8 +405,6 @@ void FourphaseModel::perform_one_update_step()
     float dx2 = context[i_plus_one].i2_cmd - context[i_minus_one].i2_cmd;
     float dx3 = context[i_plus_one].i3_cmd - context[i_minus_one].i3_cmd;
     float dx4 = context[i_plus_one].i4_cmd - context[i_minus_one].i4_cmd;
-
-
 
 #if defined(CURRENT_SENSE_SCALE_FULL)
     const float minimum_current = infinityf();

@@ -71,9 +71,9 @@ void ThreephaseModel::play_pulse(
 
     // check for max vdrive
     float v_drive = find_v_drive(v1, v2, v3);
-    if (v_drive > STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE) {
+    if (v_drive > STIM_PWM_MAX_VDRIVE) {
         // if vdrive is too high, reduce current/voltage
-        float factor = (STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE) / v_drive;
+        float factor = STIM_PWM_MAX_VDRIVE / v_drive;
         p1 = p1 * factor;
         p2 = p2 * factor;
         p3 = p3 * factor;
@@ -290,16 +290,22 @@ void ThreephaseModel::interrupt_fn()
         context[read_index].v2_cmd,
         context[read_index].v3_cmd,
     });
-    float center = STIM_PSU_VOLTAGE / 2;
-    if (center + v_max > (STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE)) {
-        center = (STIM_PSU_VOLTAGE * STIM_PWM_MAX_DUTY_CYCLE) - v_max;
+    #ifdef STIM_DYNAMIC_VOLTAGE
+    float vbus = BSP_ReadVBus();
+    vbus = max(vbus, STIM_PWM_MAX_VDRIVE);
+#else
+    float vbus = STIM_PSU_VOLTAGE;
+#endif
+    float center = vbus / 2;
+    if (center + v_max > (vbus * STIM_PWM_MAX_DUTY_CYCLE)) {
+        center = (vbus * STIM_PWM_MAX_DUTY_CYCLE) - v_max;
     }
 
     // write pwm
     BSP_SetPWM3(
-        (context[read_index].v1_cmd + center) / STIM_PSU_VOLTAGE, // TODO: precompute?
-        (context[read_index].v2_cmd + center) / STIM_PSU_VOLTAGE,
-        (context[read_index].v3_cmd + center) / STIM_PSU_VOLTAGE
+        (context[read_index].v1_cmd + center) / vbus, // TODO: precompute?
+        (context[read_index].v2_cmd + center) / vbus,
+        (context[read_index].v3_cmd + center) / vbus
     );
 
     // read currents

@@ -2,9 +2,13 @@
 #ifndef FOCSTIM_CONFIG_G474RE_MAX22213_SHIELD_H
 #define FOCSTIM_CONFIG_G474RE_MAX22213_SHIELD_H
 
+// transformer winding ratio
+#define STIM_WINDING_RATIO 10.0f    // xicon 42TU200, middle pin on driving side
+#define STIM_WINDING_RATIO_SQ (STIM_WINDING_RATIO * STIM_WINDING_RATIO)
+
 // current limits
-#define TCODE_MAX_CURRENT (1.2f / 2)          // in amps
-#define ESTOP_CURRENT_LIMIT_MARGIN 0.15f     // accounts for measurement noise
+#define BODY_CURRENT_MAX  0.12f              // in amps
+#define ESTOP_CURRENT_LIMIT_MARGIN 0.15f     // accounts for measurement noise, driving current
 
 // board temperature limits
 #define MAXIMUM_TEMPERATURE 100.f    // degrees celsius.

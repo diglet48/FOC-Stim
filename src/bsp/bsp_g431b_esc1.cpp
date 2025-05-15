@@ -2,6 +2,7 @@
 #include "bsp.h"
 
 #include "utils.h"
+#include "foc_utils.h"
 
 #include "stm32g4xx_hal.h"
 #include <Arduino.h>
@@ -759,10 +760,10 @@ Vec3f BSP_ReadPhaseCurrents3()
         (cc - midpoint));
 }
 
-float BSP_ReadPotentiometer()
+float BSP_ReadPotentiometerPercentage()
 {
-    float factor = ADC_VOLTAGE / ADC_SCALE;
-    return bsp.potentiometer * factor;
+    float value = inverse_lerp(bsp.potentiometer_filtered, POTMETER_ZERO_PERCENT_VALUE, POTMETER_HUNDRED_PERCENT_VALUE);
+    return _constrain(value, 0.f, 1.f);
 }
 
 float BSP_ReadTemperatureOnboardNTC()
@@ -797,7 +798,7 @@ void BSP_WriteStatusLED(bool on)
     digitalWrite(LED_BUILTIN, on);
 }
 
-float BSP_ReadTemperatureInternal()
+float BSP_ReadTemperatureSTM()
 {
     float ts_data = bsp.v_ts * (bsp.analog_voltage / TEMPSENSOR_CAL_VREFANALOG * 1000);
     float offset = TEMPSENSOR_CAL1_TEMP;

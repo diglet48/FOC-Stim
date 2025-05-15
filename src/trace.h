@@ -69,7 +69,7 @@ public:
                           p->amplitude);
         }
         Serial.println();
-        Serial.printf("mainloop MRAC:\r\n");
+        Serial.printf("mainloop model:\r\n");
         Serial.printf("       Z_a|       Z_b|       Z_c|       Z_d|         L|\r\n");
         for (int i = 0; i < MAINLOOP_NUM_ENTRIES; i++)
         {

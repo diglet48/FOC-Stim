@@ -57,6 +57,8 @@
 #define A_VSYS_SENSE PB15   // ADC2_IN15
 #define A_VSYS_COMP  PB1    // COMP1_INP
 
+#define A_PGOOD      PB5
+
 #define A_BOOST_EN   PB10
 #define A_BOOST_CON  PA4    // DAC1_OUT1
 
@@ -184,11 +186,11 @@ void initGPIO()
     pinMode(A_EN4, OUTPUT);
     pinMode(A_OUT1_EN, OUTPUT);
 
-    pinMode(A_BOOST_EN, OUTPUT);
-    digitalWrite(A_BOOST_EN, 0);
     pinMode(A_VSYS_SENSE, INPUT_ANALOG);
     pinMode(A_POT, INPUT_ANALOG);
     pinMode(A_VM_SENSE, INPUT_ANALOG);
+
+    pinMode(A_PGOOD, INPUT);
 
     // pinMode(A_LED_GREEN, OUTPUT);
     // pinMode(A_LED_RED, OUTPUT);
@@ -243,6 +245,13 @@ void initGPIO()
     LL_GPIO_ResetOutputPin(GPIOB, GPIO_InitStruct.Pin);
     LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+    // BOOST_EN, open drain with pullup
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+    GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_10;    // PB10
+    LL_GPIO_ResetOutputPin(GPIOB, GPIO_InitStruct.Pin);
+    LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     // default states
     digitalWrite(A_HFS, MAX22213_HFS);
@@ -834,7 +843,6 @@ void initDMA()
     // enableInterruptWithPrio(DMA1_Channel3_IRQn, 0);
     // enableInterruptWithPrio(DMA1_Channel4_IRQn, 0);
     enableInterruptWithPrio(DMA1_Channel5_IRQn, 0);
-    // DMA1_Channel2->CCR &= ~DMA_CCR_HTIE;    // enable only transfer complete interrupt.
     DMA1_Channel5->CCR &= ~DMA_CCR_HTIE;    // enable only transfer complete interrupt.
 }
 
@@ -851,9 +859,16 @@ void initDAC()
         .OutputConnection = LL_DAC_OUTPUT_CONNECT_GPIO,
         .OutputMode = LL_DAC_OUTPUT_MODE_NORMAL
     };
-    LL_DAC_Init(boost_control_dac, LL_DAC_CHANNEL_1, &DAC_InitStruct);
+    ErrorStatus status;
+    status = LL_DAC_Init(boost_control_dac, LL_DAC_CHANNEL_1, &DAC_InitStruct);
+    if (status != ErrorStatus::SUCCESS)
+    {
+        Serial.printf("DAC initialization failed: %i\n", status);
+        Error_Handler();
+    }
     LL_DAC_Enable(boost_control_dac, LL_DAC_CHANNEL_1);
-    while (boost_control_dac->SR & DAC_SR_DAC1RDY) {}    // wait until DAC is ready
+    // while (boost_control_dac->SR & DAC_SR_DAC1RDY) {}    // wait until DAC is ready
+
 
     // DAC3_CH1, used for COMP1
     DAC_InitStruct = LL_DAC_InitTypeDef{
@@ -863,9 +878,14 @@ void initDAC()
         .OutputConnection = LL_DAC_OUTPUT_CONNECT_INTERNAL,
         .OutputMode = LL_DAC_OUTPUT_MODE_NORMAL
     };
-    LL_DAC_Init(vsys_comp_dac, LL_DAC_CHANNEL_1, &DAC_InitStruct);
+    status = LL_DAC_Init(vsys_comp_dac, LL_DAC_CHANNEL_1, &DAC_InitStruct);
+    if (status != ErrorStatus::SUCCESS)
+    {
+        Serial.printf("DAC initialization failed: %i\n", status);
+        Error_Handler();
+    }
     LL_DAC_Enable(vsys_comp_dac, LL_DAC_CHANNEL_1);
-    while (vsys_comp_dac->SR & DAC_SR_DAC1RDY) {}    // wait until DAC is ready
+    // while (vsys_comp_dac->SR & DAC_SR_DAC1RDY) {}    // wait until DAC is ready
 
     boost_control_dac->DHR12R1 = DAC_MAX_VALUE;
     vsys_comp_dac->DHR12R1 = DAC_MAX_VALUE;
@@ -1187,7 +1207,12 @@ float BSP_ReadChipAnalogVoltage()
 
 void BSP_SetBoostEnable(bool enable)
 {
-    digitalWrite(A_BOOST_EN, enable);
+    // digitalWrite(A_BOOST_EN, enable);
+    if (enable) {
+        HAL_GPIO_WritePin(GPIOB, LL_GPIO_PIN_10, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(GPIOB, LL_GPIO_PIN_10, GPIO_PIN_RESET);
+    }
 }
 
 void BSP_SetBoostVoltage(float boost_voltage)
@@ -1237,6 +1262,11 @@ void BSP_WriteRedLedBrightness(float a)
 void BSP_WriteLedPattern(LedPattern pattern)
 {
     bsp.led_pattern = pattern;
+}
+
+bool BSP_ReadPGood()
+{
+    return digitalRead(A_PGOOD);
 }
 
 #endif

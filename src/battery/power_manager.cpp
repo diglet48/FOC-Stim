@@ -57,32 +57,29 @@ bool PowerManager::detect_battery()
     while (millis() - start_time < BATTERY_DETECTION_TIME_MS)
     {
         uint16_t dt = lipo.deviceType();
-        if (dt == BQ27441_DEVICE_ID) {
-            // Serial.printf("comms returned %u\r\n", dt);
-        } else {
-            // Serial.printf("comms error %u\r\n", dt);
+        if (dt != BQ27441_DEVICE_ID) {
+            // connection unstable, battery must not be present.
             return false;
         }
         delay(50);
     }
 
+    // connection stable. Battery must be present.
     return true;
 }
 
 void PowerManager::adjust_board_voltages()
 {
+    // battery               -> vbat - 0.4
+    // no battery, usb power -> 4.3v
     if (is_battery_present) {
-        Clock k;
-
         float voltage = lipo.voltage() * 0.001f;
-        k.step();
         // battery present, set boost enable threshold
         // slightly below battery voltage
-        Serial.printf("vbat: %f, %u\r\n", voltage, k.dt_micros);
-        BSP_SetBoostMinimumInputVoltage(voltage - 0.2f);
+        BSP_SetBoostMinimumInputVoltage(voltage - 0.4f);
     } else {
         // no battery present, set static boost enable threshold
-        // to avoid starting the 3v3 buck/boost.
+        // to avoid starving the 3v3 buck/boost.
         BSP_SetBoostMinimumInputVoltage(4.3);
     }
 }

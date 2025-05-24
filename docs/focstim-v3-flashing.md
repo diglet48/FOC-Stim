@@ -25,11 +25,16 @@ Due to various hardware bugs, the STM32 crashes on boot. Extra steps are needed 
 
 **To enter the bootloader:** turn on the power, then briefly short the reset pin to ground.
 
-In the bootloader, the firmware can be programmed with STM32CubeProg. (default settings, 115200 baud, RTS/DTR low).
+In the bootloader, the following actions can be performed with the STM32CubeProgrammer CLI:
 
-You must program the .elf file, not the .bin file. The .bin file does not work due to split memory bank architecture of the 128Kb chips.
+Erase the flash: `.\STM32_Programmer_CLI.exe -c port=COM4 -e all`
 
-If you get an error reading the option bytes, this appears to be a bug in the STM32CubeProgrammer GUI. You can fix it with this command: `.\STM32_Programmer_CLI.exe -c port=COM4 -e all`. (replace COM4 with your board COM port).
+Program the firmware: `.\STM32_Programmer_CLI.exe -c port=COM4 -d firmware.elf`
+(`.hex` also works. `.bin` does not work)
+
+Start the firmware: `.\STM32_Programmer_CLI.exe -c port=COM4 -g 0x08000000`
+
+Using the GUI to program the board will often fail.
 
 
 **To start the board:** short the SCL / Boot0 pin to ground before flipping the power switch. If done succesfully, one of the LEDs will turn on.
@@ -46,7 +51,7 @@ Upload the .elf firmware using your debug probe. I use segger J-Link with ozone 
 A hardware bug prevents the firmware from starting normally. Use one of these methods to start the firmware:
 * Use the ozone debugger to 'reset program to main (F4)'.
 * Short the SCL pin to ground, then reboot the board by shorting the reset pin or flip the power switch.
-* Use STM32CubeProgrammer to set option bit `nSWBOOT` to 0. You can then boot the board normally. Only do this if you have a jtag probe!
+* Use STM32CubeProgrammer to set option bit `nSWBOOT` to 0. You can then boot the board normally. Only do this if you have a debug probe!
 
 
 # Battery

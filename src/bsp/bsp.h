@@ -80,6 +80,7 @@ void BSP_SetBoostMinimumInputVoltage(float voltage);
 float BSP_ReadVSYS();
 float BSP_BoostDutyCycle(); // debug, remove
 int BSP_AppTimerTicks();
+bool BSP_ReadPGood();       // low = usb5v present. high = not present.
 #endif
 
 

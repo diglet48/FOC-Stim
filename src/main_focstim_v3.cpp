@@ -138,16 +138,26 @@ void setup()
     // print status to let the computer know we have rebooted.
     print_status();
 
-    // power_manager.init();
-    // power_manager.adjust_board_voltages();
+    power_manager.init();
+    power_manager.adjust_board_voltages();
     // power_manager.print_battery_stats();
 
-    BSP_SetBoostMinimumInputVoltage(4.0);
     BSP_SetBoostVoltage(STIM_BOOST_VOLTAGE);
     BSP_SetBoostEnable(true);
-    // wait to fill the boost caps
+    // wait for boost caps to fill
+    Clock vbus_rise_clock;
     while (BSP_ReadVBus() < STIM_BOOST_VOLTAGE_OK_THRESHOLD) {
         delay(10);
+        vbus_rise_clock.step();
+        if (vbus_rise_clock.time_seconds >= 1) {
+            BSP_SetBoostEnable(false);
+            while (1)
+            {
+                BSP_WriteLedPattern(LedPattern::Error);
+                Serial.printf("boost caps did not fill in reasonable time. Is the boost circuit defective?\r\n");
+                delay(5000);
+            }
+        }
     }
 
     model3.init(&estop_triggered);
@@ -166,11 +176,13 @@ void loop()
     static Clock vbus_high_clock;
     static uint32_t pulse_counter = 0;
     static float actual_pulse_frequency = 0;
+    static Clock adjust_board_voltage_clock;
+    static Clock print_system_stats_clock;
 
     // do comms
     bool dirty = tcode.update_from_serial();
 
-    // safety checks
+    // safety: temperature
     float temperature = BSP_ReadTemperatureSTM();
     if (temperature >= MAXIMUM_TEMPERATURE) {
         BSP_DisableOutputs();
@@ -184,7 +196,7 @@ void loop()
     }
 
     float vbus = BSP_ReadVBus();
-    // overvoltage threshold
+    // safety: boost overvoltage
     if (vbus >= STIM_BOOST_OVERVOLTAGE_THRESHOLD) {
         BSP_DisableOutputs();
         while (1)
@@ -196,7 +208,7 @@ void loop()
         }
     }
 
-    // undervoltage threshold
+    // safety: boost undervoltage
     if (vbus <= STIM_BOOST_UNDERVOLTAGE_THRESHOLD) {
         BSP_DisableOutputs();
         while (1)
@@ -216,9 +228,38 @@ void loop()
     if (keepalive_clock.time_seconds > 2 && play_status != PlayStatus::NotPlaying) {
         Serial.println("Connection lost? Stopping pulse generation.");
         play_status = PlayStatus::NotPlaying;
-        BSP_WriteLedPattern(LedPattern::Error);
+        BSP_WriteLedPattern(LedPattern::Idle);
         BSP_DisableOutputs();
         print_status();
+    }
+
+    // adjust boost undervoltage
+    adjust_board_voltage_clock.step();
+    if (adjust_board_voltage_clock.time_seconds > 1) {
+        adjust_board_voltage_clock.reset();
+        power_manager.adjust_board_voltages();
+    }
+
+    // every few seconds, print system stats
+    print_system_stats_clock.step();
+    if (print_system_stats_clock.time_seconds > 5) {
+        print_system_stats_clock.reset();
+        Serial.printf("$");
+        Serial.printf("boost_duty:%f ", BSP_BoostDutyCycle());
+        Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureSTM());
+        Serial.printf("V_BUS:%.2f ", vbus);
+        Serial.printf("V_SYS:%.2f ", BSP_ReadVSYS());
+        Serial.printf("V_ref:%.2f ", BSP_ReadChipAnalogVoltage());
+
+        if (power_manager.is_battery_present) {
+            Serial.printf("bat_power:%f ", lipo.power() * .001f);
+            unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)
+            unsigned int capacity = lipo.capacity(REMAIN); // Read remaining capacity (mAh)
+            Serial.printf("bat_soc:%f ", float(capacity) / float(fullCapacity) * 100);
+            Serial.printf("temp_gas:%.2f ", lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f);
+            Serial.printf("V_bat:%.2f ", lipo.voltage() * .001f);
+        }
+        Serial.println();
     }
 
     // DSTART / DSTOP
@@ -233,7 +274,7 @@ void loop()
         return;
     }
 
-    // delay pulse until the boost is completely filled back up, reducing the pulse frequency
+    // delay pulse until the boost capacitors are filled up, reducing the pulse frequency if neccesairy
     if (vbus <= STIM_BOOST_VOLTAGE_OK_THRESHOLD) {
         return;
     }
@@ -452,21 +493,13 @@ void loop()
         }
     }
 
-    // print debug stats: temp / volts
-    if (pulse_counter % 20 == 8)
-    {
-        Serial.print("$");
-        if (play_status == PlayStatus::PlayingThreephase) {
-            Serial.printf("V_drive:%.3f ", model3.v_drive_max);
-        }
-        if (play_status == PlayStatus::PlayingFourphase) {
-            Serial.printf("V_drive:%.3f ", model4.v_drive_max);
-        }
-        Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureSTM());
-        Serial.printf("V_BUS:%.2f ", vbus);
-        Serial.printf("V_SYS:%.2f ", BSP_ReadVSYS());
-        Serial.println();
-    }
+    // // print debug stats: temp / volts
+    // if (pulse_counter % 20 == 8)
+    // {
+    //     Serial.print("$");
+
+    //     Serial.println();
+    // }
 
     // print debug stats: misc
     if (pulse_counter % 20 == 18)
@@ -476,10 +509,13 @@ void loop()
         // Serial.printf("model_steps:%i ", model.pulse_length_samples);
         // Serial.printf("model_skips:%i ", model.skipped_update_steps);
         Serial.printf("pot:%f ", potmeter_value);
-        // Serial.printf("pot2:%f ", BSP_ReadPotentiometerPercentage());
-        Serial.printf("boost_duty:%f ", BSP_BoostDutyCycle());
+        if (play_status == PlayStatus::PlayingThreephase) {
+            Serial.printf("V_drive:%.3f ", model3.v_drive_max);
+        }
+        if (play_status == PlayStatus::PlayingFourphase) {
+            Serial.printf("V_drive:%.3f ", model4.v_drive_max);
+        }
         Serial.println();
-
     }
 
     // // DEBUG

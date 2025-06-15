@@ -5,9 +5,14 @@
 // transformer winding ratio
 #define STIM_WINDING_RATIO 6.66f    // xicon 42TL004
 #define STIM_WINDING_RATIO_SQ (STIM_WINDING_RATIO * STIM_WINDING_RATIO)
+// board resistance: low side 0.4ohm (inductor) + 1.06 ohm (transformer input) + 0.22ohm (max22213 Rdson, HFS on)
+// high side 11.5 (transformer output)
+// total 2ohm driving / 88.7ohm output
+// measured value: 105 ohm ?
+
 
 // current limits
-#define BODY_CURRENT_MAX  0.12f  // in amps
+#define BODY_CURRENT_MAX  0.15f  // in amps
 #define ESTOP_CURRENT_LIMIT_MARGIN 0.15f                // accounts for measurement noise, driving current
 
 // board temperature limits
@@ -15,10 +20,10 @@
 
 // boost voltage
 #define STIM_DYNAMIC_VOLTAGE
-#define STIM_BOOST_VOLTAGE 18.f                     // the configured boost voltage
-#define STIM_BOOST_VOLTAGE_OK_THRESHOLD 17.5f       // the minimum boost voltage required before starting a pulse
-#define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 12.f       // the lowest the boost voltage is allowed to drop during a pulse
-#define STIM_BOOST_OVERVOLTAGE_THRESHOLD 19.f       // overvoltage threshold, estop if exceeded
+#define STIM_BOOST_VOLTAGE 22.f                     // the configured boost voltage
+#define STIM_BOOST_VOLTAGE_OK_THRESHOLD 21.5f       // the minimum boost voltage required before starting a pulse
+#define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 15.f       // the lowest the boost voltage is allowed to drop during a pulse
+#define STIM_BOOST_OVERVOLTAGE_THRESHOLD 23.f       // overvoltage threshold, estop if exceeded
 #define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 12.f      // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
 
 // pwm
@@ -32,23 +37,19 @@
 #define POTMETER_HUNDRED_PERCENT_VALUE   float(4096 * .99f)
 
 // initial conditions and limits for the model
-#define MODEL_RESISTANCE_INIT 8.0f
-#define MODEL_RESISTANCE_MIN 0.7f
-#define MODEL_RESISTANCE_MAX 15.0f
-#define MODEL_INDUCTANCE_INIT 450e-6f
-#define MODEL_INDUCTANCE_MIN 20e-6f
-#define MODEL_INDUCTANCE_MAX 1500e-6f
-#define MODEL_PHASE_ANGLE_MIN -1.f
-#define MODEL_PHASE_ANGLE_MAX 1.f
-
+#define MODEL_RESISTANCE_INIT (200.f / STIM_WINDING_RATIO_SQ)
+#define MODEL_RESISTANCE_MIN (50.f / STIM_WINDING_RATIO_SQ)
+#define MODEL_RESISTANCE_MAX (1500.f / STIM_WINDING_RATIO_SQ)
+#define MODEL_PHASE_ANGLE_MIN -1.5f
+#define MODEL_PHASE_ANGLE_MAX 1.5f
 
 // enable for nicer looking waveforms on the scope. Not safe for humans!
-// TODO: implement
 // #define THREEPHASE_PULSE_DEFEAT_RANDOMIZATION
 
 #define CURRENT_SENSE_SCALE_HALF
 // #define BSP_ENABLE_THREEPHASE
 #define BSP_ENABLE_FOURPHASE
+#define BATTERY_ENABLE
 #define MAX22213_HFS 1
 
 #endif

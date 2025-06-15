@@ -3,6 +3,7 @@
 
 #include "utils.h"
 #include "foc_utils.h"
+#include "protobuf_api.h"
 
 #include "stm32g4xx_hal.h"
 #include <Arduino.h>
@@ -155,7 +156,7 @@ void initPwm()
     if (dead_time>255) dead_time = 255;
     if (dead_time==0) {
       dead_time = 255; // LL_TIM_CALC_DEADTIME returns 0 if dead_time_ns is too large
-      Serial.printf("STM32-DRV: WARN: dead time too large, setting to max\n");
+      BSP_PrintDebugMsg("STM32-DRV: WARN: dead time too large, setting to max\n");
     }
     LL_TIM_OC_SetDeadTime(pwm_timer, dead_time); // deadtime is non linear!
 
@@ -188,14 +189,14 @@ void configureOpamp(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def)
     status = HAL_OPAMP_Init(hopamp);
     if (status != HAL_OK)
     {
-        Serial.printf("opamp init failed %i\n", status);
+        BSP_PrintDebugMsg("opamp init failed %i\n", status);
         Error_Handler();
     }
 
     status = HAL_OPAMP_Start(hopamp);
     if (status != HAL_OK)
     {
-        Serial.printf("opamp start failed %i\n", status);
+        BSP_PrintDebugMsg("opamp start failed %i\n", status);
         Error_Handler();
     }
 }
@@ -356,7 +357,7 @@ void configureDMA(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Chan
     HAL_DMA_DeInit(hdma_adc);
     if (HAL_DMA_Init(hdma_adc) != HAL_OK)
     {
-        Serial.printf("HAL_DMA_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_DMA_Init failed!\n");
         Error_Handler();
     }
     __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
@@ -379,14 +380,14 @@ void initDMA(void)
     status = HAL_ADC_Start_DMA(&bsp.adc1, (uint32_t *)bsp.adc1_buffer, sizeof(bsp.adc1_buffer) / 2);
     if (status != HAL_OK)
     {
-        Serial.printf("DMA start adc2 failed, %i\n", status);
+        BSP_PrintDebugMsg("DMA start adc2 failed, %i\n", status);
         Error_Handler();
     }
 
     status = HAL_ADC_Start_DMA(&bsp.adc2, (uint32_t *)bsp.adc2_buffer, sizeof(bsp.adc2_buffer) / 2);
     if (status != HAL_OK)
     {
-        Serial.printf("DMA start adc3 failed, %i\n", status);
+        BSP_PrintDebugMsg("DMA start adc3 failed, %i\n", status);
         Error_Handler();
     }
 }
@@ -416,7 +417,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
 
     if (HAL_ADC_Init(hadc1) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_ADC_Init failed!\n");
         Error_Handler();
     }
 
@@ -425,7 +426,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     multimode.Mode = ADC_MODE_INDEPENDENT;
     if (HAL_ADCEx_MultiModeConfigChannel(hadc1, &multimode) != HAL_OK)
     {
-        Serial.printf("HAL_ADCEx_MultiModeConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADCEx_MultiModeConfigChannel failed!");
         Error_Handler();
     }
 
@@ -439,7 +440,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // OPAMP1
@@ -448,7 +449,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // OPAMP3 (2x)
@@ -457,7 +458,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // OPAMP1 (2x)
@@ -466,7 +467,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // potentiometer
@@ -475,7 +476,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;   // 1.36µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // temperature (onboard NTC)
@@ -484,7 +485,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;   // 1.36µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // temperature (internal)
@@ -493,7 +494,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_92CYCLES_5;   // ~2.4µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // vref internal
@@ -502,7 +503,7 @@ void configureADC1(ADC_HandleTypeDef *hadc1)
     sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;   // ~6µs
     if (HAL_ADC_ConfigChannel(hadc1, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -531,7 +532,7 @@ void configureADC2(ADC_HandleTypeDef *hadc2)
 
     if (HAL_ADC_Init(hadc2) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_ADC_Init failed!\n");
         Error_Handler();
     }
 
@@ -546,7 +547,7 @@ void configureADC2(ADC_HandleTypeDef *hadc2)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // OPAMP2 (2x)
@@ -555,7 +556,7 @@ void configureADC2(ADC_HandleTypeDef *hadc2)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // OPAMP2 (3x)
@@ -564,7 +565,7 @@ void configureADC2(ADC_HandleTypeDef *hadc2)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // OPAMP2 (4x)
@@ -573,7 +574,7 @@ void configureADC2(ADC_HandleTypeDef *hadc2)
     sConfig.SamplingTime = ADC_SAMPLETIME_6CYCLES_5;    // 0.4µs
     if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // vbus
@@ -582,7 +583,7 @@ void configureADC2(ADC_HandleTypeDef *hadc2)
     sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;   // 1.36µs
     if (HAL_ADC_ConfigChannel(hadc2, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -603,13 +604,13 @@ void initADC()
     status = HAL_ADCEx_Calibration_Start(&bsp.adc1, ADC_SINGLE_ENDED);
     if (status != HAL_OK)
     {
-        Serial.printf("ADC calibration failed: %i\n", status);
+        BSP_PrintDebugMsg("ADC calibration failed: %i\n", status);
         Error_Handler();
     }
     status = HAL_ADCEx_Calibration_Start(&bsp.adc2, ADC_SINGLE_ENDED);
     if (status != HAL_OK)
     {
-        Serial.printf("ADC calibration failed: %i\n", status);
+        BSP_PrintDebugMsg("ADC calibration failed: %i\n", status);
         Error_Handler();
     }
 }
@@ -762,7 +763,7 @@ Vec3f BSP_ReadPhaseCurrents3()
 
 float BSP_ReadPotentiometerPercentage()
 {
-    float value = inverse_lerp(bsp.potentiometer_filtered, POTMETER_ZERO_PERCENT_VALUE, POTMETER_HUNDRED_PERCENT_VALUE);
+    float value = inverse_lerp(bsp.potentiometer, POTMETER_ZERO_PERCENT_VALUE, POTMETER_HUNDRED_PERCENT_VALUE);
     return _constrain(value, 0.f, 1.f);
 }
 
@@ -810,6 +811,14 @@ float BSP_ReadTemperatureSTM()
 float BSP_ReadChipAnalogVoltage()
 {
     return bsp.analog_voltage;
+}
+
+void BSP_PrintDebugMsg(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    g_protobuf->transmit_notification_debug_string(fmt, args);
+    va_end(args);
 }
 
 #endif

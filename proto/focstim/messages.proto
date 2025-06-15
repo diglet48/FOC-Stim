@@ -1,0 +1,84 @@
+syntax = "proto3";
+package focstim_rpc;
+
+import "constants.proto";
+
+// general commands
+message RequestFirmwareVersion {
+}
+message ResponseFirmwareVersion {
+    BoardIdentifier board = 1;
+    string stm32_firmware_version = 2;  // TODO: implement
+    // string esp32_firmware_version = 3;  // TODO: implement
+}
+
+message RequestCapabilitiesGet {
+}
+message ResponseCapabilitiesGet {
+    bool threephase = 1;
+    bool fourphase = 2;
+    bool battery = 3;       // true if device has a battery installed
+    bool potentiometer = 4;
+    float maximum_waveform_amplitude_amps = 5;
+}
+
+message RequestSignalStart {
+    OutputMode mode = 1;
+    // todo: max power?
+}
+message ResponseSignalStart {
+}
+
+message RequestSignalStop {
+}
+message ResponseSignalStop {
+}
+
+// TODO: implement?
+message RequestModeSet {
+}
+message ResponseModeSet {
+}
+
+// MoveTo streaming API
+message RequestAxisMoveTo {
+    AxisType axis = 1;
+    float value = 3;
+    uint32 interval = 4;    // in ms
+}
+message ResponseAxisMoveTo {
+}
+
+// Buffered streaming API
+message RequestAxisSet {
+    AxisType axis = 1;
+    fixed32 timestamp_ms = 2;   // unix timestamp, in ms, modulo 2^32
+    float value = 3;            //
+    bool clear = 4;
+}
+message ResponseAxisSet {
+}
+
+// Tell the system what unix timestamp is. Call regularly to avoid drift.
+message RequestTimestampSet {
+    uint64 timestamp_ms = 1;    // unix timestamp
+}
+message ResponseTimestampSet {
+    int64 offset_ms = 1;        // new offset between epoch and local system clock
+    sint64 change_ms = 2;       // how much the offset changed in the operation
+    sint64 error_ms = 3;        // the error between
+}
+
+message RequestTimestampGet {
+}
+message ResponseTimestampGet {
+    fixed32 timestamp_ms = 1;       // local clock, uint32_t on system.
+    uint64 unix_timestamp_ms = 2;   // synchronized clock
+}
+
+// debug commands
+message RequestDebugStm32DeepSleep {
+}
+message ResponseDebugStm32DeepSleep {
+}
+

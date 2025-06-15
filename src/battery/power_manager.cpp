@@ -1,5 +1,7 @@
 #include "power_manager.h"
 
+#ifdef BATTERY_ENABLE
+
 #include "SparkFunBQ27441.h"
 #include "BQ27441_Definitions.h"
 #include <Wire.h>
@@ -13,7 +15,7 @@ void PowerManager::init() {
     Wire.setTimeout(10);
     Wire.begin();
 
-    Serial.printf("detecting battery...\r\n");
+    BSP_PrintDebugMsg("detecting battery...");
     if (detect_battery()) {
         is_battery_present = lipo.begin();
     } else {
@@ -21,16 +23,16 @@ void PowerManager::init() {
     }
 
     if (is_battery_present) {
-        Serial.printf("Battery detected!\r\n");
+        BSP_PrintDebugMsg("Battery detected!");
     } else {
-        Serial.printf("Battery NOT detected\r\n");
+        BSP_PrintDebugMsg("Battery NOT detected.");
         return;
     }
 
-    Serial.printf("Check battery configuration.\r\n");
+    BSP_PrintDebugMsg("Check battery configuration.");
     bool gpout_polarity = lipo.GPOUTPolarity();
     if (gpout_polarity == 0) {
-        Serial.printf("No battery configuration. Programming...\r\n");
+        BSP_PrintDebugMsg("No battery configuration. Programming...");
 
         lipo.enterConfig(); // To configure the values below, you must be in config mode
         lipo.setCapacity(BATTERY_CAPACITY);     // Set the battery capacity
@@ -41,7 +43,7 @@ void PowerManager::init() {
         lipo.exitConfig();
 
     } else {
-        Serial.printf("Battery already configured.\r\n");
+        BSP_PrintDebugMsg("Battery already configured.");
     }
 
 
@@ -107,3 +109,5 @@ void PowerManager::print_battery_stats()
 
     Serial.println(toPrint);
 }
+
+#endif

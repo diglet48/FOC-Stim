@@ -1,6 +1,10 @@
 #ifndef FOCSTIM_POWER_MANAGER_H
 #define FOCSTIM_POWER_MANAGER_H
 
+#include "bsp/bsp.h"
+
+#ifdef BATTERY_ENABLE
+
 #include <stdint.h>
 
 #define BATTERY_DETECTION_TIME_MS 500
@@ -27,8 +31,17 @@ public:
 
     void print_battery_stats();
 
-
     bool is_battery_present;
+
+    // bool pgood;                 // cached value of 'batPGood' pin
+    // float volts;                // battery voltage [V]
+    // float current;              // battery charge or discharge current [A]
+    // float power;                // battery charge or discharge power [W]
+    // float capacity_full;        // battery full capacity
+    // float capacity_remain;      //
+    // float health;               // battery health [% 0-1]
+
 };
 
+#endif
 #endif

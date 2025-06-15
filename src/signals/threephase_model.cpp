@@ -35,7 +35,7 @@ void ThreephaseModel::play_pulse(
     float estop_current_limit)
 {
     if ((p1 + p2 + p3).norm() > .001f) {
-        Serial.printf("Invalid pulse coordinates");
+        BSP_PrintDebugMsg("Invalid pulse coordinates");
         return;
     }
 
@@ -154,16 +154,16 @@ void ThreephaseModel::play_pulse(
 
     if (current_limit_exceeded) {
         BSP_DisableOutputs();
-        Serial.printf("Current limit exceeded\r\n");
+        BSP_PrintDebugMsg("Current limit exceeded");
         int i = (interrupt_index - 2) % CONTEXT_SIZE;
-        Serial.printf("currents were: %f %f %f\r\n", context[i].i1_meas, context[i].i2_meas, context[i].i3_meas);
+        BSP_PrintDebugMsg("currents were: %f %f %f", context[i].i1_meas, context[i].i2_meas, context[i].i3_meas);
         emergency_stop_fn();
         while(1) {}
     }
 
     if (interrupt_index != producer_index) {
         BSP_DisableOutputs();
-        Serial.printf("Producer too slow %i %i\r\n", (int)interrupt_index, (int)producer_index);
+        BSP_PrintDebugMsg("Producer too slow %i %i", (int)interrupt_index, (int)producer_index);
         emergency_stop_fn();
         while(1) {
         }
@@ -232,21 +232,18 @@ Vec3f ThreephaseModel::estimate_rms_current(float dt)
 
 void ThreephaseModel::debug_stats_teleplot()
 {
+    BSP_PrintDebugMsg("    i     V1     V2     V3 cmd_i1 i2_cmd i3_cmd     i1     i2     i3");
     int start_index = max(0, producer_index - CONTEXT_SIZE + 1);
     for (int i = start_index; i <= producer_index; i++) {
         const auto &c = context[i % CONTEXT_SIZE];
 
-        // Serial.printf("$");
-        Serial.printf("v1:%u:%.2f|xy ", i, c.v1_cmd);
-        Serial.printf("v2:%u:%.2f|xy ", i, c.v2_cmd);
-        Serial.printf("v3:%u:%.2f|xy ", i, c.v3_cmd);
-        Serial.printf("i1_cmd:%u:%.4f|xy ", i, c.i1_cmd);
-        Serial.printf("i2_cmd:%u:%.4f|xy ", i, c.i2_cmd);
-        Serial.printf("i3_cmd:%u:%.4f|xy ", i, c.i3_cmd);
-        Serial.printf("i1:%u:%.4f|xy ", i, c.i1_meas);
-        Serial.printf("i2:%u:%.4f|xy ", i, c.i2_meas);
-        Serial.printf("i3:%u:%.4f|xy ", i, c.i3_meas);
-        Serial.println();
+        BSP_PrintDebugMsg(
+            "%5i %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f",
+            i,
+            c.v1_cmd, c.v2_cmd, c.v3_cmd,
+            c.i1_cmd, c.i2_cmd, c.i3_cmd,
+            c.i1_meas, c.i2_meas, c.i3_meas
+        );
     }
 }
 

@@ -1,0 +1,78 @@
+syntax = "proto3";
+package focstim_rpc;
+
+
+message NotificationBoot {
+}
+
+message NotificationPotentiometer {
+    float value = 1;
+}
+
+message NotificationCurrents {
+    float rms_a = 1;                // body current in amps
+    float rms_b = 2;
+    float rms_c = 3;
+    float rms_d = 4;
+    float peak_a = 5;               // peak body current in amps
+    float peak_b = 6;
+    float peak_c = 7;
+    float peak_d = 8;
+    float output_power = 9;         // output stage power in watts
+    float output_power_skin = 10;   // output stage power in watts, only the component delivered to skin
+    float peak_cmd = 11;
+}
+
+message NotificationModelEstimation {
+    float resistance_a = 1;     // estimated output resistance, including output stage
+    float reluctance_a = 2;     // at 1000hz (?)
+    float resistance_b = 3;
+    float reluctance_b = 4;
+    float resistance_c = 5;
+    float reluctance_c = 6;
+    float resistance_d = 7;
+    float reluctance_d = 8;
+    float constant = 20;        // fixed resistance of the output stage
+}
+
+message SystemStatsESC1 {
+    float temp_stm32 = 1;
+    float temp_board = 2;
+    float v_bus = 3;
+    float v_ref = 4;
+}
+
+message SystemStatsFocstimV3 {
+    float temp_stm32 = 1;
+
+    float v_sys = 2;
+    float v_ref = 3;
+    float v_boost = 4;
+    float boost_duty_cycle = 5;
+}
+
+message NotificationSystemStats {
+    oneof system {
+        SystemStatsESC1 esc1 = 1;
+        SystemStatsFocstimV3 focstimv3 = 2;
+    }
+}
+
+message NotificationSignalStats {
+    float actual_pulse_frequency = 1;
+    float v_drive = 2; // TODO: replace v_drive with some sort of "percent of max power"
+}
+
+message NotificationBattery {
+    float battery_voltage = 1;
+    float battery_charge_rate_watt = 2;
+    float battery_soc = 3;  // int?
+    bool wall_power_present = 4;
+    float chip_temperature = 5;
+    // todo: usb connected?
+}
+
+
+message NotificationDebugString {
+    string message = 1;
+}

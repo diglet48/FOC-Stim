@@ -31,15 +31,11 @@
 #define MODEL_RESISTANCE_INIT 8.0f
 #define MODEL_RESISTANCE_MIN 0.7f
 #define MODEL_RESISTANCE_MAX 15.0f
-#define MODEL_INDUCTANCE_INIT 450e-6f
-#define MODEL_INDUCTANCE_MIN 20e-6f
-#define MODEL_INDUCTANCE_MAX 1500e-6f
 #define MODEL_PHASE_ANGLE_MIN -1.f
 #define MODEL_PHASE_ANGLE_MAX 1.f
 
 
 // enable for nicer looking waveforms on the scope. Not safe for humans!
-// TODO: implement
 // #define THREEPHASE_PULSE_DEFEAT_RANDOMIZATION
 
 #define CURRENT_SENSE_SCALE_HALF

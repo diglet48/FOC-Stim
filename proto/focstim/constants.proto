@@ -1,0 +1,57 @@
+syntax = "proto3";
+package focstim_rpc;
+
+
+enum AxisType{
+    AXIS_UNKNOWN = 0;
+    AXIS_POSITION_ALPHA = 1;    // position parameters
+    AXIS_POSITION_BETA = 2;
+    AXIS_POSITION_GAMMA = 3;
+
+    // AXIS_VOLUME_PERCENT = 10;    // not used
+    AXIS_WAVEFORM_AMPLITUDE_AMPS = 11;
+
+    AXIS_CARRIER_FREQUENCY_HZ = 20; // general pulse parameters
+    AXIS_PULSE_WIDTH_IN_CYCLES = 21;
+    AXIS_PULSE_RISE_TIME_CYCLES = 22;
+    AXIS_PULSE_FREQUENCY_HZ = 23;
+    AXIS_PULSE_INTERVAL_RANDOM_PERCENT = 24;
+
+    AXIS_CALIBRATION_3_CENTER = 30;
+    AXIS_CALIBRATION_3_UP = 31;
+    AXIS_CALIBRATION_3_LEFT = 32;
+
+    AXIS_CALIBRATION_4_CENTER = 40;
+    AXIS_CALIBRATION_4_A = 41;
+    AXIS_CALIBRATION_4_B = 42;
+    AXIS_CALIBRATION_4_C = 43;
+    AXIS_CALIBRATION_4_D = 44;
+}
+
+enum BoardIdentifier {
+    BOARD_UNKNOWN = 0;
+    BOARD_B_G431B_ESC1 = 1;     // AKA 'V1' or 'V2'
+    BOARD_FOCSTIM_V3 = 2;
+}
+
+enum OutputMode {
+    OUTPUT_UNKNOWN = 0;
+    // OUTPUT_OFF = 1;
+    OUTPUT_THREEPHASE = 2;
+    OUTPUT_FOURPHASE = 3;
+}
+
+// TODO: implement
+enum StreamingMode {
+    STREAMING_UNKNOWN = 0;
+    STREAMING_MOVETO = 1;
+    STREAMING_BUFFERED = 2;
+}
+
+enum Errors {
+    ERROR_UNKNOWN = 0;
+    ERROR_OUTPUT_NOT_SUPPORTED = 1;
+    ERROR_UNKNOWN_REQUEST = 2;
+    ERROR_POWER_NOT_PRESENT = 3;
+    ERROR_ALREADY_PLAYING = 4;
+}

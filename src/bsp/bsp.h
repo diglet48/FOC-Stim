@@ -84,6 +84,7 @@ bool BSP_ReadPGood();       // low = usb5v present. high = not present.
 #endif
 
 
+void BSP_PrintDebugMsg(const char* fmt, ...);
 
 
 #endif // FOCSTIM_BSP_H

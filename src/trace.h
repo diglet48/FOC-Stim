@@ -5,6 +5,7 @@
 #include <Arduino.h>
 
 #include "complex.h"
+#include "bsp/bsp.h"
 
 struct MainLoopTraceLine
 {
@@ -18,7 +19,7 @@ struct MainLoopTraceLine
     float i_max_b;
     float i_max_c;
     float i_max_d;
-    float amplitude;
+    float i_max_cmd;
     Complex Z_a;
     Complex Z_b;
     Complex Z_c;
@@ -42,45 +43,42 @@ public:
 
     void print_mainloop_trace()
     {
-        Serial.printf("mainloop timings:\r\n");
-        Serial.printf("     start|   compute|      play|      logs|     skips|\r\n");
+        BSP_PrintDebugMsg("mainloop timings:");
+        BSP_PrintDebugMsg("     start|   compute|      play|      logs|     skips|");
         for (int i = 0; i < MAINLOOP_NUM_ENTRIES; i++)
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
-            Serial.printf("%10lu %10lu %10lu %10lu %10i\r\n",
+            BSP_PrintDebugMsg("%10lu %10lu %10lu %10lu %10i",
                           p->t_start,
                           p->dt_compute,
                           p->dt_play,
                           p->dt_logs,
                           p->skipped_update_steps);
         }
-        Serial.println();
-        Serial.printf("mainloop signals:\r\n");
-        Serial.printf("   v_drive|   max I_a|   max I_b|   max I_c|   max I_d| amplitude|\r\n");
+        BSP_PrintDebugMsg("mainloop signals:");
+        BSP_PrintDebugMsg("   v_drive|   max I_a|   max I_b|   max I_c|   max I_d| i_max_cmd|");
         for (int i = 0; i < MAINLOOP_NUM_ENTRIES; i++)
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
-            Serial.printf("%10f %10f %10f %10f %10f %10f\r\n",
+            BSP_PrintDebugMsg("%10f %10f %10f %10f %10f %10f",
                           p->v_drive_max,
                           p->i_max_a,
                           p->i_max_b,
                           p->i_max_c,
                           p->i_max_d,
-                          p->amplitude);
+                          p->i_max_cmd);
         }
-        Serial.println();
-        Serial.printf("mainloop model:\r\n");
-        Serial.printf("       Z_a|       Z_b|       Z_c|       Z_d|         L|\r\n");
+        BSP_PrintDebugMsg("mainloop model:");
+        BSP_PrintDebugMsg("       Z_a|       Z_b|       Z_c|       Z_d|         L|");
         for (int i = 0; i < MAINLOOP_NUM_ENTRIES; i++)
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
-            Serial.printf("%10f %10f %10f %10f %10f\r\n",
+            BSP_PrintDebugMsg("%10f %10f %10f %10f %10f",
                           p->Z_a.norm(),
                           p->Z_b.norm(),
                           p->Z_c.norm(),
                           p->Z_d.norm());
         }
-        Serial.println();
     }
 
     MainLoopTraceLine main_loop_trace[MAINLOOP_NUM_ENTRIES] = {};

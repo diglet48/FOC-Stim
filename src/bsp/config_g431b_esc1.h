@@ -7,7 +7,7 @@
 #define STIM_WINDING_RATIO_SQ (STIM_WINDING_RATIO * STIM_WINDING_RATIO)
 
 // current limits
-#define BODY_CURRENT_MAX  0.12f             // in amps
+#define BODY_CURRENT_MAX  0.15f             // in amps, body current
 #define ESTOP_CURRENT_LIMIT_MARGIN 0.3f     // accounts for measurement noise, driving current
 
 // board temperature limits
@@ -30,14 +30,11 @@
 #define POTMETER_HUNDRED_PERCENT_VALUE   0.0f
 
 // initial conditions and limits for the model
-#define MODEL_RESISTANCE_INIT 2.0f
-#define MODEL_RESISTANCE_MIN 0.7f
-#define MODEL_RESISTANCE_MAX 15.0f
-#define MODEL_INDUCTANCE_INIT 450e-6f
-#define MODEL_INDUCTANCE_MIN 20e-6f
-#define MODEL_INDUCTANCE_MAX 1500e-6f
-#define MODEL_PHASE_ANGLE_MIN -1.f
-#define MODEL_PHASE_ANGLE_MAX 1.f
+#define MODEL_RESISTANCE_INIT (200.f / STIM_WINDING_RATIO_SQ)
+#define MODEL_RESISTANCE_MIN (70.f / STIM_WINDING_RATIO_SQ)
+#define MODEL_RESISTANCE_MAX (1500.f / STIM_WINDING_RATIO_SQ)
+#define MODEL_PHASE_ANGLE_MIN -1.5f
+#define MODEL_PHASE_ANGLE_MAX 1.5f
 
 // enable for nicer looking waveforms on the scope. Not safe for humans!
 // TODO: implement

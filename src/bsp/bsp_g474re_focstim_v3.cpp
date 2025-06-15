@@ -3,6 +3,7 @@
 #include "bsp.h"
 #include "utils.h"
 #include "foc_utils.h"
+#include "protobuf_api.h"
 
 #include <Arduino.h>
 #include <stm32g4xx_ll_dac.h>
@@ -369,14 +370,14 @@ void configureOpamp(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def)
     status = HAL_OPAMP_Init(hopamp);
     if (status != HAL_OK)
     {
-        Serial.printf("opamp init failed %i\n", status);
+        BSP_PrintDebugMsg("opamp init failed %i\n", status);
         Error_Handler();
     }
 
     status = HAL_OPAMP_Start(hopamp);
     if (status != HAL_OK)
     {
-        Serial.printf("opamp start failed %i\n", status);
+        BSP_PrintDebugMsg("opamp start failed %i\n", status);
         Error_Handler();
     }
 }
@@ -494,7 +495,7 @@ void configureADC1(ADC_HandleTypeDef *hadc)
     int status;
     if ((status = HAL_ADC_Init(hadc)) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed! %i\r\n", status);
+        BSP_PrintDebugMsg("HAL_ADC_Init failed! %i", status);
         Error_Handler();
     }
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -507,7 +508,7 @@ void configureADC1(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5; // ~6µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // internal stm32 temp sensor
@@ -516,7 +517,7 @@ void configureADC1(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5; // ~6µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // potentiometer
@@ -525,7 +526,7 @@ void configureADC1(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5; // ~6µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -554,7 +555,7 @@ void configureADC2(ADC_HandleTypeDef *hadc)
 
     if (HAL_ADC_Init(hadc) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_ADC_Init failed!\n");
         Error_Handler();
     }
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -567,7 +568,7 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5; // ~0.54µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // VM_SENSE
@@ -576,7 +577,7 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_92CYCLES_5; // ~0.8µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
     // VSYS_sense
@@ -585,7 +586,7 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_92CYCLES_5; // ~0.8µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -614,7 +615,7 @@ void configureADC3(ADC_HandleTypeDef *hadc)
 
     if (HAL_ADC_Init(hadc) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_ADC_Init failed!\n");
         Error_Handler();
     }
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -627,7 +628,7 @@ void configureADC3(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5; // ~0.54µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -656,7 +657,7 @@ void configureADC4(ADC_HandleTypeDef *hadc)
 
     if (HAL_ADC_Init(hadc) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_ADC_Init failed!\n");
         Error_Handler();
     }
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -669,7 +670,7 @@ void configureADC4(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5; // ~0.54µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -698,7 +699,7 @@ void configureADC5(ADC_HandleTypeDef *hadc)
 
     if (HAL_ADC_Init(hadc) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_ADC_Init failed!\n");
         Error_Handler();
     }
     sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -711,7 +712,7 @@ void configureADC5(ADC_HandleTypeDef *hadc)
     sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5; // ~0.54µs
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
-        Serial.printf("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -739,31 +740,31 @@ void initADC()
     status = HAL_ADCEx_Calibration_Start(&bsp.adc1, ADC_SINGLE_ENDED);
     if (status != HAL_OK)
     {
-        Serial.printf("ADC calibration failed: %i\n", status);
+        BSP_PrintDebugMsg("ADC calibration failed: %i\n", status);
         Error_Handler();
     }
     status = HAL_ADCEx_Calibration_Start(&bsp.adc2, ADC_SINGLE_ENDED);
     if (status != HAL_OK)
     {
-        Serial.printf("ADC calibration failed: %i\n", status);
+        BSP_PrintDebugMsg("ADC calibration failed: %i\n", status);
         Error_Handler();
     }
     status = HAL_ADCEx_Calibration_Start(&bsp.adc3, ADC_SINGLE_ENDED);
     if (status != HAL_OK)
     {
-        Serial.printf("ADC calibration failed: %i\n", status);
+        BSP_PrintDebugMsg("ADC calibration failed: %i\n", status);
         Error_Handler();
     }
     status = HAL_ADCEx_Calibration_Start(&bsp.adc4, ADC_SINGLE_ENDED);
     if (status != HAL_OK)
     {
-        Serial.printf("ADC calibration failed: %i\n", status);
+        BSP_PrintDebugMsg("ADC calibration failed: %i\n", status);
         Error_Handler();
     }
     status = HAL_ADCEx_Calibration_Start(&bsp.adc5, ADC_SINGLE_ENDED);
     if (status != HAL_OK)
     {
-        Serial.printf("ADC calibration failed: %i\n", status);
+        BSP_PrintDebugMsg("ADC calibration failed: %i\n", status);
         Error_Handler();
     }
 }
@@ -782,7 +783,7 @@ void configureDMA(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Chan
     HAL_DMA_DeInit(hdma_adc);
     if (HAL_DMA_Init(hdma_adc) != HAL_OK)
     {
-        Serial.printf("HAL_DMA_Init failed!\n");
+        BSP_PrintDebugMsg("HAL_DMA_Init failed!\n");
         Error_Handler();
     }
     __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
@@ -805,35 +806,35 @@ void initDMA()
     status = HAL_ADC_Start_DMA(&bsp.adc1, (uint32_t *)bsp.adc1_buffer, sizeof(bsp.adc1_buffer) / 2);
     if (status != HAL_OK)
     {
-        Serial.printf("DMA start adc1 failed, %i\n", status);
+        BSP_PrintDebugMsg("DMA start adc1 failed, %i\n", status);
         Error_Handler();
     }
 
     status = HAL_ADC_Start_DMA(&bsp.adc2, (uint32_t *)bsp.adc2_buffer, sizeof(bsp.adc2_buffer) / 2);
     if (status != HAL_OK)
     {
-        Serial.printf("DMA start adc2 failed, %i\n", status);
+        BSP_PrintDebugMsg("DMA start adc2 failed, %i\n", status);
         Error_Handler();
     }
 
     status = HAL_ADC_Start_DMA(&bsp.adc3, (uint32_t *)bsp.adc3_buffer, sizeof(bsp.adc3_buffer) / 2);
     if (status != HAL_OK)
     {
-        Serial.printf("DMA start adc3 failed, %i\n", status);
+        BSP_PrintDebugMsg("DMA start adc3 failed, %i\n", status);
         Error_Handler();
     }
 
     status = HAL_ADC_Start_DMA(&bsp.adc4, (uint32_t *)bsp.adc4_buffer, sizeof(bsp.adc4_buffer) / 2);
     if (status != HAL_OK)
     {
-        Serial.printf("DMA start adc4 failed, %i\n", status);
+        BSP_PrintDebugMsg("DMA start adc4 failed, %i\n", status);
         Error_Handler();
     }
 
     status = HAL_ADC_Start_DMA(&bsp.adc5, (uint32_t *)bsp.adc5_buffer, sizeof(bsp.adc5_buffer) / 2);
     if (status != HAL_OK)
     {
-        Serial.printf("DMA start adc5 failed, %i\n", status);
+        BSP_PrintDebugMsg("DMA start adc5 failed, %i\n", status);
         Error_Handler();
     }
 
@@ -863,7 +864,7 @@ void initDAC()
     status = LL_DAC_Init(boost_control_dac, LL_DAC_CHANNEL_1, &DAC_InitStruct);
     if (status != ErrorStatus::SUCCESS)
     {
-        Serial.printf("DAC initialization failed: %i\n", status);
+        BSP_PrintDebugMsg("DAC initialization failed: %i\n", status);
         Error_Handler();
     }
     LL_DAC_Enable(boost_control_dac, LL_DAC_CHANNEL_1);
@@ -881,7 +882,7 @@ void initDAC()
     status = LL_DAC_Init(vsys_comp_dac, LL_DAC_CHANNEL_1, &DAC_InitStruct);
     if (status != ErrorStatus::SUCCESS)
     {
-        Serial.printf("DAC initialization failed: %i\n", status);
+        BSP_PrintDebugMsg("DAC initialization failed: %i\n", status);
         Error_Handler();
     }
     LL_DAC_Enable(vsys_comp_dac, LL_DAC_CHANNEL_1);
@@ -1044,7 +1045,7 @@ extern "C"
 
 void BSP_OutputEnable(bool a, bool b, bool c, bool d)
 {
-    Serial.printf("output enable: %i %i %i %i\r\n", a, b, c, d);
+    // BSP_PrintDebugMsg("output enable: %i %i %i %i", a, b, c, d);
     digitalWrite(A_EN1, d);
     digitalWrite(A_EN2, b);
     digitalWrite(A_EN3, c);
@@ -1225,7 +1226,7 @@ void BSP_SetBoostVoltage(float boost_voltage)
     float rbot = 69000;
     float rdac = 110000;
     float vdac = (fb * (1 + rtop / rbot + rtop / rdac) - boost_voltage) * (rdac / rtop);
-    // Serial.printf("VDAC: %f\r\n", vdac);
+    // BSP_PrintDebugMsg("VDAC: %f", vdac);
     int value = min(DAC_MAX_VALUE, max(0, int(vdac * (DAC_MAX_VALUE / ADC_VOLTAGE))));
 
     // value to be written to the DAC on next interrupt.
@@ -1267,6 +1268,14 @@ void BSP_WriteLedPattern(LedPattern pattern)
 bool BSP_ReadPGood()
 {
     return digitalRead(A_PGOOD);
+}
+
+void BSP_PrintDebugMsg(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    g_protobuf->transmit_notification_debug_string(fmt, args);
+    va_end(args);
 }
 
 #endif

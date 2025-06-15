@@ -1,0 +1,83 @@
+syntax = "proto3";
+package focstim_rpc;
+
+import "notifications.proto";
+import "messages.proto";
+import "constants.proto";
+
+
+message Notification{
+    oneof notification {
+        NotificationBoot notification_boot = 1;
+        NotificationPotentiometer notification_potentiometer = 2;
+        NotificationCurrents notification_currents = 3;
+        NotificationModelEstimation notification_model_estimation = 4;
+        NotificationSystemStats notification_system_stats = 5;
+        NotificationSignalStats notification_signal_stats = 6;
+        NotificationBattery notification_battery = 7;
+
+        NotificationDebugString notification_debug_string = 1000;
+    }
+}
+
+message Request {
+    uint32 id = 1;
+    oneof params {
+        // general commands
+        RequestFirmwareVersion request_firmware_version = 500;
+        RequestCapabilitiesGet request_capabilities_get = 501;
+        RequestSignalStart request_signal_start = 502;
+        RequestSignalStop request_signal_stop = 503;
+
+        // MoveTo streaming API
+        RequestAxisMoveTo request_axis_move_to = 5;
+
+        // Buffered streaming API -- not yet implemented
+        RequestTimestampSet request_timestamp_set = 504;
+        RequestTimestampGet request_timestamp_get = 505;
+        // RequestAxisSet request_axis_set = 506;
+
+        // debug
+        RequestDebugStm32DeepSleep request_debug_stm32_deep_sleep = 1000;
+    }
+}
+
+//Responses have the same ID as the request. NB! not all requests will have a result, and just return a blank response
+message Response {
+    uint32 id = 1;
+    oneof result {
+        // general commands
+        ResponseFirmwareVersion response_firmware_version = 500;
+        ResponseCapabilitiesGet response_capabilities_get = 501;
+        ResponseSignalStart response_signal_start = 502;
+        ResponseSignalStop response_signal_stop = 503;
+
+        // MoveTo streaming API
+        ResponseAxisMoveTo response_axis_move_to = 5;
+
+        // Buffered streaming API -- not yet implemented
+        ResponseTimestampSet response_timestamp_set = 504;
+        ResponseTimestampGet response_timestamp_get = 505;
+        // ResponseAxisSet response_axis_set = 506;
+
+        // debug
+        ResponseDebugStm32DeepSleep response_debug_stm32_deep_sleep = 1000;
+    };
+    Error error = 3;
+    // Transportation transport = 3; //optional - internal use only
+}
+
+message Error {
+    Errors code = 1;
+    // string message = 2;
+    // string data = 3;
+}
+
+message RpcMessage{
+    oneof message {
+        Request request = 2;
+        // Requests requests = 3;
+        Response response = 4;
+        Notification notification = 5;
+    }
+}

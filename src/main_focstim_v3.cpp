@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include "foc_utils.h"
-#include "tcode.h"
 #include "utils.h"
 #include "stim_clock.h"
 #include "trace.h"
@@ -15,20 +14,24 @@
 #include "battery/SparkFunBQ27441.h"
 #include "battery/power_manager.h"
 #include <Wire.h>
+#include "axis/buffered_axis.h"
+#include "axis/simple_axis.h"
+#include "timestamp_sync.h"
 
 #include "bsp/bsp.h"
 
+#include <pb.h>
+#include <pb_encode.h>
+#include <pb_decode.h>
+#include "focstim_rpc.pb.h"
+
+#include "protobuf_api.h"
+
 
 Trace trace{};
-
 ThreephaseModel model3{};
 FourphaseModel model4{};
-
 PowerManager power_manager{};
-
-
-static bool status_booted = false;
-static bool status_estop = false;
 
 enum PlayStatus{
     NotPlaying,
@@ -37,83 +40,106 @@ enum PlayStatus{
 };
 static PlayStatus play_status = PlayStatus::NotPlaying;
 
-static Clock keepalive_clock{};
 
+class FocstimV3ProtobufAPI : public ProtobufAPI {
+public:
+    FocstimV3ProtobufAPI() {};
 
-void print_status() {
-    uint32_t status =
-        (status_booted << 0)
-        | (1 << 1)      // vbus
-        | (status_estop << 2)
-        | ((play_status != PlayStatus::NotPlaying) << 3);
-    Serial.printf("status: %lu\r\n", status);
-}
+    focstim_rpc_Errors signal_start_threephase()
+    {
+        if (play_status != PlayStatus::NotPlaying) {
+            return focstim_rpc_Errors_ERROR_ALREADY_PLAYING;
+        }
+        // transmit_notification_debug_string("START 3");
 
-
-void tcode_D0() {
-    Serial.println();
-    Serial.printf("version: FOC-Stim 0.5\r\n");
-    print_status();
-}
-
-void tcode_DSTART3() {
-    if (play_status == PlayStatus::NotPlaying) {
-        Serial.printf("Pulse generation started (threephase)\r\n");
+        time_since_signal_start.reset();
         BSP_OutputEnable(true, true, true);
+        BSP_SetBoostEnable(true);
+        BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
         play_status = PlayStatus::PlayingThreephase;
+        return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
-}
 
-void tcode_DSTART4() {
-    if (play_status == PlayStatus::NotPlaying) {
-        Serial.printf("Pulse generation started (fourphase)\r\n");
+    focstim_rpc_Errors signal_start_fourphase()
+    {
+        if (play_status != PlayStatus::NotPlaying) {
+            return focstim_rpc_Errors_ERROR_ALREADY_PLAYING;
+        }
+
+        // transmit_notification_debug_string("START 4");
+
+        time_since_signal_start.reset();
         BSP_OutputEnable(true, true, true, true);
+        BSP_SetBoostEnable(true);
+        BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
         play_status = PlayStatus::PlayingFourphase;
+        return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
-}
 
-void tcode_DSTOP() {
-    if (play_status != PlayStatus::NotPlaying) {
-        Serial.printf("Pulse generation stopped\r\n");
-        BSP_DisableOutputs();
-        play_status = PlayStatus::NotPlaying;
+    void signal_stop()
+    {
+        // transmit_notification_debug_string("STOP");
+
+        BSP_OutputEnable(false, false, false);
+        BSP_SetBoostEnable(false);
         BSP_WriteLedPattern(LedPattern::Idle);
+        play_status = PlayStatus::NotPlaying;
     }
-}
 
-void tcode_DPING() {
-    keepalive_clock.reset();
-}
+    virtual bool capability_threephase() {return true;};
+    virtual bool capability_fourphase() {return true;};
+    virtual bool capability_potmeter() {return true;};
+    virtual bool capability_battery() {return power_manager.is_battery_present;};
 
-struct
-{
-    TCodeAxis alpha{"L0", 0, -1, 1};
-    TCodeAxis beta{"L1", 0, -1, 1};
-    TCodeAxis gamma{"L2", 0, -1, 1};
-    TCodeAxis volume{"V0", 0, 0, BODY_CURRENT_MAX * STIM_WINDING_RATIO};
-    TCodeAxis carrier_frequency{"A0", 800, 500, 2000};
-    TCodeAxis pulse_frequency{"A1", 50, 1, 100};
-    TCodeAxis pulse_width{"A2", 6, 3, 20};
-    TCodeAxis pulse_rise{"A3", 5, 2, 10};
-    TCodeAxis pulse_interval_random{"A4", 0, 0, 1};
-    TCodeAxis calib_center{"C0", 0, -10, 10};
-    TCodeAxis calib_ud{"C1", 0, -10, 10};
-    TCodeAxis calib_lr{"C2", 0, -10, 10};
-    TCodeAxis calib_4a{"C3", 0, -10, 10};
-    TCodeAxis calib_4b{"C4", 0, -10, 10};
-    TCodeAxis calib_4c{"C5", 0, -10, 10};
-    TCodeAxis calib_4d{"C6", 0, -10, 10};
-} axes;
+    void transmit_notification_system_stats() {
+        focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+        message.which_message = focstim_rpc_RpcMessage_notification_tag;
+        message.message.notification.which_notification = focstim_rpc_Notification_notification_system_stats_tag;
+        message.message.notification.notification.notification_system_stats.which_system = focstim_rpc_NotificationSystemStats_focstimv3_tag;
+        message.message.notification.notification.notification_system_stats.system.focstimv3 = {
+            .temp_stm32 = BSP_ReadTemperatureSTM(),
+            .v_sys = BSP_ReadVSYS(),
+            .v_ref = BSP_ReadChipAnalogVoltage(),
+            .v_boost = BSP_ReadVBus(),
+            .boost_duty_cycle = BSP_BoostDutyCycle(),
+        };
+        transmit_message(message);
+    }
+
+    Clock time_since_signal_start;
+};
+
+FocstimV3ProtobufAPI protobuf{};
+ProtobufAPI* g_protobuf = &protobuf;
+
+
+// TODO: implement
+// struct {
+//     BufferedAxis alpha{-1, 1, 0};
+//     BufferedAxis beta{-1, 1, 0};
+//     BufferedAxis gamma{-1, 1, 0};
+//     BufferedAxis volume_percent{0, 1, 0};
+// } new_axes;
+
 struct {
-    TCodeDeviceCommand d0{"0", &tcode_D0};
-    TCodeDeviceCommand d_start{"START", &tcode_DSTART3};    // todo: remove at next version bump
-    TCodeDeviceCommand d_start3{"START3", &tcode_DSTART3};
-    TCodeDeviceCommand d_start4{"START4", &tcode_DSTART4};
-    TCodeDeviceCommand d_stop{"STOP", &tcode_DSTOP};
-    TCodeDeviceCommand d_ping{"PING", &tcode_DPING};
-} tcode_device_commands;
-TCode tcode(reinterpret_cast<TCodeAxis *>(&axes), sizeof(axes) / sizeof(TCodeAxis),
-            reinterpret_cast<TCodeDeviceCommand *>(&tcode_device_commands), sizeof(tcode_device_commands) / sizeof(TCodeDeviceCommand));
+    SimpleAxis alpha{focstim_rpc_AxisType_AXIS_POSITION_ALPHA, 0, -1, 1};
+    SimpleAxis beta{focstim_rpc_AxisType_AXIS_POSITION_BETA, 0, -1, 1};
+    SimpleAxis gamma{focstim_rpc_AxisType_AXIS_POSITION_GAMMA, 0, -1, 1};
+    SimpleAxis waveform_amplitude_amps{focstim_rpc_AxisType_AXIS_WAVEFORM_AMPLITUDE_AMPS, 0, 0, BODY_CURRENT_MAX};
+    SimpleAxis carrier_frequency{focstim_rpc_AxisType_AXIS_CARRIER_FREQUENCY_HZ, 800, 500, 2000};
+    SimpleAxis pulse_frequency{focstim_rpc_AxisType_AXIS_PULSE_FREQUENCY_HZ, 50, 1, 100};
+    SimpleAxis pulse_width{focstim_rpc_AxisType_AXIS_PULSE_WIDTH_IN_CYCLES, 6, 3, 20};
+    SimpleAxis pulse_rise{focstim_rpc_AxisType_AXIS_PULSE_RISE_TIME_CYCLES, 5, 2, 10};
+    SimpleAxis pulse_interval_random{focstim_rpc_AxisType_AXIS_PULSE_INTERVAL_RANDOM_PERCENT, 0, 0, 1};
+    SimpleAxis calib_center{focstim_rpc_AxisType_AXIS_CALIBRATION_3_CENTER, 0, -10, 10};
+    SimpleAxis calib_ud{focstim_rpc_AxisType_AXIS_CALIBRATION_3_UP, 0, -10, 10};
+    SimpleAxis calib_lr{focstim_rpc_AxisType_AXIS_CALIBRATION_3_LEFT, 0, -10, 10};
+    SimpleAxis calib_4_center{focstim_rpc_AxisType_AXIS_CALIBRATION_4_CENTER, 0, -10, 10};
+    SimpleAxis calib_4a{focstim_rpc_AxisType_AXIS_CALIBRATION_4_A, 0, -10, 10};
+    SimpleAxis calib_4b{focstim_rpc_AxisType_AXIS_CALIBRATION_4_B, 0, -10, 10};
+    SimpleAxis calib_4c{focstim_rpc_AxisType_AXIS_CALIBRATION_4_C, 0, -10, 10};
+    SimpleAxis calib_4d{focstim_rpc_AxisType_AXIS_CALIBRATION_4_D, 0, -10, 10};
+} simple_axes;
 
 void estop_triggered()
 {
@@ -130,39 +156,23 @@ void estop_triggered()
 void setup()
 {
     Serial.begin(115200, SERIAL_8E1);
-    delay(100);
-    Serial.println("BSP init");
+    protobuf.init();
+    protobuf.set_simple_axis(
+        reinterpret_cast<SimpleAxis *>(&simple_axes),
+        sizeof(simple_axes) / sizeof(SimpleAxis));
+    BSP_PrintDebugMsg("BSP init");
     BSP_Init();
     BSP_WriteLedPattern(LedPattern::Idle);
 
-    // print status to let the computer know we have rebooted.
-    print_status();
+    protobuf.transmit_notification_boot();
 
     power_manager.init();
     power_manager.adjust_board_voltages();
-    // power_manager.print_battery_stats();
 
     BSP_SetBoostVoltage(STIM_BOOST_VOLTAGE);
-    BSP_SetBoostEnable(true);
-    // wait for boost caps to fill
-    Clock vbus_rise_clock;
-    while (BSP_ReadVBus() < STIM_BOOST_VOLTAGE_OK_THRESHOLD) {
-        delay(10);
-        vbus_rise_clock.step();
-        if (vbus_rise_clock.time_seconds >= 1) {
-            BSP_SetBoostEnable(false);
-            while (1)
-            {
-                BSP_WriteLedPattern(LedPattern::Error);
-                Serial.printf("boost caps did not fill in reasonable time. Is the boost circuit defective?\r\n");
-                delay(5000);
-            }
-        }
-    }
 
     model3.init(&estop_triggered);
     model4.init(&estop_triggered);
-    print_status();
 }
 
 void loop()
@@ -179,18 +189,22 @@ void loop()
     static Clock adjust_board_voltage_clock;
     static Clock print_system_stats_clock;
 
+    static Clock potentiometer_notification_nospam;
+    static float potentiometer_notification_lastvalue = 0;
+
     // do comms
-    bool dirty = tcode.update_from_serial();
+    protobuf.process_incoming_messages();
 
     // safety: temperature
     float temperature = BSP_ReadTemperatureSTM();
     if (temperature >= MAXIMUM_TEMPERATURE) {
-        BSP_DisableOutputs();
+        protobuf.signal_stop();
         while (1)
         {
             BSP_WriteLedPattern(LedPattern::Error);
-            Serial.printf("temperature limit exceeded %.2f. Current temperature=%.2f. Restart device to proceed\r\n",
-                          temperature, BSP_ReadTemperatureSTM());
+            BSP_PrintDebugMsg(
+                "temperature limit exceeded %.2f. Current temperature=%.2f. Restart device to proceed.",
+                temperature, BSP_ReadTemperatureSTM());
             delay(5000);
         }
     }
@@ -198,42 +212,49 @@ void loop()
     float vbus = BSP_ReadVBus();
     // safety: boost overvoltage
     if (vbus >= STIM_BOOST_OVERVOLTAGE_THRESHOLD) {
-        BSP_DisableOutputs();
+        protobuf.signal_stop();
         while (1)
         {
             BSP_WriteLedPattern(LedPattern::Error);
-            Serial.printf("boost overvoltage detected %.2f. Current boost=%.2f. Restart device to proceed\r\n",
-                          vbus, BSP_ReadVBus());
+            BSP_PrintDebugMsg(
+                "boost overvoltage detected %.2f. Current boost=%.2f. Restart device to proceed.",
+                vbus, BSP_ReadVBus());
             delay(5000);
         }
     }
 
     // safety: boost undervoltage
     if (vbus <= STIM_BOOST_UNDERVOLTAGE_THRESHOLD) {
-        BSP_DisableOutputs();
-        while (1)
-        {
-            BSP_WriteLedPattern(LedPattern::Error);
-            Serial.printf("boost undervoltage detected %.2f. Current boost=%.2f. Restart device to proceed\r\n",
-                          vbus, BSP_ReadVBus());
-            delay(5000);
+        if (play_status != PlayStatus::NotPlaying) {
+            protobuf.time_since_signal_start.step();
+            if (protobuf.time_since_signal_start.time_seconds >= 0.5f) {
+                BSP_DisableOutputs();
+                while (1)
+                {
+                    BSP_WriteLedPattern(LedPattern::Error);
+                    BSP_PrintDebugMsg(
+                        "boost undervoltage detected %.2f. Current boost=%.2f. Restart device to proceed.",
+                        vbus, BSP_ReadVBus());
+                        delay(5000);
+                }
+            }
         }
     }
 
-    // keepalive timer. Stop playing if no messages have been received for some time.
-    if (dirty) {
-        keepalive_clock.reset();
-    }
-    keepalive_clock.step();
-    if (keepalive_clock.time_seconds > 2 && play_status != PlayStatus::NotPlaying) {
-        Serial.println("Connection lost? Stopping pulse generation.");
-        play_status = PlayStatus::NotPlaying;
-        BSP_WriteLedPattern(LedPattern::Idle);
-        BSP_DisableOutputs();
-        print_status();
+    // transmit potmeter notification
+    potentiometer_notification_nospam.step();
+    bool do_transmit_potmeter = false;
+    do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 1);
+    do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 0.1f
+        && abs(BSP_ReadPotentiometerPercentage() - potentiometer_notification_lastvalue) >= 0.001f);
+    if (do_transmit_potmeter) {
+        float pot = BSP_ReadPotentiometerPercentage();
+        protobuf.transmit_notification_potentiometer(powf(pot, 1.f/2));
+        potentiometer_notification_nospam.reset();
+        potentiometer_notification_lastvalue = pot;
     }
 
-    // adjust boost undervoltage
+    // adjust boost duty cycle
     adjust_board_voltage_clock.step();
     if (adjust_board_voltage_clock.time_seconds > 1) {
         adjust_board_voltage_clock.reset();
@@ -244,27 +265,33 @@ void loop()
     print_system_stats_clock.step();
     if (print_system_stats_clock.time_seconds > 5) {
         print_system_stats_clock.reset();
-        Serial.printf("$");
-        Serial.printf("boost_duty:%f ", BSP_BoostDutyCycle());
-        Serial.printf("temp_stm32:%.2f ", BSP_ReadTemperatureSTM());
-        Serial.printf("V_BUS:%.2f ", vbus);
-        Serial.printf("V_SYS:%.2f ", BSP_ReadVSYS());
-        Serial.printf("V_ref:%.2f ", BSP_ReadChipAnalogVoltage());
+        protobuf.transmit_notification_system_stats();
 
         if (power_manager.is_battery_present) {
-            Serial.printf("bat_power:%f ", lipo.power() * .001f);
+            float voltage = lipo.voltage() * .001f;
+            float power_watt = lipo.power() * .001f;
             unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)
             unsigned int capacity = lipo.capacity(REMAIN); // Read remaining capacity (mAh)
-            Serial.printf("bat_soc:%f ", float(capacity) / float(fullCapacity) * 100);
-            Serial.printf("temp_gas:%.2f ", lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f);
-            Serial.printf("V_bat:%.2f ", lipo.voltage() * .001f);
+            float soc = float(capacity) / float(fullCapacity);
+            float temperature = lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f;
+            protobuf.transmit_notification_battery(voltage, soc, power_watt, temperature, !BSP_ReadPGood());
         }
-        Serial.println();
     }
 
     // DSTART / DSTOP
     if (play_status == PlayStatus::NotPlaying) {
-        delay(10);
+        BSP_WriteLedPattern(LedPattern::Idle);
+        delay(5);
+        return;
+    }
+
+    // keepalive timer. Stop playing if no messages have been received for some time.
+    if (protobuf.time_since_last_axis_command.time_seconds > 2) {
+        BSP_PrintDebugMsg("Comms lost? Stopping.");
+        play_status = PlayStatus::NotPlaying;
+        BSP_WriteLedPattern(LedPattern::Idle);
+        BSP_DisableOutputs();
+        BSP_SetBoostEnable(false);
         return;
     }
 
@@ -290,26 +317,26 @@ void loop()
     actual_pulse_frequency = lerp(.05f, actual_pulse_frequency, 1e6f / actual_pulse_frequency_clock.dt_micros);
 
     // get all the pulse parameters
-    uint32_t t0 = micros();
-    float pulse_alpha = axes.alpha.get_remap(t0);
-    float pulse_beta = axes.beta.get_remap(t0);
-    float pulse_gamma = axes.gamma.get_remap(t0);
+    uint32_t now_ms = millis();
+    float pulse_alpha = simple_axes.alpha.get(now_ms);
+    float pulse_beta = simple_axes.beta.get(now_ms);
+    float pulse_gamma = simple_axes.gamma.get(now_ms);
+    float body_current_amps = simple_axes.waveform_amplitude_amps.get(now_ms);
 
-    float pulse_amplitude = axes.volume.get_remap(t0); // pulse amplitude in amps
-    float pulse_carrier_frequency = axes.carrier_frequency.get_remap(t0);
-    float pulse_frequency = axes.pulse_frequency.get_remap(t0);
-    float pulse_width = axes.pulse_width.get_remap(t0);
-    float pulse_rise = axes.pulse_rise.get_remap(t0);
-    float pulse_interval_random = axes.pulse_interval_random.get_remap(t0);
+    float pulse_carrier_frequency = simple_axes.carrier_frequency.get(now_ms);
+    float pulse_frequency = simple_axes.pulse_frequency.get(now_ms);
+    float pulse_width = simple_axes.pulse_width.get(now_ms);
+    float pulse_rise = simple_axes.pulse_rise.get(now_ms);
+    float pulse_interval_random = simple_axes.pulse_interval_random.get(now_ms);
 
-    float calibration_center = axes.calib_center.get_remap(t0);
-    float calibration_lr = axes.calib_lr.get_remap(t0);
-    float calibration_ud = axes.calib_ud.get_remap(t0);
+    float calibration_center = simple_axes.calib_center.get(now_ms);
+    float calibration_lr = simple_axes.calib_lr.get(now_ms);
+    float calibration_ud = simple_axes.calib_ud.get(now_ms);
 
-    float calibration_4a = axes.calib_4a.get_remap(t0);
-    float calibration_4b = axes.calib_4b.get_remap(t0);
-    float calibration_4c = axes.calib_4c.get_remap(t0);
-    float calibration_4d = axes.calib_4d.get_remap(t0);
+    float calibration_4a = simple_axes.calib_4a.get(now_ms);
+    float calibration_4b = simple_axes.calib_4b.get(now_ms);
+    float calibration_4c = simple_axes.calib_4c.get(now_ms);
+    float calibration_4d = simple_axes.calib_4d.get(now_ms);
 
     float pulse_active_duration = pulse_width / pulse_carrier_frequency;
     float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);
@@ -319,14 +346,17 @@ void loop()
     // mix in potmeter
     float potmeter_value = BSP_ReadPotentiometerPercentage();
     potmeter_value = powf(potmeter_value, 1.f/2);
-    pulse_amplitude *= potmeter_value;
+    body_current_amps *= potmeter_value;
 
-    float amplitude_percentage = pulse_amplitude / (BODY_CURRENT_MAX * STIM_WINDING_RATIO);
-    if (amplitude_percentage < .02f) {
+    // calculate amplitude in amperes (driving current)
+    float driving_current_amps = body_current_amps * STIM_WINDING_RATIO;
+
+    float volume_percent = body_current_amps / BODY_CURRENT_MAX;
+    if (volume_percent < .02f) {
         BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
-    } else if (amplitude_percentage < .2) {
+    } else if (volume_percent < .2) {
         BSP_WriteLedPattern(LedPattern::PlayingLow);
-    } else if (amplitude_percentage < .6) {
+    } else if (volume_percent < .6) {
         BSP_WriteLedPattern(LedPattern::PlayingMedium);
     } else {
         BSP_WriteLedPattern(LedPattern::PlayingHigh);
@@ -341,15 +371,14 @@ void loop()
 #endif
 
     // store stats
-    traceline->amplitude = pulse_amplitude;
+    traceline->i_max_cmd = driving_current_amps;
     total_pulse_length_timer.step();
     traceline->dt_compute = total_pulse_length_timer.dt_micros;
-
 
     // play the pulse
     if (play_status == PlayStatus::PlayingThreephase) {
         ComplexThreephasePoints points3 = project_threephase(
-            pulse_amplitude,
+            driving_current_amps,
             pulse_alpha,
             pulse_beta,
             calibration_center,
@@ -361,10 +390,10 @@ void loop()
         model3.play_pulse(points3.p1, points3.p2, points3.p3,
             pulse_carrier_frequency,
             pulse_width, pulse_rise,
-            pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
+            driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
     } else if (play_status == PlayStatus::PlayingFourphase) {
         ComplexFourphasePoints points4 = project_fourphase(
-            pulse_amplitude,
+            driving_current_amps,
             pulse_alpha, pulse_beta, pulse_gamma,
             calibration_center,
             calibration_4a, calibration_4b, calibration_4c, calibration_4d,
@@ -374,7 +403,7 @@ void loop()
         model4.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4,
             pulse_carrier_frequency,
             pulse_width, pulse_rise,
-            pulse_amplitude + ESTOP_CURRENT_LIMIT_MARGIN);
+            driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
     }
 
     float vbus_after = BSP_ReadVBus();
@@ -416,112 +445,96 @@ void loop()
         traceline->Z_d = z4;
     }
 
-
-    // print debug stats: impedance (xy)
-    if (pulse_counter % 10 == 0) {
-        Serial.printf("$");
-        Serial.printf("Za:%f:%f|xy ", z1.a * STIM_WINDING_RATIO_SQ, z1.b * STIM_WINDING_RATIO_SQ);
-        Serial.printf("Zb:%f:%f|xy ", z2.a * STIM_WINDING_RATIO_SQ, z2.b * STIM_WINDING_RATIO_SQ);
-        Serial.printf("Zc:%f:%f|xy ", z3.a * STIM_WINDING_RATIO_SQ, z3.b * STIM_WINDING_RATIO_SQ);
-        if (play_status == PlayStatus::PlayingFourphase)
-            Serial.printf("Zd:%f:%f|xy ", z4.a * STIM_WINDING_RATIO_SQ, z4.b * STIM_WINDING_RATIO_SQ);
-        Serial.printf("Z0:%f:%f|xy ", 0.f, 0.f);
-        Serial.println();
-    }
-
-    // print debug stats: resistance
-    if (pulse_counter % 10 == 2)
-    {
-        Serial.print("$");
-        Serial.printf("R_a:%.2f ", z1.norm() * STIM_WINDING_RATIO_SQ);
-        Serial.printf("R_b:%.2f ", z2.norm() * STIM_WINDING_RATIO_SQ);
-        Serial.printf("R_c:%.2f ", z3.norm() * STIM_WINDING_RATIO_SQ);
-        if (play_status == PlayStatus::PlayingFourphase)
-            Serial.printf("R_d:%.2f ", z4.norm() * STIM_WINDING_RATIO_SQ);
-        Serial.println();
-    }
-
-    // print debug stats: max current
-    if (pulse_counter % 10 == 4)
-    {
-        if (play_status == PlayStatus::PlayingThreephase) {
-            Serial.print("$");
-            Serial.printf("I_max_a:%.1f ", abs(model3.current_max.a) / STIM_WINDING_RATIO * 1000);
-            Serial.printf("I_max_b:%.1f ", abs(model3.current_max.b) / STIM_WINDING_RATIO * 1000);
-            Serial.printf("I_max_c:%.1f ", abs(model3.current_max.c) / STIM_WINDING_RATIO * 1000);
-            Serial.printf("I_max_cmd:%.1f ", abs(pulse_amplitude) / STIM_WINDING_RATIO * 1000);
-            Serial.println();
-            model3.v_drive_max = 0;
-            model3.current_max = {};
-        }
-        if (play_status == PlayStatus::PlayingFourphase) {
-            Serial.print("$");
-            Serial.printf("I_max_a:%.1f ", abs(model4.current_max.a) / STIM_WINDING_RATIO * 1000);
-            Serial.printf("I_max_b:%.1f ", abs(model4.current_max.b) / STIM_WINDING_RATIO * 1000);
-            Serial.printf("I_max_c:%.1f ", abs(model4.current_max.c) / STIM_WINDING_RATIO * 1000);
-            Serial.printf("I_max_d:%.1f ", abs(model4.current_max.d) / STIM_WINDING_RATIO * 1000);
-            Serial.printf("I_max_cmd:%.1f ", abs(pulse_amplitude) / STIM_WINDING_RATIO * 1000);
-            Serial.println();
-            model4.v_drive_max = 0;
-            model4.current_max = {};
-        }
-    }
-
-    // print debug stats: rms current
-    if (pulse_counter % 10 == 6)
-    {
+    // send notification: pulse current
+    if (pulse_counter % 50 == 0) {
         rms_current_clock.step();
-
         if (play_status == PlayStatus::PlayingThreephase) {
             auto rms = model3.estimate_rms_current(rms_current_clock.dt_seconds);
-            Serial.print("$");
-            Serial.printf("rms_a:%.1f ", rms.a / STIM_WINDING_RATIO * 1000);
-            Serial.printf("rms_b:%.1f ", rms.b / STIM_WINDING_RATIO * 1000);
-            Serial.printf("rms_c:%.1f ", rms.c / STIM_WINDING_RATIO * 1000);
-            Serial.println();
+            auto r_a = model3.z1.a;
+            auto r_b = model3.z2.a;
+            auto r_c = model3.z3.a;
+            float p =
+                (rms.a * rms.a) * r_a +
+                (rms.b * rms.b) * r_b +
+                (rms.c * rms.c) * r_c;
+
+            protobuf.transmit_notification_currents(
+                rms.a / STIM_WINDING_RATIO,
+                rms.b / STIM_WINDING_RATIO,
+                rms.c / STIM_WINDING_RATIO,
+                0,
+                abs(model3.current_max.a) / STIM_WINDING_RATIO,
+                abs(model3.current_max.b) / STIM_WINDING_RATIO,
+                abs(model3.current_max.c) / STIM_WINDING_RATIO,
+                0,
+                p, 0,
+                abs(driving_current_amps) / STIM_WINDING_RATIO
+            );
+            model3.current_max = {};
             model3.current_squared = {};
         }
         if (play_status == PlayStatus::PlayingFourphase) {
             auto rms = model4.estimate_rms_current(rms_current_clock.dt_seconds);
-            Serial.print("$");
-            Serial.printf("rms_a:%.1f ", rms.a / STIM_WINDING_RATIO * 1000);
-            Serial.printf("rms_b:%.1f ", rms.b / STIM_WINDING_RATIO * 1000);
-            Serial.printf("rms_c:%.1f ", rms.c / STIM_WINDING_RATIO * 1000);
-            Serial.printf("rms_d:%.1f ", rms.d / STIM_WINDING_RATIO * 1000);
-            Serial.println();
+            auto r_a = model4.z1.a;
+            auto r_b = model4.z2.a;
+            auto r_c = model4.z3.a;
+            auto r_d = model4.z4.a;
+            float p =
+                (rms.a * rms.a) * r_a +
+                (rms.b * rms.b) * r_b +
+                (rms.c * rms.c) * r_c;
+
+            protobuf.transmit_notification_currents(
+                rms.a / STIM_WINDING_RATIO,
+                rms.b / STIM_WINDING_RATIO,
+                rms.c / STIM_WINDING_RATIO,
+                0,
+                abs(model4.current_max.a) / STIM_WINDING_RATIO,
+                abs(model4.current_max.b) / STIM_WINDING_RATIO,
+                abs(model4.current_max.c) / STIM_WINDING_RATIO,
+                0,
+                p, 0,
+                abs(driving_current_amps) / STIM_WINDING_RATIO
+            );
+            model4.current_max = {};
             model4.current_squared = {};
         }
     }
 
-    // // print debug stats: temp / volts
-    // if (pulse_counter % 20 == 8)
-    // {
-    //     Serial.print("$");
-
-    //     Serial.println();
-    // }
-
-    // print debug stats: misc
-    if (pulse_counter % 20 == 18)
-    {
-        Serial.print("$");
-        Serial.printf("F_pulse:%.1f ", actual_pulse_frequency);
-        // Serial.printf("model_steps:%i ", model.pulse_length_samples);
-        // Serial.printf("model_skips:%i ", model.skipped_update_steps);
-        Serial.printf("pot:%f ", potmeter_value);
+    // send notification: skin resistance estimation
+    if (pulse_counter % 50 == 20) {
+        float m = STIM_WINDING_RATIO_SQ;
         if (play_status == PlayStatus::PlayingThreephase) {
-            Serial.printf("V_drive:%.3f ", model3.v_drive_max);
+            protobuf.transmit_notification_model_estimation(
+                model3.z1.a * m, model3.z1.b * m,
+                model3.z2.a * m, model3.z2.b * m,
+                model3.z3.a * m, model3.z3.b * m,
+                0, 0);
         }
         if (play_status == PlayStatus::PlayingFourphase) {
-            Serial.printf("V_drive:%.3f ", model4.v_drive_max);
+            protobuf.transmit_notification_model_estimation(
+                model4.z1.a * m, model4.z1.b * m,
+                model4.z2.a * m, model4.z2.b * m,
+                model4.z3.a * m, model4.z3.b * m,
+                model4.z4.a * m, model4.z4.b * m);
         }
-        Serial.println();
     }
 
-    // // DEBUG
-    // if (pulse_interval_random > 0.1) {
-    //     model.debug_stats_teleplot();
-    // }
+    // send notification: pulse stats
+    if (pulse_counter % 50 == 40) {
+        float v_drive = 0;
+        if (play_status == PlayStatus::PlayingThreephase) {
+            v_drive = model3.v_drive_max;
+            model3.v_drive_max = 0;
+        }
+        if (play_status == PlayStatus::PlayingFourphase) {
+            v_drive = model4.v_drive_max;
+            model4.v_drive_max = 0;
+        }
+
+        // transmit_notification
+        protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive);
+    }
 
     // store stats
     total_pulse_length_timer.step();

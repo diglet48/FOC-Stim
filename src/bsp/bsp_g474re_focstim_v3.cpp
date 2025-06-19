@@ -152,6 +152,7 @@ struct BSP {
     uint32_t boost_off_cycles;
 
     float potentiometer_filtered;
+    float ts_filtered;
 
     uint32_t app_timer_ticks;
 
@@ -1004,6 +1005,8 @@ extern "C"
 
             // average potentiometer value
             bsp.potentiometer_filtered += (float(bsp.potentiometer) - bsp.potentiometer_filtered) * 0.05f;
+            // average temperature value -- filters out weird spikes
+            bsp.ts_filtered += (float(bsp.v_ts) - bsp.ts_filtered) * 0.05f;
 
             // REMOVE ME
             bsp.app_timer_ticks++;
@@ -1014,9 +1017,10 @@ extern "C"
                 bsp.led_pattern_progress = (bsp.led_pattern_progress + 1) % 2048;
                 BSP_WriteRedLedBrightness(bsp.led_pattern_progress < 100 ? .5 : .1);
                 BSP_WriteGreenLedBrightness(0);
-                break;
-            case Error:
-                BSP_WriteRedLedBrightness(1);
+            break;
+                case Error:
+                bsp.led_pattern_progress = (bsp.led_pattern_progress + 1) % 256;
+                BSP_WriteRedLedBrightness(bsp.led_pattern_progress < 100 ? .1 : 1);
                 BSP_WriteGreenLedBrightness(0);
             break;
             case PlayingVeryLow:
@@ -1164,7 +1168,8 @@ void BSP_WriteFaultLED(bool on)
 
 float BSP_ReadTemperatureSTM()
 {
-    float ts_data = bsp.v_ts * (ADC_VOLTAGE / TEMPSENSOR_CAL_VREFANALOG * 1000);
+    // float ts_data = bsp.v_ts * (ADC_VOLTAGE / TEMPSENSOR_CAL_VREFANALOG * 1000);
+    float ts_data = bsp.ts_filtered * (ADC_VOLTAGE / TEMPSENSOR_CAL_VREFANALOG * 1000);
     float offset = TEMPSENSOR_CAL1_TEMP;
     float slope = (TEMPSENSOR_CAL2_TEMP - TEMPSENSOR_CAL1_TEMP) / float((*TEMPSENSOR_CAL2_ADDR - *TEMPSENSOR_CAL1_ADDR));
     float temp = offset + (ts_data - *TEMPSENSOR_CAL1_ADDR) * slope;

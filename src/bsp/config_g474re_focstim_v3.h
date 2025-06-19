@@ -5,7 +5,7 @@
 // transformer winding ratio
 #define STIM_WINDING_RATIO 6.66f    // xicon 42TL004
 #define STIM_WINDING_RATIO_SQ (STIM_WINDING_RATIO * STIM_WINDING_RATIO)
-// board resistance: low side 0.4ohm (inductor) + 1.06 ohm (transformer input) + 0.22ohm (max22213 Rdson, HFS on)
+// board resistance: 0.4ohm (inductor) + 1.06 ohm (transformer input) + 0.22ohm (max22213 Rdson, HFS on)
 // high side 11.5 (transformer output)
 // total 2ohm driving / 88.7ohm output
 // measured value: 105 ohm ?

@@ -921,6 +921,8 @@ void initEXTI()
     enableInterruptWithPrio(COMP1_2_3_IRQn, 0);
 }
 
+
+
 void BSP_Init()
 {
     initGPIO();

@@ -56,6 +56,7 @@ public:
     void handle_request_capabilities_get(focstim_rpc_RequestCapabilitiesGet &request, uint32_t id);
 
     void handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebugStm32DeepSleep &request, uint32_t id);
+    void handle_request_debug_enter_bootloader(focstim_rpc_RequestDebugEnterBootloader &request, uint32_t id);
 
     void handle_request(focstim_rpc_Request &request);
     void handle_frame(const uint8_t* data, size_t data_len);

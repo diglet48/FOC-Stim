@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include "bsp/bsp.h"
+#include "bsp/bootloader.h"
 
 
 int16_t read_byte() {
@@ -329,6 +330,22 @@ void ProtobufAPI::handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebug
     }
 }
 
+
+#define BOOT_ADDR	0x1FFF0000	// my MCU boot code base address
+#define	MCU_IRQS	101u	// no. of NVIC IRQ inputs
+
+struct boot_vectable_ {
+    uint32_t Initial_SP;
+    void (*Reset_Handler)(void);
+};
+
+#define BOOTVTAB	((struct boot_vectable_ *)BOOT_ADDR)
+
+void ProtobufAPI::handle_request_debug_enter_bootloader(focstim_rpc_RequestDebugEnterBootloader &request, uint32_t id)
+{
+    BSP_ResetAndJumpToBootloader();
+}
+
 void ProtobufAPI::handle_request(focstim_rpc_Request &request)
 {
     // Serial.printf("transaction id: %u\r\n", request.id);
@@ -369,6 +386,10 @@ void ProtobufAPI::handle_request(focstim_rpc_Request &request)
 
         case focstim_rpc_Request_request_debug_stm32_deep_sleep_tag:
             handle_request_debug_stm32_deep_sleep(request.params.request_debug_stm32_deep_sleep, id);
+        break;
+
+        case focstim_rpc_Request_request_debug_enter_bootloader_tag:
+            handle_request_debug_enter_bootloader(request.params.request_debug_enter_bootloader, id);
         break;
 
         default:

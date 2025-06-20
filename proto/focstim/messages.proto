@@ -82,3 +82,6 @@ message RequestDebugStm32DeepSleep {
 message ResponseDebugStm32DeepSleep {
 }
 
+message RequestDebugEnterBootloader {
+}
+// no response

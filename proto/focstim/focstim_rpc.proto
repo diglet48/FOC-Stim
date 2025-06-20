@@ -39,6 +39,7 @@ message Request {
 
         // debug
         RequestDebugStm32DeepSleep request_debug_stm32_deep_sleep = 1000;
+        RequestDebugEnterBootloader request_debug_enter_bootloader = 1001;
     }
 }
 

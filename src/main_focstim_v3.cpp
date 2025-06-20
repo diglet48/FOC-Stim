@@ -19,6 +19,7 @@
 #include "timestamp_sync.h"
 
 #include "bsp/bsp.h"
+#include "bsp/bootloader.h"
 
 #include <pb.h>
 #include <pb_encode.h>
@@ -155,6 +156,7 @@ void estop_triggered()
 
 void setup()
 {
+    BSP_CheckJumpToBootloader();
     Serial.begin(115200, SERIAL_8E1);
     protobuf.init();
     protobuf.set_simple_axis(

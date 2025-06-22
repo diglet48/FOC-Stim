@@ -348,7 +348,7 @@ void loop()
     // send notification: pulse stats
     if (pulse_counter % 50 == 40) {
         // transmit_notification
-        protobuf.transmit_notification_signal_stats(actual_pulse_frequency);
+        protobuf.transmit_notification_signal_stats(actual_pulse_frequency, model3.v_drive_max);
     }
 
     // store stats

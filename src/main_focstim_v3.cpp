@@ -17,6 +17,7 @@
 #include "axis/buffered_axis.h"
 #include "axis/simple_axis.h"
 #include "timestamp_sync.h"
+#include "sensors/as5311.h"
 
 #include "bsp/bsp.h"
 #include "bsp/bootloader.h"
@@ -154,6 +155,8 @@ void estop_triggered()
     }
 }
 
+AS5311 as5311{};
+
 void setup()
 {
     BSP_CheckJumpToBootloader();
@@ -175,6 +178,8 @@ void setup()
 
     model3.init(&estop_triggered);
     model4.init(&estop_triggered);
+
+    as5311.init(0.001f, 0.01f);
 }
 
 void loop()
@@ -279,6 +284,8 @@ void loop()
             protobuf.transmit_notification_battery(voltage, soc, power_watt, temperature, !BSP_ReadPGood());
         }
     }
+
+    as5311.update();
 
     // DSTART / DSTOP
     if (play_status == PlayStatus::NotPlaying) {

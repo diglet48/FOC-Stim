@@ -45,6 +45,7 @@ public:
 
     void transmit_notification_debug_string(const char* fmt, ...);
     void transmit_notification_debug_string(const char* fmt, va_list args);
+    void transmit_notification_debug_as5311(int raw, int tracked, int flags);
 
     void handle_request_firmware_version(focstim_rpc_RequestFirmwareVersion &request, uint32_t id);
     // void handle_request_axis_set(focstim_rpc_RequestAxisSet &request, uint32_t id);

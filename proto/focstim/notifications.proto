@@ -76,3 +76,9 @@ message NotificationBattery {
 message NotificationDebugString {
     string message = 1;
 }
+
+message NotificationDebugAS5311 {
+    int32 raw = 1;
+    sint32 tracked = 2;
+    int32 flags = 3;
+}

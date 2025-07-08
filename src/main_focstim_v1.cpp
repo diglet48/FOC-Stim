@@ -132,7 +132,13 @@ void loop()
     // TODO: led toggling
 
     // do comms
-    protobuf.process_incoming_messages();
+    bool any_frames_received = protobuf.process_incoming_messages();
+
+    // toggle LED
+    if (any_frames_received) {
+        led_status = ! led_status;
+        BSP_WriteStatusLED(led_status);
+    }
 
     // checks: board temperature
     float board_temperature = BSP_ReadTemperatureOnboardNTC();

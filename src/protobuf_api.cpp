@@ -49,15 +49,18 @@ void ProtobufAPI::set_simple_axis(SimpleAxis *axis, int num_axis)
     simple_num = num_axis;
 }
 
-void ProtobufAPI::process_incoming_messages() {
+bool ProtobufAPI::process_incoming_messages() {
+    bool any_frames_received = false;
     time_sync.step();
     time_since_last_axis_command.step();
     while (Serial.available()) {
         int retv = hdlc.receive();
         if (retv > 0) {
             handle_frame(hdlc.data, hdlc.len);
+            any_frames_received = true;
         }
     }
+    return any_frames_received;
 }
 
 void ProtobufAPI::transmit_message(focstim_rpc_RpcMessage &message)

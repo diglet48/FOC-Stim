@@ -19,7 +19,7 @@ public:
     void set_simple_axis(SimpleAxis *axis, int num_axis);
     // TODO: buffered axis
 
-    void process_incoming_messages();
+    bool process_incoming_messages();
 
     void transmit_message(focstim_rpc_RpcMessage &message);
     void transmit_notification(focstim_rpc_Notification &notification);

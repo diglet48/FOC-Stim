@@ -69,6 +69,11 @@ void AS5311::read_sensor() {
     int raw = result >> (18 - 12);
     int status = result & 0x03F;
 
+    if (!status) {
+        // sensor unresponsive
+        return;
+    }
+
     int offset = ((raw - last_raw) + 4096) % 4096;
     if (offset >= 2048) {
         offset -= 4096;

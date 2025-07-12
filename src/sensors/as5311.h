@@ -8,6 +8,13 @@
 #define PIN_CSN PA0
 #define PIN_CLK PA5
 
+#define FLAG_OCF_MASK (1 << 5)  // offset compensation.
+#define FLAG_COF_MASK (1 << 4)  // cordic overflow
+#define FLAG_LIN_MASK (1 << 3)
+#define FLAG_INC_MASK (1 << 2)
+#define FLAG_DEC_MASK (1 << 1)
+#define FLAG_PAR_MASK (1 << 0)  // parity
+
 class AS5311 {
     public:
 

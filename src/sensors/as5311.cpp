@@ -69,8 +69,13 @@ void AS5311::read_sensor() {
     int raw = result >> (18 - 12);
     int status = result & 0x03F;
 
-    if (!status) {
-        // sensor unresponsive
+    if (!(status & FLAG_OCF_MASK)) {
+        // OCF bit not set, data invalid.
+        return;
+    }
+
+    if (status & FLAG_COF_MASK) {
+        // COF bit not set, data invalid.
         return;
     }
 

@@ -212,7 +212,7 @@ void loop()
     }
 
     // keepalive timer. Stop playing if no messages have been received for some time.
-    if (protobuf.time_since_last_axis_command.time_seconds > 2) {
+    if (protobuf.time_since_last_axis_command.time_seconds > 4) {
         BSP_PrintDebugMsg("Comms lost? Stopping.");
         play_status = PlayStatus::NotPlaying;
         protobuf.signal_stop();

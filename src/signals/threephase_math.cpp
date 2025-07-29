@@ -44,11 +44,11 @@ static void get_calibration_coefs(
 }
 
 ComplexThreephasePoints project_threephase(
-    float pulse_amplitude, 
-    float alpha, 
-    float beta, 
-    float center_calibration, 
-    float up_down_calibration, 
+    float pulse_amplitude,
+    float alpha,
+    float beta,
+    float center_calibration,
+    float up_down_calibration,
     float left_right_calibration,
     bool flip_polarity,
     float start_angle)
@@ -86,7 +86,7 @@ ComplexThreephasePoints project_threephase(
     float ab22 = -_SQRT3_2; // left
     float ab31 = -0.5f;
     float ab32 = _SQRT3_2;  // right
-    
+
     // complex points
     Complex p1(ab11 * b11 + ab12 * b21, ab11 * b12 + ab12 * b22);
     Complex p2(ab21 * b11 + ab22 * b21, ab21 * b12 + ab22 * b22);

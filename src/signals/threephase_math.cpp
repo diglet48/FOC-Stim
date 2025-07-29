@@ -29,16 +29,17 @@ static void get_calibration_coefs(
     {
         float s = (scale - 1);
 
-        // scaling_contant()
-        float norm1 = norm(1 + s * a * a, s * a * b);
-        float norm2 = norm(1 + s * b * b, s * a * b);
-        float scaling_constant = 1.f / std::max(norm1, norm2);
+        // normalization parameter to generate matrix with eigenvalues <= 1
+        float normalization = 1;
+        if (scale >= 1) {
+            normalization = 1 / scale; // scale is the largest eigenvalue
+        }
 
         // scale_in_arbitrary_direction()
-        *s11 = (1 + s * a * a) * scaling_constant;
-        *s12 = (s * a * b) * scaling_constant;
-        *s21 = (s * a * b) * scaling_constant;
-        *s22 = (1 + s * b * b) * scaling_constant;
+        *s11 = (1 + s * a * a) * normalization;
+        *s12 = (s * a * b) * normalization;
+        *s21 = (s * a * b) * normalization;
+        *s22 = (1 + s * b * b) * normalization;
     }
 }
 

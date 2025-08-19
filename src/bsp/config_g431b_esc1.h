@@ -16,8 +16,8 @@
 // supply voltage
 #define STIM_STATIC_VOLTAGE
 #define STIM_PSU_VOLTAGE 12.0f
-#define STIM_PSU_VOLTAGE_MIN 11.5f // e-stop if exceeded
-#define STIM_PSU_VOLTAGE_MAX 13.0f // e-stop if exceeded
+#define STIM_PSU_VOLTAGE_MIN 11.0f // e-stop if exceeded
+#define STIM_PSU_VOLTAGE_MAX 15.0f // e-stop if exceeded
 
 // pwm
 #define STIM_PWM_FREQ 50000 // switching frequency is twice this frequency

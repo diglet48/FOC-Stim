@@ -4,9 +4,13 @@
 #include "stim_clock.h"
 
 
-#define PIN_DO  PA1
-#define PIN_CSN PA0
-#define PIN_CLK PA5
+#define PORT_DO GPIOA
+#define PIN_DO  LL_GPIO_PIN_1
+#define PORT_CSN GPIOA
+#define PIN_CSN LL_GPIO_PIN_0
+#define PORT_CLK GPIOA
+#define PIN_CLK LL_GPIO_PIN_5
+
 
 #define FLAG_OCF_MASK (1 << 5)  // offset compensation.
 #define FLAG_COF_MASK (1 << 4)  // cordic overflow

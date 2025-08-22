@@ -29,49 +29,86 @@
 #endif
 
 
-#define ADC2_CHANNEL_VM_SENSE       ADC_CHANNEL_12 // PB2
-#define ADC2_CHANNEL_VSYS_SENSE     ADC_CHANNEL_15 // PB15
-#define ADC1_CHANNEL_POTENTIOMETER  ADC_CHANNEL_8  // PC2
+// MAX22213 fault. Input pull-up
+#define FAULT_GPIO_PORT GPIOA
+#define FAULT_PIN LL_GPIO_PIN_15    // PA15
 
+// MAX22213 sleep, active low. Output
+#define SLEEP_GPIO_PORT GPIOC
+#define SLEEP_PIN LL_GPIO_PIN_11    // PC11
+
+// MAX22213 HFS. Output
+#define HFS_GPIO_PORT GPIOD
+#define HFS_PIN LL_GPIO_PIN_2       // PD2
+
+// MAX22213 enable pins. Output
+#define ENABLE_GPIO_PORT GPIOC
+#define ENABLE_1_PIN LL_GPIO_PIN_7  // PC7
+#define ENABLE_2_PIN LL_GPIO_PIN_8  // PC8
+#define ENABLE_3_PIN LL_GPIO_PIN_9  // PC9
+#define ENABLE_4_PIN LL_GPIO_PIN_6  // PC6
+
+// MAX22213 DIN (direction) pins. Output via TIM1
+#define DIN_GPIO_PORT GPIOA
+#define DIN_1_PIN LL_GPIO_PIN_9    // PA9  AF6  tim1_ch2 "D"
+#define DIN_2_PIN LL_GPIO_PIN_8    // PA8  AF6  tim1_ch1 "B"
+#define DIN_3_PIN LL_GPIO_PIN_10   // PA10 AF6  tim1_ch3 "C"
+#define DIN_4_PIN LL_GPIO_PIN_11   // PA11 AF11 tim1_ch4 "A"
+
+// MAX22213 current sense pins. Analog input (opamp)
+#define SEN_GPIO_PORT GPIOB
+#define SEN1_PIN LL_GPIO_PIN_14    // PB14 opamp2   ADC_CHANNEL_VOPAMP2 on ADC2
+#define SEN2_PIN LL_GPIO_PIN_13    // PB13 opamp3   ADC_CHANNEL_VOPAMP3_ADC3 (also available on ADC2)
+#define SEN3_PIN LL_GPIO_PIN_11    // PB11 opamp4   ADC_CHANNEL_VOPAMP4 on ADC5
+#define SEN4_PIN LL_GPIO_PIN_12    // PB12 opamp6   ADC_CHANNEL_VOPAMP6 on ADC4
+#define SEN1_OPAMP OPAMP2
+#define SEN2_OPAMP OPAMP3
+#define SEN3_OPAMP OPAMP4
+#define SEN4_OPAMP OPAMP6
+
+// triac for phase 'D' enable. Output
+#define OUT1_EN_GPIO_PORT GPIOB
+#define OUT1_EN_PIN LL_GPIO_PIN_4  // PB4
+
+// boost enable. Output open-drain with pullup enabled
+#define BOOST_EN_GPIO_PORT GPIOB
+#define BOOST_EN_PIN LL_GPIO_PIN_10 // PB10
+
+// boost control. DAC1_OUT1
+#define BOOST_DAC_GPIO_PORT GPIOA
+#define BOOST_DAC_PIN LL_GPIO_PIN_4 // PA4
+
+// VM sense, ADC2_IN12
+#define VM_SENSE_GPIO_PORT GPIOB
+#define VM_SENSE_PIN LL_GPIO_PIN_2  // PB2
+#define ADC2_CHANNEL_VM_SENSE       ADC_CHANNEL_12
+
+// VSYS sense, ADC2_IN15
+#define VSYS_SENSE_GPIO_PORT GPIOB
+#define VSYS_SENSE_PIN LL_GPIO_PIN_15 // PB15
+#define ADC2_CHANNEL_VSYS_SENSE     ADC_CHANNEL_15
+
+// VSYS comp, COMP1_INP
+#define VSYS_COMP_GPIO_PORT GPIOB
+#define VSYS_COMP_PIN LL_GPIO_PIN_1 // PB1
 #define EXTI_LINE_VSYS_COMP         LL_EXTI_LINE_21
 
+// Potentiometer, ADC12_IN8
+#define POTENTIOMETER_GPIO_PORT GPIOC
+#define POTENTIOMETER_PIN LL_GPIO_PIN_2 // PC2
+#define ADC1_CHANNEL_POTENTIOMETER  ADC_CHANNEL_8
 
-#define A_FAULT 	PA15    // MAX22213 fault line
-#define A_SLEEP 	PC11    // MAX22213 sleep, active low
-#define A_HFS 		PD2     // MAX22213 HFS
-#define A_EN1 		PC7
-#define A_EN2 		PC8
-#define A_EN3 		PC9
-#define A_EN4 		PC6
-#define A_DIN1 		PA9     // tim1_ch2 "D"
-#define A_DIN2 		PA8     // tim1_ch1 "B"
-#define A_DIN3 		PA10    // tim1_ch3 "C"
-#define A_DIN4 		PA11    // tim1_ch4 "A"
-#define A_SEN1_PLUS PB14    // opamp2   ADC_CHANNEL_VOPAMP2 on ADC2
-#define A_SEN2_PLUS PB13    // opamp3   ADC_CHANNEL_VOPAMP3_ADC3 (also available on ADC2)
-#define A_SEN3_PLUS PB11    // opamp4   ADC_CHANNEL_VOPAMP4 on ADC5
-#define A_SEN4_PLUS PB12    // opamp6   ADC_CHANNEL_VOPAMP6 on ADC4
-#define A_OUT1_EN   PB4
+// PGOOD. Input
+#define PGOOD_GPIO_PORT GPIOB
+#define PGOOD_PIN LL_GPIO_PIN_5 // PB5
 
-#define A_VM_SENSE   PB2    // ADC2_IN12
+// Red LED. Output via TIM8_CH1 (AF5)
+#define LED_RED_GPIO_PORT GPIOB
+#define LED_RED_PIN LL_GPIO_PIN_6 // PB6
 
-#define A_VSYS_SENSE PB15   // ADC2_IN15
-#define A_VSYS_COMP  PB1    // COMP1_INP
-
-#define A_PGOOD      PB5
-
-#define A_BOOST_EN   PB10
-#define A_BOOST_CON  PA4    // DAC1_OUT1
-
-#define A_POT        PC2    // ADC12_IN8
-
-#define A_LED_RED    PB_6_ALT1    // tim8_ch1     AF5
-#define A_LED_GREEN  PC_12_ALT1   // tim8_cn3n    AF4
-
-#define A_BOOT_BUTTON PC10
-
-#define A_I2C_SCL   PB8
-#define A_I2C_SDA   PB7
+// Green LED. Output via TIM8_CH3n (AF4)
+#define LED_GREEN_GPIO_PORT GPIOC
+#define LED_GREEN_PIN LL_GPIO_PIN_12    // PC12
 
 // TODO: usart 2
 
@@ -174,91 +211,87 @@ void initGPIO()
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
 
-    // TODO: bootloader
+    // TODO: bootloader pin
 
-    // init pin modes
-    pinMode(A_FAULT, INPUT);
-    pinMode(A_SLEEP, OUTPUT);
-    pinMode(A_HFS, OUTPUT);
+    // MAX22213 fault. Input pull-up
+    LL_GPIO_SetPinMode(FAULT_GPIO_PORT, FAULT_PIN, LL_GPIO_MODE_INPUT);
+    LL_GPIO_SetPinPull(FAULT_GPIO_PORT, FAULT_PIN, LL_GPIO_PULL_UP);
 
-    pinMode(A_EN1, OUTPUT);
-    pinMode(A_EN2, OUTPUT);
-    pinMode(A_EN3, OUTPUT);
-    pinMode(A_EN4, OUTPUT);
-    pinMode(A_OUT1_EN, OUTPUT);
+    // MAX22213 sleep, active low. Output
+    LL_GPIO_SetPinMode(SLEEP_GPIO_PORT, SLEEP_PIN, LL_GPIO_MODE_OUTPUT);
+    LL_GPIO_ResetOutputPin(SLEEP_GPIO_PORT, SLEEP_PIN); // do sleep
 
-    pinMode(A_VSYS_SENSE, INPUT_ANALOG);
-    pinMode(A_POT, INPUT_ANALOG);
-    pinMode(A_VM_SENSE, INPUT_ANALOG);
+    // MAX22213 HFS. Output
+    LL_GPIO_SetPinMode(HFS_GPIO_PORT, HFS_PIN, LL_GPIO_MODE_OUTPUT);
+    HAL_GPIO_WritePin(HFS_GPIO_PORT, HFS_PIN, (GPIO_PinState)MAX22213_HFS);
 
-    pinMode(A_PGOOD, INPUT);
+    // MAX22213 enable pins. Output
+    LL_GPIO_SetPinMode(ENABLE_GPIO_PORT, ENABLE_1_PIN, LL_GPIO_MODE_OUTPUT);
+    LL_GPIO_SetPinMode(ENABLE_GPIO_PORT, ENABLE_2_PIN, LL_GPIO_MODE_OUTPUT);
+    LL_GPIO_SetPinMode(ENABLE_GPIO_PORT, ENABLE_3_PIN, LL_GPIO_MODE_OUTPUT);
+    LL_GPIO_SetPinMode(ENABLE_GPIO_PORT, ENABLE_4_PIN, LL_GPIO_MODE_OUTPUT);
+    LL_GPIO_ResetOutputPin(ENABLE_GPIO_PORT, ENABLE_1_PIN | ENABLE_2_PIN | ENABLE_3_PIN | ENABLE_4_PIN);
 
-    // pinMode(A_LED_GREEN, OUTPUT);
-    // pinMode(A_LED_RED, OUTPUT);
+    // MAX22213 DIN (direction) pins. Output via TIM1
+    LL_GPIO_SetPinMode(DIN_GPIO_PORT, DIN_1_PIN, LL_GPIO_MODE_ALTERNATE);
+    LL_GPIO_SetPinMode(DIN_GPIO_PORT, DIN_2_PIN, LL_GPIO_MODE_ALTERNATE);
+    LL_GPIO_SetPinMode(DIN_GPIO_PORT, DIN_3_PIN, LL_GPIO_MODE_ALTERNATE);
+    LL_GPIO_SetPinMode(DIN_GPIO_PORT, DIN_4_PIN, LL_GPIO_MODE_ALTERNATE);
+    LL_GPIO_SetAFPin_8_15(DIN_GPIO_PORT, DIN_1_PIN, LL_GPIO_AF_6);
+    LL_GPIO_SetAFPin_8_15(DIN_GPIO_PORT, DIN_2_PIN, LL_GPIO_AF_6);
+    LL_GPIO_SetAFPin_8_15(DIN_GPIO_PORT, DIN_3_PIN, LL_GPIO_AF_6);
+    LL_GPIO_SetAFPin_8_15(DIN_GPIO_PORT, DIN_4_PIN, LL_GPIO_AF_11);
+    LL_GPIO_SetPinSpeed(DIN_GPIO_PORT, DIN_1_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
+    LL_GPIO_SetPinSpeed(DIN_GPIO_PORT, DIN_2_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
+    LL_GPIO_SetPinSpeed(DIN_GPIO_PORT, DIN_3_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
+    LL_GPIO_SetPinSpeed(DIN_GPIO_PORT, DIN_4_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
 
-    LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+    // MAX22213 current sense pins. Analog input (opamp)
+    LL_GPIO_SetPinMode(SEN_GPIO_PORT, SEN1_PIN, LL_GPIO_MODE_ANALOG);
+    LL_GPIO_SetPinMode(SEN_GPIO_PORT, SEN2_PIN, LL_GPIO_MODE_ANALOG);
+    LL_GPIO_SetPinMode(SEN_GPIO_PORT, SEN3_PIN, LL_GPIO_MODE_ANALOG);
+    LL_GPIO_SetPinMode(SEN_GPIO_PORT, SEN4_PIN, LL_GPIO_MODE_ANALOG);
 
-    // TIM1
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-    GPIO_InitStruct.Alternate = LL_GPIO_AF_6; // TIM1_CH1, TIM1_CH2, TIM1_CH3
-    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_8 | LL_GPIO_PIN_9 | LL_GPIO_PIN_10;
-    LL_GPIO_ResetOutputPin(GPIOA, GPIO_InitStruct.Pin);
-    LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    // triac for phase 'D' enable. Output
+    LL_GPIO_SetPinMode(OUT1_EN_GPIO_PORT, OUT1_EN_PIN, LL_GPIO_MODE_OUTPUT);
+    LL_GPIO_ResetOutputPin(OUT1_EN_GPIO_PORT, OUT1_EN_PIN); // disable triac
 
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-    GPIO_InitStruct.Alternate = LL_GPIO_AF_11; // TIM1_CH4
-    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_11;
-    LL_GPIO_ResetOutputPin(GPIOA, GPIO_InitStruct.Pin);
-    LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    // boost enable. Output open-drain with pullup enabled
+    LL_GPIO_SetPinMode(BOOST_EN_GPIO_PORT, BOOST_EN_PIN, LL_GPIO_MODE_OUTPUT);
+    LL_GPIO_SetPinOutputType(BOOST_EN_GPIO_PORT, BOOST_EN_PIN, LL_GPIO_OUTPUT_OPENDRAIN);
+    LL_GPIO_SetPinPull(BOOST_EN_GPIO_PORT, BOOST_EN_PIN, LL_GPIO_PULL_UP);
+    LL_GPIO_ResetOutputPin(BOOST_EN_GPIO_PORT, BOOST_EN_PIN);
 
-    // TIM8
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-    GPIO_InitStruct.Alternate = LL_GPIO_AF_5; // TIM8_CH1
-    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_6;
-    LL_GPIO_ResetOutputPin(GPIOB, GPIO_InitStruct.Pin);
-    LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    // boost control. DAC1_OUT1
+    LL_GPIO_SetPinMode(BOOST_DAC_GPIO_PORT, BOOST_DAC_PIN, LL_GPIO_MODE_ANALOG);
 
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-    GPIO_InitStruct.Alternate = LL_GPIO_AF_4; // TIM8_CH3N
-    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_12;
-    LL_GPIO_ResetOutputPin(GPIOC, GPIO_InitStruct.Pin);
-    LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    // VM sense, ADC2_IN12
+    LL_GPIO_SetPinMode(VM_SENSE_GPIO_PORT, VM_SENSE_PIN, LL_GPIO_MODE_ANALOG);
 
-    // DAC
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_4;    // PA4
-    LL_GPIO_ResetOutputPin(GPIOA, GPIO_InitStruct.Pin);
-    LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    // VSYS sense, ADC2_IN15
+    LL_GPIO_SetPinMode(VSYS_SENSE_GPIO_PORT, VSYS_SENSE_PIN, LL_GPIO_MODE_ANALOG);
 
-    // COMP
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_1;    // PB1
-    LL_GPIO_ResetOutputPin(GPIOB, GPIO_InitStruct.Pin);
-    LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    // VSYS comp, COMP1_INP
+    LL_GPIO_SetPinMode(VSYS_COMP_GPIO_PORT, VSYS_COMP_PIN, LL_GPIO_MODE_ANALOG);
 
-    // BOOST_EN, open drain with pullup
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-    GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
-    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_10;    // PB10
-    LL_GPIO_ResetOutputPin(GPIOB, GPIO_InitStruct.Pin);
-    LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    // Potentiometer, ADC12_IN8
+    LL_GPIO_SetPinMode(POTENTIOMETER_GPIO_PORT, POTENTIOMETER_PIN, LL_GPIO_MODE_ANALOG);
+
+    // PGOOD. Input
+    LL_GPIO_SetPinMode(PGOOD_GPIO_PORT, PGOOD_PIN, LL_GPIO_MODE_INPUT);
+
+    // Red LED. Output via TIM8_CH1 (AF5)
+    LL_GPIO_SetPinMode(LED_RED_GPIO_PORT, LED_RED_PIN, LL_GPIO_MODE_ALTERNATE);
+    LL_GPIO_SetAFPin_0_7(LED_RED_GPIO_PORT, LED_RED_PIN, LL_GPIO_AF_5);
+
+    // Green LED. Output via TIM8_CH3n (AF4)
+    LL_GPIO_SetPinMode(LED_GREEN_GPIO_PORT, LED_GREEN_PIN, LL_GPIO_MODE_ALTERNATE);
+    LL_GPIO_SetAFPin_8_15(LED_GREEN_GPIO_PORT, LED_GREEN_PIN, LL_GPIO_AF_4);
 
     // default states
-    digitalWrite(A_HFS, MAX22213_HFS);
     BSP_OutputEnable(false, false, false, false);
-
 }
 
 void initPwm()
@@ -330,7 +363,7 @@ void initLedTimer()
     led_timer->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;    // pwm mode
     led_timer->CCMR2 |= TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1;
 
-    led_timer->CCR1 = 0;    // led's off
+    led_timer->CCR1 = 0;    // leds off
     led_timer->CCR3 = 0;
 
     led_timer->CCER |= TIM_CCER_CC1E | TIM_CCER_CC3NE;  // enable output 1 and 3n
@@ -347,19 +380,19 @@ void configureOpamp(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def)
     hopamp->Init.Mode = OPAMP_PGA_MODE;
     if (hopamp->Instance == OPAMP2)
     {
-        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO1;   // PB14
+        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO1;   // PB14 = ISEN1
     }
     if (hopamp->Instance == OPAMP3)
     {
-        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO1;   // PB13
+        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO1;   // PB13 = ISEN2
     }
     if (hopamp->Instance == OPAMP4)
     {
-        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO2;   // PB11
+        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO2;   // PB11 = ISEN3
     }
     if (hopamp->Instance == OPAMP6)
     {
-        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO0;   // PB12
+        hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO0;   // PB12 = ISEN4
     }
     hopamp->Init.InternalOutput = ENABLE;
     hopamp->Init.TimerControlledMuxmode = OPAMP_TIMERCONTROLLEDMUXMODE_DISABLE;
@@ -389,86 +422,6 @@ void initOpamp()
     configureOpamp(&bsp.opamp3, OPAMP3);
     configureOpamp(&bsp.opamp4, OPAMP4);
     configureOpamp(&bsp.opamp6, OPAMP6);
-}
-
-/**
- * @brief OPAMP MSP Initialization
- * @param hopamp-> OPAMP handle pointer
- * @retval None
- */
-void HAL_OPAMP_MspInit(OPAMP_HandleTypeDef *hopamp)
-{
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    if (hopamp->Instance == OPAMP2)
-    {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-        /**OPAMP3 GPIO Configuration
-        PB14    ------> A_SEN1_PLUS
-        */
-        GPIO_InitStruct.Pin = GPIO_PIN_14;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    }
-    else if (hopamp->Instance == OPAMP3)
-    {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-        /**OPAMP4 GPIO Configuration
-        PB13     ------> A_SEN2_PLUS
-        */
-        GPIO_InitStruct.Pin = GPIO_PIN_13;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    }
-    else if (hopamp->Instance == OPAMP4)
-    {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-        /**OPAMP5 GPIO Configuration
-        PB11     ------> A_SEN3_PLUS
-        */
-        GPIO_InitStruct.Pin = GPIO_PIN_11;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    }
-    else if (hopamp->Instance == OPAMP6)
-    {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-        /**OPAMP6 GPIO Configuration
-        PB12     ------> A_SEN4_PLUS
-        */
-        GPIO_InitStruct.Pin = GPIO_PIN_12;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    }
-}
-
-/**
- * @brief OPAMP MSP De-Initialization
- * @param hopamp-> OPAMP handle pointer
- * @retval None
- */
-void HAL_OPAMP_MspDeInit(OPAMP_HandleTypeDef *hopamp)
-{
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    if (hopamp->Instance == OPAMP2)
-    {
-        HAL_GPIO_DeInit(GPIOB, GPIO_PIN_14);
-    }
-    else if (hopamp->Instance == OPAMP3)
-    {
-        HAL_GPIO_DeInit(GPIOB, GPIO_PIN_13);
-    }
-    else if (hopamp->Instance == OPAMP4)
-    {
-        HAL_GPIO_DeInit(GPIOB, GPIO_PIN_11);
-    }
-    else if (hopamp->Instance == OPAMP6)
-    {
-        HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12);
-    }
 }
 
 void configureADC1(ADC_HandleTypeDef *hadc)
@@ -1052,17 +1005,17 @@ extern "C"
 void BSP_OutputEnable(bool a, bool b, bool c, bool d)
 {
     // BSP_PrintDebugMsg("output enable: %i %i %i %i", a, b, c, d);
-    digitalWrite(A_EN1, d);
-    digitalWrite(A_EN2, b);
-    digitalWrite(A_EN3, c);
-    digitalWrite(A_EN4, a);
-    digitalWrite(A_OUT1_EN, d);
+    HAL_GPIO_WritePin(ENABLE_GPIO_PORT, ENABLE_1_PIN, (GPIO_PinState)d);
+    HAL_GPIO_WritePin(ENABLE_GPIO_PORT, ENABLE_2_PIN, (GPIO_PinState)b);
+    HAL_GPIO_WritePin(ENABLE_GPIO_PORT, ENABLE_3_PIN, (GPIO_PinState)c);
+    HAL_GPIO_WritePin(ENABLE_GPIO_PORT, ENABLE_4_PIN, (GPIO_PinState)a);
+    HAL_GPIO_WritePin(OUT1_EN_GPIO_PORT, OUT1_EN_PIN, (GPIO_PinState)d);
 
     if (a || b || c || d) {
-        digitalWrite(A_SLEEP, 1);
+        LL_GPIO_SetOutputPin(SLEEP_GPIO_PORT, SLEEP_PIN);
         pwm_timer->BDTR |= TIM_BDTR_MOE;
     } else {
-        digitalWrite(A_SLEEP, 0);
+        LL_GPIO_ResetOutputPin(SLEEP_GPIO_PORT, SLEEP_PIN);
         pwm_timer->BDTR &= ~(TIM_BDTR_MOE);
     }
 }
@@ -1155,17 +1108,17 @@ Vec4f BSP_ReadPhaseCurrents4()
 bool BSP_ReadFault()
 {
     // TODO: use in software.
-    return digitalRead(A_FAULT);
+    return LL_GPIO_IsInputPinSet(FAULT_GPIO_PORT, FAULT_PIN);
 }
 
 void BSP_WriteStatusLED(bool on)
 {
-    // digitalWrite(A_LED_GREEN, on);
+
 }
 
 void BSP_WriteFaultLED(bool on)
 {
-    // digitalWrite(A_LED_RED, on);
+
 }
 
 float BSP_ReadTemperatureSTM()
@@ -1215,12 +1168,7 @@ float BSP_ReadChipAnalogVoltage()
 
 void BSP_SetBoostEnable(bool enable)
 {
-    // digitalWrite(A_BOOST_EN, enable);
-    if (enable) {
-        HAL_GPIO_WritePin(GPIOB, LL_GPIO_PIN_10, GPIO_PIN_SET);
-    } else {
-        HAL_GPIO_WritePin(GPIOB, LL_GPIO_PIN_10, GPIO_PIN_RESET);
-    }
+    HAL_GPIO_WritePin(BOOST_EN_GPIO_PORT, BOOST_EN_PIN, (GPIO_PinState)enable);
 }
 
 void BSP_SetBoostVoltage(float boost_voltage)
@@ -1274,7 +1222,7 @@ void BSP_WriteLedPattern(LedPattern pattern)
 
 bool BSP_ReadPGood()
 {
-    return digitalRead(A_PGOOD);
+    return LL_GPIO_IsInputPinSet(PGOOD_GPIO_PORT, PGOOD_PIN);
 }
 
 void BSP_PrintDebugMsg(const char *fmt, ...)

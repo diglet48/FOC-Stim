@@ -29,4 +29,4 @@ jobs:
         with:
           name: dist-without-markdown
           path: |
-            ./pio/build/disco_b_g431b_esc1/firmware.bin
+            .pio/build/disco_b_g431b_esc1/firmware.bin

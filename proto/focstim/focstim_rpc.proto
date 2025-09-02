@@ -18,6 +18,7 @@ message Notification{
 
         NotificationDebugString notification_debug_string = 1000;
         NotificationDebugAS5311 notification_debug_as5311 = 1001;
+        NotificationDebugEdging notification_debug_edging = 1002;
     }
 
     uint64 timestamp = 999;

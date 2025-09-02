@@ -82,3 +82,10 @@ message NotificationDebugAS5311 {
     sint32 tracked = 2;
     int32 flags = 3;
 }
+
+// only abused for debug within logging in restim
+message NotificationDebugEdging {
+    float full_power_threshold = 1;
+    float reduced_power_threshold = 2;
+    float reduction = 3;
+}

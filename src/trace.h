@@ -14,7 +14,7 @@ struct MainLoopTraceLine
     uint32_t dt_play;
     uint32_t dt_logs;
     int skipped_update_steps;
-    float v_drive_max;
+    float v_drive;
     float i_max_a;
     float i_max_b;
     float i_max_c;
@@ -61,7 +61,7 @@ public:
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
             BSP_PrintDebugMsg("%10f %10f %10f %10f %10f %10f",
-                          p->v_drive_max,
+                          p->v_drive,
                           p->i_max_a,
                           p->i_max_b,
                           p->i_max_c,

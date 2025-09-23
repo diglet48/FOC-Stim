@@ -4,6 +4,7 @@
 #include "bsp/config_g431b_esc1.h"
 #include "bsp/config_g474re_max22213_shield.h"
 #include "bsp/config_g474re_focstim_v3.h"
+#include "bsp/config_g473re_focstim_v4.h"
 #include "vec.h"
 #include <functional>
 
@@ -25,6 +26,7 @@ At pwm peak the following occurs:
 void BSP_AttachPWMInterrupt(std::function<void()>);
 
 void BSP_DisableOutputs();
+void BSP_AdjustCurrentSenseOffsets(); // ESC1: to be called regularly. V4: to be called regularly when the drivers are enabled but not driving current.
 
 // three outputs interface
 void BSP_OutputEnable(bool a, bool b, bool c);      // enable or high-z
@@ -42,7 +44,6 @@ Vec4f BSP_ReadPhaseCurrents4();
 #endif
 
 #ifdef ARDUINO_B_G431B_ESC1
-void BSP_AdjustCurrentSenseOffsets();
 float BSP_ReadTemperatureOnboardNTC();  // onboard temperature sensor (ESC1)
 #endif
 
@@ -55,7 +56,7 @@ float BSP_ReadVBus();
 // LED
 #if defined(ARDUINO_B_G431B_ESC1)
 void BSP_WriteStatusLED(bool on);
-#elif defined(ARDUINO_FOCSTIM_V3)
+#elif defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
 
 enum LedPattern {
     Idle,
@@ -72,14 +73,13 @@ void BSP_WriteRedLedBrightness(float a);
 #endif
 
 
-#if defined(ARDUINO_NUCLEO_G474RE) || defined(ARDUINO_FOCSTIM_V3)
+#if defined(ARDUINO_NUCLEO_G474RE) || defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
 bool BSP_ReadFault();           // Fault pin to MAX22213. Active low.
 void BSP_SetBoostEnable(bool enable);
 void BSP_SetBoostVoltage(float boost_voltage);
 void BSP_SetBoostMinimumInputVoltage(float voltage);
 float BSP_ReadVSYS();
 float BSP_BoostDutyCycle(); // debug, remove
-int BSP_AppTimerTicks();
 bool BSP_ReadPGood();       // low = usb5v present. high = not present.
 #endif
 

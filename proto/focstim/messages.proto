@@ -76,6 +76,15 @@ message ResponseTimestampGet {
     uint64 unix_timestamp_ms = 2;   // synchronized clock
 }
 
+// network
+message RequestWifiParametersSet {
+    bytes ssid = 1;
+    bytes password = 2;
+}
+message ResponseWifiParametersSet {
+}
+
+
 // debug commands
 message RequestDebugStm32DeepSleep {
 }

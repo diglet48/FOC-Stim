@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
- * @brief modified linker script for STM32G474RBTx
- *                      128Kbytes FLASH, organized in 2 banks of 64k
+ * @brief modified linker script for STM32G473RCTx
+ *                      256Kbytes FLASH, organized in 2 banks of 128k
  *                      128Kbytes RAM
  *
  * This linker script splits up the .text section to fit into the two
@@ -22,8 +22,8 @@ _Min_Stack_Size = 0x400;	/* required amount of stack */
 MEMORY
 {
   RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 131072
-  FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 65536
-  FLASH_BANK2 (rx)    : ORIGIN = 0x8040000,   LENGTH = 65536
+  FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 131072
+  /* FLASH_BANK2 (rx)    : ORIGIN = 0x8040000,   LENGTH = 131072 */
 }
 
 /* Sections */
@@ -64,7 +64,7 @@ SECTIONS
     KEEP (*(.fini))
 
     . = ALIGN(4);
-  } >FLASH_BANK2
+  } >FLASH /* >FLASH_BANK2 */
 
   /* Constant data into "FLASH" Rom type memory */
   .rodata :

@@ -10,7 +10,7 @@
  *
  *******************************************************************************
  */
-#if defined(BOARD_FOCSTIM_V3)
+#if defined(BOARD_FOCSTIM_V4)
 #include "pins_arduino.h"
 
 // Digital PinName array
@@ -143,8 +143,8 @@ WEAK void SystemClock_Config(void)
                                     | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;   // TIM2, TIM3, I2C, DMA1, DMA2
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;   // TIM1, TIM20
 
     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) {
         Error_Handler();

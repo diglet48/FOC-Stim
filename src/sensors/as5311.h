@@ -3,13 +3,22 @@
 
 #include "stim_clock.h"
 
-
+#ifdef FOCSTIM_V3
 #define PORT_DO GPIOA
 #define PIN_DO  LL_GPIO_PIN_1
 #define PORT_CSN GPIOA
 #define PIN_CSN LL_GPIO_PIN_0
 #define PORT_CLK GPIOA
 #define PIN_CLK LL_GPIO_PIN_5
+#else   // V4
+// TODO: check pin assignment
+#define PORT_DO GPIOC
+#define PIN_DO  LL_GPIO_PIN_4
+#define PORT_CSN GPIOA
+#define PIN_CSN LL_GPIO_PIN_0
+#define PORT_CLK GPIOB
+#define PIN_CLK LL_GPIO_PIN_0
+#endif
 
 
 #define FLAG_OCF_MASK (1 << 5)  // offset compensation.

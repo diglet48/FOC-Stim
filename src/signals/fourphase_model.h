@@ -38,7 +38,7 @@ public:
 
 
     // log stats
-    float v_drive_max = 0;
+    float v_drive_last = 0;
     float v_min = 0;
     float v_max = 0;
     Vec4f current_squared = Vec4f(0, 0, 0, 0);

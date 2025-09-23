@@ -41,6 +41,9 @@ message Request {
         RequestTimestampGet request_timestamp_get = 505;
         // RequestAxisSet request_axis_set = 506;
 
+        // network
+        RequestWifiParametersSet request_wifi_parameters_set = 507;
+
         // debug
         RequestDebugStm32DeepSleep request_debug_stm32_deep_sleep = 1000;
         RequestDebugEnterBootloader request_debug_enter_bootloader = 1001;
@@ -64,6 +67,9 @@ message Response {
         ResponseTimestampSet response_timestamp_set = 504;
         ResponseTimestampGet response_timestamp_get = 505;
         // ResponseAxisSet response_axis_set = 506;
+
+        // network
+        ResponseWifiParametersSet response_wifi_parameters_set = 507;
 
         // debug
         ResponseDebugStm32DeepSleep response_debug_stm32_deep_sleep = 1000;

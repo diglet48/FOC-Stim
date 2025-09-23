@@ -93,7 +93,7 @@ void FourphaseModel::play_pulse(
         v4 = v4 * factor;
         v_drive = v_drive * factor;
     }
-    v_drive_max = max(v_drive, v_drive_max);
+    v_drive_last = v_drive;
 
     // compute pulse length etc.
     int samples = int(STIM_PWM_FREQ * pulse_width / carrier_frequency);
@@ -113,10 +113,10 @@ void FourphaseModel::play_pulse(
 
 
     // enable pwm and interrupt
-    BSP_SetPWM4Atomic(.5f, .5f, .5f, 0.5f);
+    BSP_SetPWM4Atomic(.5f, .5f, .5f, .5f);
     BSP_AttachPWMInterrupt([&]{interrupt_fn();});
 
-    // start consumer, pulse plays in backgroud
+    // start producer, pulse plays in backgroud
     for (int i = 0; i < samples; i++) {
         if (i < rise_endpoint) {
             envelope = envelope * envelope_rotator;
@@ -136,6 +136,22 @@ void FourphaseModel::play_pulse(
         context[i % CONTEXT_SIZE].v2_cmd = (v2 * q).a;
         context[i % CONTEXT_SIZE].v3_cmd = (v3 * q).a;
         context[i % CONTEXT_SIZE].v4_cmd = (v4 * q).a;
+
+#if defined(DEADTIME_COMPENSATION_ENABLE)
+        // note1: This does not result in current flow if all voltages are zero or very close to zero.
+        // note2: Assumes current is not discontinuous. (requires R <= 220µh * max(on_time, off_time)).
+        // note3: Assumes current does not change sign during pwm operation.
+#if defined(STIM_DYNAMIC_VOLTAGE)
+        float dtcomp = DEADTIME_COMPENSATION_PERCENTAGE * BSP_ReadVBus();
+#elif defined(STIM_STATIC_VOLTAGE)
+        float dtcomp = DEADTIME_COMPENSATION_PERCENTAGE * STIM_PSU_VOLTAGE;
+#endif
+        context[i % CONTEXT_SIZE].v1_cmd += (context[i % CONTEXT_SIZE].i1_cmd > 0 ? 1 : -1) * dtcomp;
+        context[i % CONTEXT_SIZE].v2_cmd += (context[i % CONTEXT_SIZE].i2_cmd > 0 ? 1 : -1) * dtcomp;
+        context[i % CONTEXT_SIZE].v3_cmd += (context[i % CONTEXT_SIZE].i3_cmd > 0 ? 1 : -1) * dtcomp;
+        context[i % CONTEXT_SIZE].v4_cmd += (context[i % CONTEXT_SIZE].i4_cmd > 0 ? 1 : -1) * dtcomp;
+#endif
+
         atomic_signal_fence(std::memory_order_release);
         producer_index = i;
 

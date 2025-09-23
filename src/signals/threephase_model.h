@@ -32,20 +32,20 @@ public:
     Complex z2 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of second output
     Complex z3 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of third output
 
-    
+
     // log stats
-    float v_drive_max = 0;
+    float v_drive_last = 0;
     float v_min = 0;
     float v_max = 0;
     Vec3f current_squared = Vec3f(0, 0, 0);
     Vec3f current_max = Vec3f(0, 0, 0);
-    
+
     static constexpr int CONTEXT_SIZE = 512;
     static constexpr int max_producer_queue_length = 20;    // (producer_index - interrupt_index) % CONTEXT_SIZE
     static constexpr int min_producer_queue_length = 10;    // (producer_index - interrupt_index) % CONTEXT_SIZE
     static constexpr int interrupt_headstart = 20;          // (producer_index - interrupt_index) % CONTEXT_SIZE
     static constexpr int max_updater_lag = 50;              // (interrupt_index - updater_index)  % CONTEXT_SIZE
-    
+
     int producer_index;
     int updater_index;
     volatile int interrupt_index;

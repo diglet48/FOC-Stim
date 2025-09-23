@@ -125,6 +125,7 @@ void loop()
     static float actual_pulse_frequency = 0;
     static bool led_status = true;
     static Clock print_system_stats_clock;
+    static float v_drive_max = 0;
 
     static Clock potentiometer_notification_nospam;
     static float potentiometer_notification_lastvalue = 0;
@@ -300,7 +301,8 @@ void loop()
     // store trace
     {
         traceline->skipped_update_steps = model3.skipped_update_steps;
-        traceline->v_drive_max = model3.v_drive_max;
+        traceline->v_drive = model3.v_drive_last;
+        v_drive_max = max(v_drive_max, model3.v_drive_last);
         auto current_max = model3.current_max;
         traceline->i_max_a = current_max.a;
         traceline->i_max_b = current_max.b;
@@ -354,7 +356,8 @@ void loop()
     // send notification: pulse stats
     if (pulse_counter % 50 == 40) {
         // transmit_notification
-        protobuf.transmit_notification_signal_stats(actual_pulse_frequency, model3.v_drive_max);
+        protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive_max);
+        v_drive_max = 0;
     }
 
     // store stats

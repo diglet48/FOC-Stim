@@ -21,7 +21,7 @@ int16_t read_byte() {
 void write_byte(uint8_t ch) {
     Serial.write(ch);
 };
-HDLC<read_byte, write_byte, 32, CRC16_CCITT> hdlc;
+HDLC<read_byte, write_byte, 128, CRC16_CCITT> hdlc;
 
 
 static bool encode_string(pb_ostream_t* stream, const pb_field_t* field, void* const* arg)
@@ -220,7 +220,11 @@ void ProtobufAPI::handle_request_firmware_version(focstim_rpc_RequestFirmwareVer
     message.which_message = focstim_rpc_RpcMessage_response_tag;
     message.message.response.id = id;
     message.message.response.which_result = focstim_rpc_Response_response_firmware_version_tag;
+#if defined(ARDUINO_B_G431B_ESC1)
+    message.message.response.result.response_firmware_version.board = focstim_rpc_BoardIdentifier_BOARD_B_G431B_ESC1;
+#elif defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
     message.message.response.result.response_firmware_version.board = focstim_rpc_BoardIdentifier_BOARD_FOCSTIM_V3;
+#endif
     message.message.response.result.response_firmware_version.stm32_firmware_version.arg = (char*)FIRMWARE_VERSION;
     message.message.response.result.response_firmware_version.stm32_firmware_version.funcs.encode = encode_string;
     transmit_message(message);
@@ -337,23 +341,32 @@ void ProtobufAPI::handle_request_capabilities_get(focstim_rpc_RequestCapabilitie
     transmit_message(message);
 }
 
+void ProtobufAPI::handle_request_wifi_parameters_set(focstim_rpc_RequestWifiParametersSet &request, uint32_t id)
+{
+    focstim_rpc_Errors error = focstim_rpc_Errors_ERROR_UNKNOWN;
+
+    error = wifi_parameters_set(
+        request
+    );
+
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_response_tag;
+    message.message.response.id = id;
+    if (error == focstim_rpc_Errors_ERROR_UNKNOWN) {
+        message.message.response.which_result = focstim_rpc_Response_response_wifi_parameters_set_tag;
+    } else {
+        message.message.response.has_error = true;
+        message.message.response.error.code = error;
+    }
+    transmit_message(message);
+}
+
 void ProtobufAPI::handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebugStm32DeepSleep &request, uint32_t id)
 {
     while (1) {
         HAL_PWREx_EnterSHUTDOWNMode();
     }
 }
-
-
-#define BOOT_ADDR	0x1FFF0000	// my MCU boot code base address
-#define	MCU_IRQS	101u	// no. of NVIC IRQ inputs
-
-struct boot_vectable_ {
-    uint32_t Initial_SP;
-    void (*Reset_Handler)(void);
-};
-
-#define BOOTVTAB	((struct boot_vectable_ *)BOOT_ADDR)
 
 void ProtobufAPI::handle_request_debug_enter_bootloader(focstim_rpc_RequestDebugEnterBootloader &request, uint32_t id)
 {
@@ -396,6 +409,10 @@ void ProtobufAPI::handle_request(focstim_rpc_Request &request)
 
         case focstim_rpc_Request_request_capabilities_get_tag:
             handle_request_capabilities_get(request.params.request_capabilities_get, id);
+        break;
+
+        case focstim_rpc_Request_request_wifi_parameters_set_tag:
+            handle_request_wifi_parameters_set(request.params.request_wifi_parameters_set, id);
         break;
 
         case focstim_rpc_Request_request_debug_stm32_deep_sleep_tag:

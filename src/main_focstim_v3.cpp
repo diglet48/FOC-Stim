@@ -1,4 +1,4 @@
-#if defined(ARDUINO_FOCSTIM_V3)
+#if defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
 
 #include <Arduino.h>
 
@@ -18,6 +18,8 @@
 #include "axis/simple_axis.h"
 #include "timestamp_sync.h"
 #include "sensors/as5311.h"
+#include "user_interface/user_interface.h"
+#include "esp32.h"
 
 #include "bsp/bsp.h"
 #include "bsp/bootloader.h"
@@ -34,6 +36,8 @@ Trace trace{};
 ThreephaseModel model3{};
 FourphaseModel model4{};
 PowerManager power_manager{};
+UserInterface user_interface{};
+ESP32 esp32;
 
 enum PlayStatus{
     NotPlaying,
@@ -47,6 +51,15 @@ class FocstimV3ProtobufAPI : public ProtobufAPI {
 public:
     FocstimV3ProtobufAPI() {};
 
+    focstim_rpc_Errors wifi_parameters_set(focstim_rpc_RequestWifiParametersSet &params) {
+        // TODO: error checks
+        esp32.set_wifi_ssid(params.ssid.bytes, params.ssid.size);
+        esp32.set_wifi_password(params.password.bytes, params.password.size);
+        esp32.wifi_reconnect();
+
+        return focstim_rpc_Errors_ERROR_UNKNOWN;
+    }
+
     focstim_rpc_Errors signal_start_threephase()
     {
         if (play_status != PlayStatus::NotPlaying) {
@@ -59,6 +72,7 @@ public:
         BSP_SetBoostEnable(true);
         BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
         play_status = PlayStatus::PlayingThreephase;
+        user_interface.setState(UserInterface::Playing);
         return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
@@ -75,6 +89,7 @@ public:
         BSP_SetBoostEnable(true);
         BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
         play_status = PlayStatus::PlayingFourphase;
+        user_interface.setState(UserInterface::Playing);
         return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
@@ -85,6 +100,7 @@ public:
         BSP_OutputEnable(false, false, false);
         BSP_SetBoostEnable(false);
         BSP_WriteLedPattern(LedPattern::Idle);
+        user_interface.setState(UserInterface::Idle);   // TOOD: force display update
         play_status = PlayStatus::NotPlaying;
     }
 
@@ -153,14 +169,22 @@ void estop_triggered()
     if (play_status == PlayStatus::PlayingFourphase) {
         model4.debug_stats_teleplot();
     }
+    user_interface.setState(UserInterface::Error);
+    user_interface.refresh();
 }
 
 AS5311 as5311{};
+
 
 void setup()
 {
     BSP_CheckJumpToBootloader();
     Serial.begin(115200, SERIAL_8E1);
+
+    Wire.setSCL(PA15);
+    Wire.setSDA(PB9);
+    user_interface.init();
+
     protobuf.init();
     protobuf.set_simple_axis(
         reinterpret_cast<SimpleAxis *>(&simple_axes),
@@ -168,18 +192,30 @@ void setup()
     BSP_PrintDebugMsg("BSP init");
     BSP_Init();
     BSP_WriteLedPattern(LedPattern::Idle);
-
     protobuf.transmit_notification_boot();
+    user_interface.refresh();
 
     power_manager.init();
     power_manager.adjust_board_voltages();
+    user_interface.setBatteryPresent(power_manager.is_battery_present);
+    if (power_manager.is_battery_present) {
+        unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)
+        unsigned int capacity = lipo.capacity(REMAIN); // Read remaining capacity (mAh)
+        float soc = float(capacity) / float(fullCapacity);
+        user_interface.setBatterySoc(soc);
+    }
+    user_interface.setState(UserInterface::Idle);
+    user_interface.refresh();
 
+    esp32.init();
+
+    // TODO: dynamic
     BSP_SetBoostVoltage(STIM_BOOST_VOLTAGE);
 
     model3.init(&estop_triggered);
     model4.init(&estop_triggered);
 
-    as5311.init(0.001f, 0.01f);
+    // as5311.init(0.001f, 0.01f);
 }
 
 void loop()
@@ -195,6 +231,8 @@ void loop()
     static float actual_pulse_frequency = 0;
     static Clock adjust_board_voltage_clock;
     static Clock print_system_stats_clock;
+    static float v_drive_max = 0;
+    static Clock ip_refresh_clock;
 
     static Clock potentiometer_notification_nospam;
     static float potentiometer_notification_lastvalue = 0;
@@ -259,6 +297,9 @@ void loop()
         protobuf.transmit_notification_potentiometer(powf(pot, 1.f/2));
         potentiometer_notification_nospam.reset();
         potentiometer_notification_lastvalue = pot;
+
+        user_interface.setPowerLevel(powf(pot, 1.f/2) * 100);
+        user_interface.refresh();
     }
 
     // adjust boost duty cycle
@@ -282,7 +323,18 @@ void loop()
             float soc = float(capacity) / float(fullCapacity);
             float temperature = lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f;
             protobuf.transmit_notification_battery(voltage, soc, power_watt, temperature, !BSP_ReadPGood());
+
+            user_interface.setBatterySoc(soc);
+            user_interface.refresh();
         }
+    }
+
+    // if not playing, regularly query the IP address from the esp32
+    ip_refresh_clock.step();
+    if (ip_refresh_clock.time_seconds > 0.4f && play_status == PlayStatus::NotPlaying) {
+        user_interface.setIP(esp32.ip());
+        user_interface.refresh();
+        ip_refresh_clock.reset();
     }
 
     as5311.update();
@@ -299,6 +351,7 @@ void loop()
         BSP_PrintDebugMsg("Comms lost? Stopping.");
         play_status = PlayStatus::NotPlaying;
         BSP_WriteLedPattern(LedPattern::Idle);
+        user_interface.setState(UserInterface::Idle);
         BSP_DisableOutputs();
         BSP_SetBoostEnable(false);
         return;
@@ -314,6 +367,9 @@ void loop()
     if (vbus <= STIM_BOOST_VOLTAGE_OK_THRESHOLD) {
         return;
     }
+
+    // Offset compensation for current sense. Only when drivers enabled.
+    BSP_AdjustCurrentSenseOffsets();
 
     // ready to generate next pulse!
     MainLoopTraceLine *traceline = trace.next_main_loop_line();
@@ -430,7 +486,8 @@ void loop()
     {
         if (play_status == PlayStatus::PlayingThreephase) {
             traceline->skipped_update_steps = model3.skipped_update_steps;
-            traceline->v_drive_max = model3.v_drive_max;
+            traceline->v_drive = model3.v_drive_last;
+            v_drive_max = max(v_drive_max, model3.v_drive_last);
 
             auto current_max = model3.current_max;
             traceline->i_max_a = current_max.a;
@@ -439,7 +496,8 @@ void loop()
             traceline->i_max_d = 0;
         } else {
             traceline->skipped_update_steps = model4.skipped_update_steps;
-            traceline->v_drive_max = model4.v_drive_max;
+            traceline->v_drive = model4.v_drive_last;
+            v_drive_max = max(v_drive_max, model4.v_drive_last);
 
             auto current_max = model4.current_max;
             traceline->i_max_a = current_max.a;
@@ -497,11 +555,11 @@ void loop()
                 rms.a / STIM_WINDING_RATIO,
                 rms.b / STIM_WINDING_RATIO,
                 rms.c / STIM_WINDING_RATIO,
-                0,
+                rms.d / STIM_WINDING_RATIO,
                 abs(model4.current_max.a) / STIM_WINDING_RATIO,
                 abs(model4.current_max.b) / STIM_WINDING_RATIO,
                 abs(model4.current_max.c) / STIM_WINDING_RATIO,
-                0,
+                abs(model4.current_max.d) / STIM_WINDING_RATIO,
                 p, 0,
                 abs(driving_current_amps) / STIM_WINDING_RATIO
             );
@@ -531,18 +589,9 @@ void loop()
 
     // send notification: pulse stats
     if (pulse_counter % 50 == 40) {
-        float v_drive = 0;
-        if (play_status == PlayStatus::PlayingThreephase) {
-            v_drive = model3.v_drive_max;
-            model3.v_drive_max = 0;
-        }
-        if (play_status == PlayStatus::PlayingFourphase) {
-            v_drive = model4.v_drive_max;
-            model4.v_drive_max = 0;
-        }
-
         // transmit_notification
-        protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive);
+        protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive_max);
+        v_drive_max = 0;
     }
 
     // store stats

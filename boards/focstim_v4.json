@@ -2,11 +2,11 @@
     "build": {
       "core": "stm32",
       "cpu": "cortex-m4",
-      "extra_flags": "-DSTM32G4 -DSTM32G4xx -DSTM32G474xx -DBOARD_FOCSTIM_V3",
+      "extra_flags": "-DSTM32G4 -DSTM32G4xx -DSTM32G473xx -DBOARD_FOCSTIM_V4",
       "f_cpu": "170000000L",
-      "mcu": "stm32g474rbt6",
-      "product_line": "STM32G474xx",
-      "variant": "focstim_v3",
+      "mcu": "stm32g473rct3",
+      "product_line": "STM32G473xx",
+      "variant": "focstim_v4",
       "variants_dir": "custom_variants"
     },
     "connectivity": [
@@ -16,12 +16,12 @@
       "default_tools": [
         "stlink"
       ],
-      "jlink_device": "STM32G474RB",
+      "jlink_device": "STM32G473RC",
       "onboard_tools": [
         "stlink"
       ],
       "openocd_target": "stm32g4x",
-      "svd_path": "STM32G474xx.svd"
+      "svd_path": "STM32G473xx.svd"
     },
     "frameworks": [
       "arduino",
@@ -31,10 +31,10 @@
       "stm32cube",
       "zephyr"
     ],
-    "name": "Nucleo G474RB",
+    "name": "Nucleo G473RC",
     "upload": {
       "maximum_ram_size": 131072,
-      "maximum_size": 131072,
+      "maximum_size": 262144,
       "protocol": "stlink",
       "protocols": [
         "stlink",

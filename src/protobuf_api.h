@@ -55,6 +55,7 @@ public:
     void handle_request_signal_start(focstim_rpc_RequestSignalStart &request, uint32_t id);
     void handle_request_signal_stop(focstim_rpc_RequestSignalStop &request, uint32_t id);
     void handle_request_capabilities_get(focstim_rpc_RequestCapabilitiesGet &request, uint32_t id);
+    void handle_request_wifi_parameters_set(focstim_rpc_RequestWifiParametersSet &request, uint32_t id);
 
     void handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebugStm32DeepSleep &request, uint32_t id);
     void handle_request_debug_enter_bootloader(focstim_rpc_RequestDebugEnterBootloader &request, uint32_t id);
@@ -63,6 +64,8 @@ public:
     void handle_frame(const uint8_t* data, size_t data_len);
 
     // override me!
+    virtual focstim_rpc_Errors wifi_parameters_set(focstim_rpc_RequestWifiParametersSet& params) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
+
     virtual focstim_rpc_Errors signal_start_threephase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual focstim_rpc_Errors signal_start_fourphase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual void signal_stop() {}

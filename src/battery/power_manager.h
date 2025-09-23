@@ -10,7 +10,7 @@
 #define BATTERY_DETECTION_TIME_MS 500
 
 // Set BATTERY_CAPACITY to the design capacity of your battery.
-const unsigned int BATTERY_CAPACITY = 1200; // e.g. 850mAh battery
+const unsigned int BATTERY_CAPACITY = 2000; // e.g. 850mAh battery
 
 const uint8_t SOCI_SET = 10; // battery low threshold, turn the system OFF (in percent)
 const uint8_t SOCI_CLR = 15; // battery low threshold clear.

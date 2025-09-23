@@ -6,7 +6,7 @@
 
 #include "stim_clock.h"
 
-float find_v_drive(Complex p1, Complex p2, Complex p3) {
+static float find_v_drive(Complex p1, Complex p2, Complex p3) {
     // TODO: exact method exists.
     int steps = 500;
     Complex proj(1, 0);
@@ -83,7 +83,7 @@ void ThreephaseModel::play_pulse(
         v3 = v3 * factor;
         v_drive = v_drive * factor;
     }
-    v_drive_max = max(v_drive, v_drive_max);
+    v_drive_last = v_drive;
 
     // compute pulse length etc.
     int samples = int(STIM_PWM_FREQ * pulse_width / carrier_frequency);
@@ -106,7 +106,7 @@ void ThreephaseModel::play_pulse(
     BSP_SetPWM3Atomic(.5f, .5f, .5f);
     BSP_AttachPWMInterrupt([&]{interrupt_fn();});
 
-    // start consumer, pulse plays in backgroud
+    // start producer, pulse plays in backgroud
     for (int i = 0; i < samples; i++) {
         if (i < rise_endpoint) {
             envelope = envelope * envelope_rotator;
@@ -124,6 +124,21 @@ void ThreephaseModel::play_pulse(
         context[i % CONTEXT_SIZE].v1_cmd = (v1 * q).a;  // cmd voltage.
         context[i % CONTEXT_SIZE].v2_cmd = (v2 * q).a;
         context[i % CONTEXT_SIZE].v3_cmd = (v3 * q).a;
+
+#if defined(DEADTIME_COMPENSATION_ENABLE)
+        // note1: This does not result in current flow if all voltages are zero or very close to zero.
+        // note2: Assumes current is not discontinuous. (requires R <= 220µh * max(on_time, off_time)).
+        // note3: Assumes current does not change sign during pwm operation.
+#if defined(STIM_DYNAMIC_VOLTAGE)
+        float dtcomp = DEADTIME_COMPENSATION_PERCENTAGE * BSP_ReadVBus();
+#elif defined(STIM_STATIC_VOLTAGE)
+        float dtcomp = DEADTIME_COMPENSATION_PERCENTAGE * STIM_PSU_VOLTAGE;
+#endif
+        context[i % CONTEXT_SIZE].v1_cmd += (context[i % CONTEXT_SIZE].i1_cmd > 0 ? 1 : -1) * dtcomp;
+        context[i % CONTEXT_SIZE].v2_cmd += (context[i % CONTEXT_SIZE].i2_cmd > 0 ? 1 : -1) * dtcomp;
+        context[i % CONTEXT_SIZE].v3_cmd += (context[i % CONTEXT_SIZE].i3_cmd > 0 ? 1 : -1) * dtcomp;
+#endif
+
         atomic_signal_fence(std::memory_order_release);
         producer_index = i;
 
@@ -232,7 +247,7 @@ Vec3f ThreephaseModel::estimate_rms_current(float dt)
 
 void ThreephaseModel::debug_stats_teleplot()
 {
-    BSP_PrintDebugMsg("    i     V1     V2     V3 cmd_i1 i2_cmd i3_cmd     i1     i2     i3");
+    BSP_PrintDebugMsg("    i     V1     V2     V3 i1_cmd i2_cmd i3_cmd     i1     i2     i3");
     int start_index = max(0, producer_index - CONTEXT_SIZE + 1);
     for (int i = start_index; i <= producer_index; i++) {
         const auto &c = context[i % CONTEXT_SIZE];

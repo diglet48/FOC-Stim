@@ -88,10 +88,11 @@ TODO: sourcing link for this part
 ### Battery
 A battery is optional.
 
-34mm * 50mm. Maximum thickness 10mm. Must be 3-pin JST-PH.  
-Search for 303450, 403450, 503450, 603450, 703450, 803450, 903450, 103450  
-https://aliexpress.com/item/1005009218475835.html  
-1200mAh battery lasts approximately 4 hours.  
+34mm * 50mm. Maximum thickness 10mm. Must be 3-pin JST-PH. 
+[Aliexpress](https://aliexpress.com/item/1005009218475835.html)  
+Alternative: search for 303450, 403450, 503450, 603450, 703450, 803450, 903450, 103450  
+  
+A 6mm 1200mAh battery lasts about 4 hours. 10mm 2000mAh about 7 hours.  
 
 
 # Case

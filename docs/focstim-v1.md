@@ -6,12 +6,22 @@ How to wire:
 
 ![](/docs/images/schematic.png)
 
+
 `U`, `V`, `W` are the 3 outputs on the board, with `U` being the one closest to the potentiometer.
 
 The side of the transformer marked with black sharpie should be connected to the board-side.
 The primary, indicated with a "P", is the output side.
 
+![](/docs/images/focstim-v1-board.png)
+
+The build on a breadboard:
+
 ![](/docs/images/breadboard.jpg)
+
+Complete build built into 120x97x60mm aluminium enclosure.
+
+![](/docs/images/focstim-v1-completed.jpg)
+
 
 # Software
 
@@ -19,13 +29,17 @@ From the factory, the board has a very old ST-link firmware that prevents the us
 correctly on some computers. It is highly recommended to update the ST-link firmware using
 [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) before proceeding.
 
+## Uploading firmware
+
+Click on the latest workflow run on https://github.com/diglet48/FOC-Stim/actions/workflows/build.yml and download b_g431b_esc1_firmware.
+Use STM32CubeProgrammer to upload the firmware to the device.
+
+## Build the firmware yourself
+
 Install Visual Studio Code with plugins `platformio` and `teleplot`,
 then build and upload the firmware, instructions below.
 
 For this hardware, you must select project `env:disco_b_g431b_esc1`.
-
-If you find that the box is not powerful enough, the current limit can be increased by modifying `BODY_CURRENT_MAX` in `FOC-Stim/src/bsp/config_g431b_esc1.h`.
-
 
 ![](/docs/images/pio.png)
 

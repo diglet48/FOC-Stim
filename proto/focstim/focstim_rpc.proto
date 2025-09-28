@@ -43,6 +43,7 @@ message Request {
 
         // network
         RequestWifiParametersSet request_wifi_parameters_set = 507;
+        RequestWifiIPGet request_wifi_ip_get = 508;
 
         // debug
         RequestDebugStm32DeepSleep request_debug_stm32_deep_sleep = 1000;
@@ -70,6 +71,7 @@ message Response {
 
         // network
         ResponseWifiParametersSet response_wifi_parameters_set = 507;
+        ResponseWifiIPGet response_wifi_ip_get = 508;
 
         // debug
         ResponseDebugStm32DeepSleep response_debug_stm32_deep_sleep = 1000;

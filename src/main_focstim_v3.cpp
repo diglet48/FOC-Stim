@@ -60,6 +60,12 @@ public:
         return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
+    focstim_rpc_Errors wifi_ip_get(focstim_rpc_RequestWifiIPGet& params, uint32_t *ip_out) {
+        // TOOD: error checks
+        *ip_out = esp32.ip();
+        return focstim_rpc_Errors_ERROR_UNKNOWN;
+    }
+
     focstim_rpc_Errors signal_start_threephase()
     {
         if (play_status != PlayStatus::NotPlaying) {

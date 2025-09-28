@@ -84,6 +84,13 @@ message RequestWifiParametersSet {
 message ResponseWifiParametersSet {
 }
 
+message RequestWifiIPGet {
+}
+message ResponseWifiIPGet {
+    uint32 ip = 1;
+}
+
+
 
 // debug commands
 message RequestDebugStm32DeepSleep {

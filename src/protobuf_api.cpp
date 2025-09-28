@@ -361,6 +361,28 @@ void ProtobufAPI::handle_request_wifi_parameters_set(focstim_rpc_RequestWifiPara
     transmit_message(message);
 }
 
+void ProtobufAPI::handle_request_wifi_ip_get(focstim_rpc_RequestWifiIPGet &request, uint32_t id)
+{
+    focstim_rpc_Errors error = focstim_rpc_Errors_ERROR_UNKNOWN;
+    uint32_t ip = 0;
+
+    error = wifi_ip_get(
+        request, &ip
+    );
+
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_response_tag;
+    message.message.response.id = id;
+    if (error == focstim_rpc_Errors_ERROR_UNKNOWN) {
+        message.message.response.which_result = focstim_rpc_Response_response_wifi_ip_get_tag;
+        message.message.response.result.response_wifi_ip_get.ip = ip;
+    } else {
+        message.message.response.has_error = true;
+        message.message.response.error.code = error;
+    }
+    transmit_message(message);
+}
+
 void ProtobufAPI::handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebugStm32DeepSleep &request, uint32_t id)
 {
     while (1) {
@@ -413,6 +435,10 @@ void ProtobufAPI::handle_request(focstim_rpc_Request &request)
 
         case focstim_rpc_Request_request_wifi_parameters_set_tag:
             handle_request_wifi_parameters_set(request.params.request_wifi_parameters_set, id);
+        break;
+
+        case focstim_rpc_Request_request_wifi_ip_get_tag:
+            handle_request_wifi_ip_get(request.params.request_wifi_ip_get, id);
         break;
 
         case focstim_rpc_Request_request_debug_stm32_deep_sleep_tag:

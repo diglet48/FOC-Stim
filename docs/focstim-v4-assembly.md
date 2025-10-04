@@ -29,10 +29,15 @@ Solder the battery connector and switch to the unpopulated side of the board.
 > [!NOTE]  
 > Make sure to solder the frontpanel components to the correct side
 
+> [!NOTE]  
+> Follow this assembly order
+
+
 Solder the SMD nuts and the pin headers to the rear of the frontpanel.
 
-When soldering the SMD nuts, do not put solder on the front. 
-Check if the SMD nuts are roughly centered in their holes.
+Put a good amount of solder on the top and bottom of the SMD nuts, 
+keeping the front free from solder.
+Check if the nuts are roughly centered in their holes. 
 
 ![](images/focstim-v4-frontpanel-1.jpg)
 ![](images/focstim-v4-frontpanel-2.jpg)
@@ -58,7 +63,7 @@ Print the case. No supports needed if printing at .2 layer height.
 
 TODO: print instructions.
 
-Install the M3 heatset inserts.
+Install the M3 heatset inserts in the battery sled.
 
 TOOD: image showing this assembly step.
 
@@ -71,6 +76,9 @@ TODO: wait for feet to arrive and make pictures
 Insert the frontpanel into the case and tighten the 2mm banana jacks.
 The best tool for grabbing onto the jacks is a small torx bit, just jam it into the hole.
 
+Jacks should be a loose fit, if they are extremely tight you may delaminate the
+frontpanel during tightening.
+
 ![](images/focstim-v4-jacks.jpg)
 
 Combine the mainboard, battery tray and rear by sliding the parts together.   
@@ -81,7 +89,7 @@ Insert the battery connector and neatly fold the battery cable under.
 
 ![](images/focstim-v4-battery.jpg)
 
-Slide the whole assembly into the case. Tighten the screw on the bottom to lock the assembly.
+Slide the whole assembly into the case. Tighten the single screw on the bottom to lock the assembly.
 
 The extra holes can be used for a belt clip (todo: design).
 

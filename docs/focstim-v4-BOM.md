@@ -70,7 +70,9 @@ Alternative style: [Aliexpress](https://aliexpress.com/item/1005007065833808.htm
 
 ### Non-slip feet
 
-TODO
+Round, 10mm diameter sticky feet 
+[Aliexpress](https://aliexpress.com/item/1005007646422189.html),
+[Aliexpress 2](https://aliexpress.com/item/1005005667108142.html) (I tested white from this seller)
 
 ### M3 heatset insert
 3x M3 heatset insert, designed for 4mm hole. Max length 6mm.
@@ -81,7 +83,7 @@ IUTB-M3 [Mouser](https://mouser.com/ProductDetail/SI/IUTB-M3?qs=7MVldsJ5Uay0LzKd
 
 ### M3 screw
 
-M3x6 or M3x8 countersink. Optional accessories may require longer bolts.
+M3 countersink, length 4mm to 10mm. Optional accessories may require longer bolts.
 
 TODO: sourcing link for this part
 

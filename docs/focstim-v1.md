@@ -31,7 +31,7 @@ correctly on some computers. It is highly recommended to update the ST-link firm
 
 ## Uploading firmware
 
-Click on the latest workflow run on https://github.com/diglet48/FOC-Stim/actions/workflows/build.yml and download b_g431b_esc1_firmware.
+Download the latest firmware binary from https://github.com/diglet48/FOC-Stim/releases (b_g431b_esc1_firmware.bin).
 Use STM32CubeProgrammer to upload the firmware to the device.
 
 ## Build the firmware yourself

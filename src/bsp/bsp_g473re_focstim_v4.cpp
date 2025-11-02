@@ -1215,14 +1215,19 @@ void BSP_SetBoostEnable(bool enable)
 
 void BSP_SetBoostVoltage(float boost_voltage)
 {
-    // min 0.21v
-    // max 30.21v
+    // DAC 2.4v or higher -> boost ~4v
+    // DAC 0.2v           -> boost 31.9v
+    // DAC 0.0v           -> boost 34.4v
+    // With output buffer on, min DAC output is 0.2v, and VM_sense caps out at 31.9v
+    // use 30v max to have some headroom for over-voltage detection.
+    boost_voltage = min(30.f, max(0.f, boost_voltage));
 
     float fb = 1.229f;
     float rtop = 1000000;
     float rbot = 69000;
     float rdac = 80000;
     float vdac = (fb * (1 + rtop / rbot + rtop / rdac) - boost_voltage) * (rdac / rtop);
+    // inverse: boost_voltage = fb * (1 + rtop / rbot + rtop / rdac) - vdac * (rtop / rdac);
     int value = min(DAC_MAX_VALUE, max(0, int(vdac * (DAC_MAX_VALUE / ADC_VOLTAGE))));
 
     // value to be written to the DAC on next interrupt.

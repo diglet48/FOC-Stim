@@ -139,15 +139,6 @@ public:
 FocstimV3ProtobufAPI protobuf{};
 ProtobufAPI* g_protobuf = &protobuf;
 
-
-// TODO: implement
-// struct {
-//     BufferedAxis alpha{-1, 1, 0};
-//     BufferedAxis beta{-1, 1, 0};
-//     BufferedAxis gamma{-1, 1, 0};
-//     BufferedAxis volume_percent{0, 1, 0};
-// } new_axes;
-
 struct {
     SimpleAxis alpha{focstim_rpc_AxisType_AXIS_POSITION_ALPHA, 0, -1, 1};
     SimpleAxis beta{focstim_rpc_AxisType_AXIS_POSITION_BETA, 0, -1, 1};
@@ -204,7 +195,7 @@ AS5311 as5311{};
 void setup()
 {
     BSP_CheckJumpToBootloader();
-    Serial.begin(115200, SERIAL_8E1);
+    Serial.begin(115200, SERIAL_8E1);   // match STM32 bootloader setting
 
     Wire.setSCL(PA15);
     Wire.setSDA(PB9);

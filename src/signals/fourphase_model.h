@@ -44,6 +44,8 @@ public:
     float v_max = 0;
     Vec4f current_squared = Vec4f(0, 0, 0, 0);
     Vec4f current_max = Vec4f(0, 0, 0, 0);
+    float v_bus_min = 0;
+    float v_bus_max = 0;
 
     static constexpr int CONTEXT_SIZE = 256;
     static constexpr int max_producer_queue_length = 20;    // (producer_index - interrupt_index) % CONTEXT_SIZE

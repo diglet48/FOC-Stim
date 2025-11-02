@@ -179,7 +179,8 @@ struct BSP {
     uint32_t boost_on_cycles;
     uint32_t boost_off_cycles;
 
-    float potentiometer_filtered;
+    uint16_t vsys_min = 0;
+    uint16_t vsys_max = 0;
 
     float current_a_offset = 0;
     float current_b_offset = 0;
@@ -928,6 +929,9 @@ extern "C"
                 bsp.pwm_callback();
             }
 
+            bsp.vsys_min = min(bsp.vsys_min, (uint16_t)bsp.vsys_sense);
+            bsp.vsys_max = max(bsp.vsys_max, (uint16_t)bsp.vsys_sense);
+
             DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CTCIF5 | DMA_IFCR_CHTIF5;
         } else {
             DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CHTIF5;
@@ -1201,6 +1205,17 @@ float BSP_ReadVSYS()
     float adc_voltage = bsp.vsys_sense * (ADC_VOLTAGE / ADC_SCALE);
     const float multiplier = (100 + 100) / 100.f;
     return adc_voltage * multiplier;
+}
+
+Vec2f BSP_ReadVSYSRange()
+{
+    // VSYS reads slightly low (about 2.5%) because of the high sampling frequency and high resistors used in the divider.
+    float adc_voltage_min = bsp.vsys_min * (ADC_VOLTAGE / ADC_SCALE);
+    bsp.vsys_min = ADC_SCALE;
+    float adc_voltage_max = bsp.vsys_max * (ADC_VOLTAGE / ADC_SCALE);
+    bsp.vsys_max = 0;
+    const float multiplier = (100 + 100) / 100.f;
+    return {adc_voltage_min * multiplier, adc_voltage_max * multiplier};
 }
 
 float BSP_ReadChipAnalogVoltage()

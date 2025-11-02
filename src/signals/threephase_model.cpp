@@ -53,6 +53,8 @@ void ThreephaseModel::play_pulse(
     skipped_update_steps = 0;
     current_limit_exceeded = 0;
     current_limit = estop_current_limit;
+    v_bus_min = 99;
+    v_bus_max = 0;
 
     // make debug easier by clearing out stale data.
     for (int i = 0; i < CONTEXT_SIZE; i++) {
@@ -301,9 +303,11 @@ void ThreephaseModel::interrupt_fn()
         context[read_index].v2_cmd,
         context[read_index].v3_cmd,
     });
-    #ifdef STIM_DYNAMIC_VOLTAGE
+#ifdef STIM_DYNAMIC_VOLTAGE
     float vbus = BSP_ReadVBus();
-    vbus = max(vbus, STIM_PWM_MAX_VDRIVE);
+    v_bus_max = max(v_bus_max, vbus);
+    v_bus_min = min(v_bus_min, vbus);
+    vbus = max(vbus, STIM_BOOST_VOLTAGE_LOW_THRESHOLD);
 #else
     float vbus = STIM_PSU_VOLTAGE;
 #endif

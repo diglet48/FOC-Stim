@@ -45,9 +45,11 @@ message SystemStatsESC1 {
 message SystemStatsFocstimV3 {
     float temp_stm32 = 1;
 
-    float v_sys = 2;
+    float v_sys_min = 2;
+    float v_sys_max = 6;
     float v_ref = 3;
-    float v_boost = 4;
+    float v_boost_min = 4;
+    float v_boost_max = 7;
     float boost_duty_cycle = 5;
 }
 

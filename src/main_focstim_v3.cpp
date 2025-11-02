@@ -116,17 +116,20 @@ public:
     virtual bool capability_potmeter() {return true;};
     virtual bool capability_battery() {return power_manager.is_battery_present;};
 
-    void transmit_notification_system_stats() {
+    void transmit_notification_system_stats(float v_boost_min, float v_boost_max) {
         focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
         message.which_message = focstim_rpc_RpcMessage_notification_tag;
         message.message.notification.which_notification = focstim_rpc_Notification_notification_system_stats_tag;
         message.message.notification.notification.notification_system_stats.which_system = focstim_rpc_NotificationSystemStats_focstimv3_tag;
+        Vec2f vsys_range = BSP_ReadVSYSRange();
         message.message.notification.notification.notification_system_stats.system.focstimv3 = {
             .temp_stm32 = BSP_ReadTemperatureSTM(),
-            .v_sys = BSP_ReadVSYS(),
+            .v_sys_min = vsys_range.a,
             .v_ref = BSP_ReadChipAnalogVoltage(),
-            .v_boost = BSP_ReadVBus(),
+            .v_boost_min = v_boost_min,
             .boost_duty_cycle = BSP_BoostDutyCycle(),
+            .v_sys_max = vsys_range.b,
+            .v_boost_max = v_boost_max,
         };
         transmit_message(message);
     }
@@ -255,6 +258,8 @@ void loop()
     static float actual_pulse_frequency = 0;
     static Clock print_system_stats_clock;
     static float v_drive_max = 0;
+    static float v_boost_min = 99;
+    static float v_boost_max = 0;
     static Clock ip_refresh_clock;
 
     static Clock potentiometer_notification_nospam;
@@ -278,6 +283,8 @@ void loop()
     }
 
     float vbus = BSP_ReadVBus();
+    v_boost_min = min(v_boost_min, vbus);
+    v_boost_max = max(v_boost_max, vbus);
     // safety: boost overvoltage
     if (vbus >= STIM_BOOST_OVERVOLTAGE_THRESHOLD) {
         trigger_emergency_stop(FOCError::BOOST_OVER_VOLTAGE);
@@ -329,7 +336,9 @@ void loop()
     print_system_stats_clock.step();
     if (print_system_stats_clock.time_seconds > 5) {
         print_system_stats_clock.reset();
-        protobuf.transmit_notification_system_stats();
+        protobuf.transmit_notification_system_stats(v_boost_min, v_boost_max);
+        v_boost_min = 99;
+        v_boost_max = 0;
 
         if (power_manager.is_battery_present) {
             float voltage = lipo.voltage() * .001f;
@@ -382,6 +391,7 @@ void loop()
 
     // delay pulse until the boost capacitors are filled up, reducing the pulse frequency if neccesairy
     if (vbus <= STIM_BOOST_VOLTAGE_OK_THRESHOLD) {
+        BSP_PrintDebugMsg("boost too low: %u %f %f", micros(), vbus, BSP_ReadVSYS());
         return;
     }
 
@@ -424,6 +434,7 @@ void loop()
     float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);
     pulse_pause_duration *= float_rand(1 - pulse_interval_random, 1 + pulse_interval_random);
     pulse_total_duration = pulse_active_duration + pulse_pause_duration;
+    traceline->dt_next = pulse_total_duration;
 
     // mix in potmeter
     float potmeter_value = BSP_ReadPotentiometerPercentage();
@@ -434,6 +445,7 @@ void loop()
     float driving_current_amps = body_current_amps * STIM_WINDING_RATIO;
 
     float volume_percent = body_current_amps / BODY_CURRENT_MAX;
+    // TODO: remove
     if (volume_percent < .02f) {
         BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
     } else if (volume_percent < .2) {
@@ -454,8 +466,6 @@ void loop()
 
     // store stats
     traceline->i_max_cmd = driving_current_amps;
-    total_pulse_length_timer.step();
-    traceline->dt_compute = total_pulse_length_timer.dt_micros;
 
     // play the pulse
     if (play_status == PlayStatus::PlayingThreephase) {
@@ -488,8 +498,6 @@ void loop()
             driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
     }
 
-    float vbus_after = BSP_ReadVBus();
-
     // store stats
     total_pulse_length_timer.step();
     traceline->dt_play = total_pulse_length_timer.dt_micros;
@@ -511,6 +519,12 @@ void loop()
             traceline->i_max_b = current_max.b;
             traceline->i_max_c = current_max.c;
             traceline->i_max_d = 0;
+
+            traceline->v_boost_min = model3.v_bus_min;
+            traceline->v_boost_max = model3.v_bus_max;
+            v_boost_min = min(v_boost_min, model3.v_bus_min);
+            v_boost_max = max(v_boost_max, model3.v_bus_max);
+
         } else {
             traceline->skipped_update_steps = model4.skipped_update_steps;
             traceline->v_drive = model4.v_drive_last;
@@ -522,6 +536,10 @@ void loop()
             traceline->i_max_c = current_max.c;
             traceline->i_max_d = current_max.d;
 
+            traceline->v_boost_min = model4.v_bus_min;
+            traceline->v_boost_max = model4.v_bus_max;
+            v_boost_min = min(v_boost_min, model4.v_bus_min);
+            v_boost_max = max(v_boost_max, model4.v_bus_max);
         }
         traceline->Z_a = z1;
         traceline->Z_b = z2;
@@ -610,10 +628,6 @@ void loop()
         protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive_max);
         v_drive_max = 0;
     }
-
-    // store stats
-    total_pulse_length_timer.step();
-    traceline->dt_logs = total_pulse_length_timer.dt_micros;
 }
 
 #endif

@@ -79,6 +79,7 @@ void BSP_SetBoostEnable(bool enable);
 void BSP_SetBoostVoltage(float boost_voltage);
 void BSP_SetBoostMinimumInputVoltage(float voltage);
 float BSP_ReadVSYS();
+Vec2f BSP_ReadVSYSRange();
 float BSP_BoostDutyCycle(); // debug, remove
 bool BSP_ReadPGood();       // low = usb5v present. high = not present.
 #endif

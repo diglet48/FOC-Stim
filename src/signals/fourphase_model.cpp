@@ -59,6 +59,8 @@ void FourphaseModel::play_pulse(
     skipped_update_steps = 0;
     current_limit_exceeded = 0;
     current_limit = estop_current_limit;
+    v_bus_min = 99;
+    v_bus_max = 0;
 
     // make debug easier by clearing out stale data.
     for (int i = 0; i < CONTEXT_SIZE; i++) {
@@ -201,6 +203,8 @@ void FourphaseModel::play_pulse(
         perform_one_update_step();
     }
 
+    // TODO: if v_boost dropped too much during the pulse, do not perform update step.
+
     // apply impedance magnitude error
     // done in special way to avoid drift when the input signal
     // is not sufficienctly exciting.
@@ -327,7 +331,9 @@ void FourphaseModel::interrupt_fn()
     // float vbus = 15;
 #ifdef STIM_DYNAMIC_VOLTAGE
     float vbus = BSP_ReadVBus();
-    vbus = max(vbus, STIM_PWM_MAX_VDRIVE);
+    v_bus_max = max(v_bus_max, vbus);
+    v_bus_min = min(v_bus_min, vbus);
+    vbus = max(vbus, STIM_BOOST_VOLTAGE_LOW_THRESHOLD);
 #else
     float vbus = STIM_PSU_VOLTAGE;
 #endif

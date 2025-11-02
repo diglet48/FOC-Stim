@@ -276,7 +276,6 @@ void loop()
     // store stats
     traceline->i_max_cmd = driving_current_amps;
     total_pulse_length_timer.step();
-    traceline->dt_compute = total_pulse_length_timer.dt_micros;
 
     // play the pulse
     ComplexThreephasePoints points3 = project_threephase(

@@ -40,6 +40,8 @@ public:
     float v_max = 0;
     Vec3f current_squared = Vec3f(0, 0, 0);
     Vec3f current_max = Vec3f(0, 0, 0);
+    float v_bus_min = 0;
+    float v_bus_max = 0;
 
     static constexpr int CONTEXT_SIZE = 512;
     static constexpr int max_producer_queue_length = 20;    // (producer_index - interrupt_index) % CONTEXT_SIZE

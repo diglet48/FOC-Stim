@@ -1,4 +1,4 @@
-#if defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
+#if defined(BOARD_FOCSTIM_V4)
 
 #include <Arduino.h>
 

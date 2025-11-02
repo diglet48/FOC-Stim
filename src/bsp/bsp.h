@@ -2,8 +2,6 @@
 #define FOCSTIM_BSP_H
 
 #include "bsp/config_g431b_esc1.h"
-#include "bsp/config_g474re_max22213_shield.h"
-#include "bsp/config_g474re_focstim_v3.h"
 #include "bsp/config_g473re_focstim_v4.h"
 #include "vec.h"
 #include <functional>
@@ -56,7 +54,7 @@ float BSP_ReadVBus();
 // LED
 #if defined(ARDUINO_B_G431B_ESC1)
 void BSP_WriteStatusLED(bool on);
-#elif defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
+#elif defined(BOARD_FOCSTIM_V4)
 
 enum LedPattern {
     Idle,
@@ -73,7 +71,7 @@ void BSP_WriteRedLedBrightness(float a);
 #endif
 
 
-#if defined(ARDUINO_NUCLEO_G474RE) || defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
+#if defined(BOARD_FOCSTIM_V4)
 bool BSP_ReadFault();           // Fault pin to MAX22213. Active low.
 void BSP_SetBoostEnable(bool enable);
 void BSP_SetBoostVoltage(float boost_voltage);

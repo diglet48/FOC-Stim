@@ -222,8 +222,8 @@ void ProtobufAPI::handle_request_firmware_version(focstim_rpc_RequestFirmwareVer
     message.message.response.which_result = focstim_rpc_Response_response_firmware_version_tag;
 #if defined(ARDUINO_B_G431B_ESC1)
     message.message.response.result.response_firmware_version.board = focstim_rpc_BoardIdentifier_BOARD_B_G431B_ESC1;
-#elif defined(BOARD_FOCSTIM_V3) || defined(BOARD_FOCSTIM_V4)
-    message.message.response.result.response_firmware_version.board = focstim_rpc_BoardIdentifier_BOARD_FOCSTIM_V3;
+#elif defined(BOARD_FOCSTIM_V4)
+    message.message.response.result.response_firmware_version.board = focstim_rpc_BoardIdentifier_BOARD_FOCSTIM_V4;
 #endif
     message.message.response.result.response_firmware_version.stm32_firmware_version.arg = (char*)FIRMWARE_VERSION;
     message.message.response.result.response_firmware_version.stm32_firmware_version.funcs.encode = encode_string;

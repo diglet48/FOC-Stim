@@ -31,7 +31,7 @@ enum AxisType{
 enum BoardIdentifier {
     BOARD_UNKNOWN = 0;
     BOARD_B_G431B_ESC1 = 1;     // AKA 'V1' or 'V2'
-    BOARD_FOCSTIM_V3 = 2;
+    BOARD_FOCSTIM_V4 = 2;       // also V3
 }
 
 enum OutputMode {

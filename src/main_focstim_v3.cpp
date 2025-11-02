@@ -420,7 +420,7 @@ void loop()
     float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);
     pulse_pause_duration *= float_rand(1 - pulse_interval_random, 1 + pulse_interval_random);
     pulse_total_duration = pulse_active_duration + pulse_pause_duration;
-    traceline->dt_next = pulse_total_duration;
+    traceline->dt_next = pulse_total_duration * 1e6f;
 
     // mix in potmeter
     float potmeter_value = BSP_ReadPotentiometerPercentage();

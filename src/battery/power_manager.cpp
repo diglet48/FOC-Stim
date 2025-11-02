@@ -148,7 +148,7 @@ bool PowerManager::detect_battery()
 
 void PowerManager::read_temperature()
 {
-    cached_power = lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f;
+    cached_temperature = lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f;
 }
 
 void PowerManager::read_voltage()

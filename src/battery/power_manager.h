@@ -5,6 +5,7 @@
 
 #ifdef BATTERY_ENABLE
 
+#include "stim_clock.h"
 #include <stdint.h>
 
 #define BATTERY_DETECTION_TIME_MS 500
@@ -24,19 +25,35 @@ public:
     PowerManager() = default;
 
     void init();
-
-    bool detect_battery();
+    void update();
+    void update_all();
 
     bool is_battery_present;
 
-    // bool pgood;                 // cached value of 'batPGood' pin
-    // float volts;                // battery voltage [V]
-    // float current;              // battery charge or discharge current [A]
-    // float power;                // battery charge or discharge power [W]
-    // float capacity_full;        // battery full capacity
-    // float capacity_remain;      //
-    // float health;               // battery health [% 0-1]
+    float cached_temperature;               // deg c
+    float cached_voltage;                   // V
+    int cached_soh;                         // percent
+    float cached_remaning_capacity_uf;      // mAh
+    float cached_full_charge_capacity_uf;   // mAh
+    float cached_power;                     // mW
+    float cached_soc() {
+        return cached_remaning_capacity_uf / cached_full_charge_capacity_uf;
+    }
 
+    void print_battery_stats();
+private:
+
+    bool detect_battery();
+
+    void read_temperature();
+    void read_voltage();
+    void read_soh();
+    void read_remaining_capacity_uf();
+    void read_full_charge_capacity_uf();
+    void read_power();
+
+    Clock update_clock;
+    int update_step;
 };
 
 #endif

@@ -11,7 +11,6 @@
 #include "signals/threephase_model.h"
 #include "signals/fourphase_math.h"
 #include "signals/fourphase_model.h"
-#include "battery/SparkFunBQ27441.h"
 #include "battery/power_manager.h"
 #include <Wire.h>
 #include "axis/buffered_axis.h"
@@ -225,10 +224,7 @@ void setup()
     power_manager.init();
     user_interface.setBatteryPresent(power_manager.is_battery_present);
     if (power_manager.is_battery_present) {
-        unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)
-        unsigned int capacity = lipo.capacity(REMAIN); // Read remaining capacity (mAh)
-        float soc = float(capacity) / float(fullCapacity);
-        user_interface.setBatterySoc(soc);
+        user_interface.setBatterySoc(power_manager.cached_soc());
     }
     user_interface.setState(UserInterface::Idle);
     user_interface.repaint();
@@ -341,15 +337,13 @@ void loop()
         v_boost_max = 0;
 
         if (power_manager.is_battery_present) {
-            float voltage = lipo.voltage() * .001f;
-            float power_watt = lipo.power() * .001f;
-            unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)
-            unsigned int capacity = lipo.capacity(REMAIN); // Read remaining capacity (mAh)
-            float soc = float(capacity) / float(fullCapacity);
-            float temperature = lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f;
-            protobuf.transmit_notification_battery(voltage, soc, power_watt, temperature, !BSP_ReadPGood());
-
-            user_interface.setBatterySoc(soc);
+            protobuf.transmit_notification_battery(
+                power_manager.cached_voltage,
+                power_manager.cached_soc(),
+                power_manager.cached_power,
+                power_manager.cached_temperature,
+                !BSP_ReadPGood());
+            user_interface.setBatterySoc(power_manager.cached_soc());
         }
     }
 
@@ -361,6 +355,7 @@ void loop()
     }
 
     as5311.update();
+    power_manager.update();
 
     // update small slice of the display
     user_interface.repaint();

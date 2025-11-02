@@ -51,6 +51,78 @@ void PowerManager::init() {
     } else {
         BSP_SetBoostMinimumInputVoltage(4.3f);
     }
+
+    update_all();
+}
+
+void PowerManager::update()
+{
+    if (!is_battery_present) {
+        return;
+    }
+
+    // update one parameter every so often to avoid blocking the mainloop.
+    update_clock.step();
+    if (update_clock.time_seconds <= 0.25f) {
+        return;
+    }
+    update_clock.reset();
+
+    Wire.setClock(400'000ULL);
+    update_step = (update_step + 1) % 6;
+    switch (update_step) {
+        case 0:
+        read_temperature();
+        break;
+        case 1:
+        read_voltage();
+        break;
+        case 2:
+        read_soh();
+        break;
+        case 3:
+        read_remaining_capacity_uf();
+        break;
+        case 4:
+        read_full_charge_capacity_uf();
+        break;
+        case 5:
+        read_power();
+        break;
+    }
+    Wire.setClock(100'000ULL);
+}
+
+void PowerManager::update_all()
+{
+    Wire.setClock(400'000ULL);
+    read_temperature();
+    read_voltage();
+    read_soh();
+    read_remaining_capacity_uf();
+    read_full_charge_capacity_uf();
+    read_power();
+    Wire.setClock(100'000ULL);
+}
+
+void PowerManager::print_battery_stats()
+{
+    BSP_PrintDebugMsg("soc %i", lipo.soc());
+    BSP_PrintDebugMsg("DesignCapacity %i", lipo.capacity(DESIGN));
+
+    BSP_PrintDebugMsg("RemainingCapacity %i", lipo.capacity(REMAIN));               // compensated battery capacity remaining, compensated for load and temp
+    BSP_PrintDebugMsg("RemainingCapacityFiltered %i", lipo.capacity(REMAIN_F));
+    BSP_PrintDebugMsg("RemainingCapacityUnfiltered %i", lipo.capacity(REMAIN_UF));
+
+    BSP_PrintDebugMsg("FullChargeCapacity %i", lipo.capacity(FULL));                // compensated battery capacity when fully charged, compensated for load and temp
+    BSP_PrintDebugMsg("FullChargeCapacityFiltered %i", lipo.capacity(FULL_F));
+    BSP_PrintDebugMsg("FullChargeCapacityUnFiltered %i", lipo.capacity(FULL_UF));
+
+    BSP_PrintDebugMsg("NominalAvailableCapacity %i", lipo.capacity(AVAIL));         // uncompensated battery capacity remaining
+    BSP_PrintDebugMsg("FullAvailableCapacity %i", lipo.capacity(AVAIL_FULL));       // uncompensated battery capacity when fully charged
+
+    BSP_PrintDebugMsg("soh %% %i", lipo.soh(PERCENT));
+    BSP_PrintDebugMsg("soh %i", lipo.soh(SOH_STAT));
 }
 
 bool PowerManager::detect_battery()
@@ -74,5 +146,34 @@ bool PowerManager::detect_battery()
     return true;
 }
 
+void PowerManager::read_temperature()
+{
+    cached_power = lipo.temperature(INTERNAL_TEMP) * 0.1f - 273.15f;
+}
+
+void PowerManager::read_voltage()
+{
+    cached_voltage = lipo.voltage() * 0.001f;
+}
+
+void PowerManager::read_soh()
+{
+    cached_soh = lipo.soh() * 0.01;
+}
+
+void PowerManager::read_remaining_capacity_uf()
+{
+    cached_remaning_capacity_uf = lipo.capacity(REMAIN_UF); // RemainingCapacityUnfiltered()
+}
+
+void PowerManager::read_full_charge_capacity_uf()
+{
+    cached_full_charge_capacity_uf = lipo.capacity(FULL_UF); // FullChargeCapacityUnfiltered()
+}
+
+void PowerManager::read_power()
+{
+    cached_power = lipo.power() * 0.001f; // AveragePower()
+}
 
 #endif

@@ -74,7 +74,6 @@ public:
         // transmit_notification_debug_string("START 3");
 
         time_since_signal_start.reset();
-        BSP_OutputEnable(true, true, true);
         BSP_SetBoostEnable(true);
         BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
         play_status = PlayStatus::PlayingThreephase;
@@ -91,7 +90,6 @@ public:
         // transmit_notification_debug_string("START 4");
 
         time_since_signal_start.reset();
-        BSP_OutputEnable(true, true, true, true);
         BSP_SetBoostEnable(true);
         BSP_WriteLedPattern(LedPattern::PlayingVeryLow);
         play_status = PlayStatus::PlayingFourphase;
@@ -103,7 +101,6 @@ public:
     {
         // transmit_notification_debug_string("STOP");
 
-        BSP_OutputEnable(false, false, false);
         BSP_SetBoostEnable(false);
         BSP_WriteLedPattern(LedPattern::Idle);
         user_interface.setState(UserInterface::Idle);   // TOOD: force display update
@@ -377,12 +374,11 @@ void loop()
 
     // delay pulse until the boost capacitors are filled up, reducing the pulse frequency if neccesairy
     if (vbus <= STIM_BOOST_VOLTAGE_OK_THRESHOLD) {
-        BSP_PrintDebugMsg("boost too low: %u %f %f", micros(), vbus, BSP_ReadVSYS());
+        if (protobuf.time_since_signal_start.time_seconds >= 0.5f) {
+            BSP_PrintDebugMsg("boost too low: %u %f %f", micros(), vbus, BSP_ReadVSYS());
+        }
         return;
     }
-
-    // Offset compensation for current sense. Only when drivers enabled.
-    BSP_AdjustCurrentSenseOffsets();
 
     // ready to generate next pulse!
     MainLoopTraceLine *traceline = trace.next_main_loop_line();
@@ -465,10 +461,16 @@ void loop()
             polarity,
             random_start_angle);
 
+        BSP_OutputEnable(true, true, true);
+        delayMicroseconds(300); // DRV8231A turnon time (250µs) + bit of margin
+        BSP_AdjustCurrentSenseOffsets();
+
         model3.play_pulse(points3.p1, points3.p2, points3.p3,
             pulse_carrier_frequency,
             pulse_width, pulse_rise,
             driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
+
+        BSP_DisableOutputs();
     } else if (play_status == PlayStatus::PlayingFourphase) {
         ComplexFourphasePoints points4 = project_fourphase(
             driving_current_amps,
@@ -478,10 +480,16 @@ void loop()
             polarity,
             random_start_angle);
 
+        BSP_OutputEnable(true, true, true, true);
+        delayMicroseconds(300); // DRV8231A turnon time (250µs) + bit of margin
+        BSP_AdjustCurrentSenseOffsets();
+
         model4.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4,
             pulse_carrier_frequency,
             pulse_width, pulse_rise,
             driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
+
+        BSP_DisableOutputs();
     }
 
     // store stats

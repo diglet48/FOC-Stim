@@ -20,6 +20,7 @@
 #include "sensors/as5311.h"
 #include "user_interface/user_interface.h"
 #include "esp32.h"
+#include "foc_error.h"
 
 #include "bsp/bsp.h"
 #include "bsp/bootloader.h"
@@ -165,18 +166,34 @@ struct {
     SimpleAxis calib_4d{focstim_rpc_AxisType_AXIS_CALIBRATION_4_D, 0, -10, 10};
 } simple_axes;
 
-void estop_triggered()
+void trigger_emergency_stop(FOCError error)
 {
+    BSP_DisableOutputs();
+    BSP_SetBoostEnable(false);
     BSP_WriteLedPattern(LedPattern::Error);
-    trace.print_mainloop_trace();
-    if (play_status == PlayStatus::PlayingThreephase) {
-        model3.debug_stats_teleplot();
+
+    switch (error) {
+        case OUTPUT_OVER_CURRENT:
+        case MODEL_TIMING_ERROR:
+        trace.print_mainloop_trace();
+        if (play_status == PlayStatus::PlayingThreephase) {
+            model3.debug_stats_teleplot();
+        }
+        if (play_status == PlayStatus::PlayingFourphase) {
+            model4.debug_stats_teleplot();
+        }
+        break;
+        case BOOST_VOLTAGE_NOT_RISING:
+        case BOOST_UNDER_VOLTAGE:
+        case BOOST_OVER_VOLTAGE:
+        case BOARD_OVER_TEMPERATURE:
+        break;
     }
-    if (play_status == PlayStatus::PlayingFourphase) {
-        model4.debug_stats_teleplot();
-    }
+
+    play_status = PlayStatus::NotPlaying;
     user_interface.setState(UserInterface::Error);
-    user_interface.refresh();
+    user_interface.repaint();
+    user_interface.full_update();
 }
 
 AS5311 as5311{};
@@ -199,7 +216,8 @@ void setup()
     BSP_Init();
     BSP_WriteLedPattern(LedPattern::Idle);
     protobuf.transmit_notification_boot();
-    user_interface.refresh();
+    user_interface.repaint();
+    user_interface.full_update();
 
     power_manager.init();
     user_interface.setBatteryPresent(power_manager.is_battery_present);
@@ -210,15 +228,16 @@ void setup()
         user_interface.setBatterySoc(soc);
     }
     user_interface.setState(UserInterface::Idle);
-    user_interface.refresh();
+    user_interface.repaint();
+    user_interface.full_update();
 
     esp32.init();
 
     // TODO: dynamic
     BSP_SetBoostVoltage(STIM_BOOST_VOLTAGE);
 
-    model3.init(&estop_triggered);
-    model4.init(&estop_triggered);
+    model3.init(&trigger_emergency_stop);
+    model4.init(&trigger_emergency_stop);
 
     // as5311.init(0.001f, 0.01f);
 }
@@ -247,7 +266,7 @@ void loop()
     // safety: temperature
     float temperature = BSP_ReadTemperatureSTM();
     if (temperature >= MAXIMUM_TEMPERATURE) {
-        protobuf.signal_stop();
+        trigger_emergency_stop(FOCError::BOARD_OVER_TEMPERATURE);
         while (1)
         {
             BSP_WriteLedPattern(LedPattern::Error);
@@ -261,7 +280,7 @@ void loop()
     float vbus = BSP_ReadVBus();
     // safety: boost overvoltage
     if (vbus >= STIM_BOOST_OVERVOLTAGE_THRESHOLD) {
-        protobuf.signal_stop();
+        trigger_emergency_stop(FOCError::BOOST_OVER_VOLTAGE);
         while (1)
         {
             BSP_WriteLedPattern(LedPattern::Error);
@@ -277,7 +296,8 @@ void loop()
         if (play_status != PlayStatus::NotPlaying) {
             protobuf.time_since_signal_start.step();
             if (protobuf.time_since_signal_start.time_seconds >= 0.5f) {
-                BSP_DisableOutputs();
+                trigger_emergency_stop(FOCError::BOOST_UNDER_VOLTAGE);
+                trace.print_mainloop_trace();
                 while (1)
                 {
                     BSP_WriteLedPattern(LedPattern::Error);
@@ -321,7 +341,6 @@ void loop()
             protobuf.transmit_notification_battery(voltage, soc, power_watt, temperature, !BSP_ReadPGood());
 
             user_interface.setBatterySoc(soc);
-            user_interface.refresh();
         }
     }
 
@@ -329,16 +348,18 @@ void loop()
     ip_refresh_clock.step();
     if (ip_refresh_clock.time_seconds > 0.4f && play_status == PlayStatus::NotPlaying) {
         user_interface.setIP(esp32.ip());
-        user_interface.refresh();
         ip_refresh_clock.reset();
     }
 
     as5311.update();
 
-    // DSTART / DSTOP
+    // update small slice of the display
+    user_interface.repaint();
+    user_interface.partial_update();
+
+    // start/stop
     if (play_status == PlayStatus::NotPlaying) {
         BSP_WriteLedPattern(LedPattern::Idle);
-        delay(5);
         return;
     }
 

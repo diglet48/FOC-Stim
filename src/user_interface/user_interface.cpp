@@ -17,9 +17,11 @@
 #define OLED_RESET -1		// Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
+#define I2C_CLOCK_DURING    1'000'000ULL
+#define I2C_CLOCK_AFTER     100'000ULL
 
 UserInterface::UserInterface()
-    : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, 1'000'000ULL, 100'000ULL)
+    : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, I2C_CLOCK_DURING, I2C_CLOCK_AFTER)
     , state(UIState::DetectBattery)
 {
 }
@@ -42,8 +44,16 @@ void UserInterface::init()
 	// display.clearDisplay();
 }
 
-void UserInterface::refresh()
+void UserInterface::repaint()
 {
+    if (dirty) {
+        dirty = false;
+    } else {
+        return;
+    }
+
+    Clock k;
+
     // clear display
     display.clearDisplay();
     display.setTextColor(SSD1306_WHITE);
@@ -138,8 +148,41 @@ void UserInterface::refresh()
             display.print("     error");
             break;
     }
+}
 
+void UserInterface::full_update()
+{
     display.display();
+}
+
+void UserInterface::partial_update()
+{
+    Wire.setClock(I2C_CLOCK_DURING);
+
+    int bytes_per_block = 16;
+    int blocks_per_row = 128 / bytes_per_block;
+    int block = partial_update_index % 32;
+    partial_update_index = (partial_update_index + 1) % 32;
+
+    Wire.beginTransmission(SCREEN_ADDRESS);
+    Wire.write((uint8_t)0x00);                      // Co = 0, D/C = 0
+    Wire.write(SSD1306_PAGEADDR);
+    Wire.write(block / blocks_per_row);             // Page start address
+    Wire.write(0xFF);                               // Page end (not really, but works here)
+    Wire.write(SSD1306_COLUMNADDR);
+    Wire.write((block * bytes_per_block) % 128);    // Column start
+    Wire.write(127);                                // Column end address
+    Wire.endTransmission();
+
+    uint8_t *ptr = display.getBuffer() + bytes_per_block * block;
+    Wire.beginTransmission(SCREEN_ADDRESS);
+    Wire.write((uint8_t)0x40);                      // Co = 0, D/C = 1
+    for (int i = 0; i < 16; i++) {
+        Wire.write(ptr[i]);
+    }
+    Wire.endTransmission();
+
+    Wire.setClock(I2C_CLOCK_AFTER);
 }
 
 void UserInterface::hexdump()

@@ -7,6 +7,7 @@
 
 #include "complex.h"
 #include "vec.h"
+#include "foc_error.h"
 
 #include <atomic>
 
@@ -14,7 +15,7 @@ class FourphaseModel {
 public:
     FourphaseModel() {};
 
-    void init(std::function<void()> emergency_stop_fn);
+    void init(std::function<void(FOCError)> emergency_stop_fn);
 
     void play_pulse(
         Complex p1, Complex p2, Complex p3, Complex p4,
@@ -87,7 +88,7 @@ public:
     float angle_error3 = 0;
     float angle_error4 = 0;
 
-    std::function<void()> emergency_stop_fn;
+    std::function<void(FOCError)> emergency_stop_fn;
 };
 
 #endif

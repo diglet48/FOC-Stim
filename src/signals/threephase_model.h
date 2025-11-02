@@ -3,6 +3,7 @@
 
 #include "complex.h"
 #include "vec.h"
+#include "foc_error.h"
 #include "bsp/bsp.h"
 
 #include <atomic>
@@ -11,7 +12,7 @@ class ThreephaseModel {
 public:
     ThreephaseModel() {};
 
-    void init(std::function<void()> emergency_stop_fn);
+    void init(std::function<void(FOCError)> emergency_stop_fn);
 
     void play_pulse(
         Complex p1, Complex p2, Complex p3,
@@ -78,7 +79,7 @@ public:
     float angle_error2 = 0;
     float angle_error3 = 0;
 
-    std::function<void()> emergency_stop_fn;
+    std::function<void(FOCError)> emergency_stop_fn;
 };
 
 #endif

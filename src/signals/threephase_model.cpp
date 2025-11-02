@@ -24,7 +24,7 @@ static float find_v_drive(Complex p1, Complex p2, Complex p3) {
     return v_drive;
 }
 
-void ThreephaseModel::init(std::function<void()> emergency_stop_fn) {
+void ThreephaseModel::init(std::function<void(FOCError)> emergency_stop_fn) {
     this->emergency_stop_fn = emergency_stop_fn;
 }
 
@@ -172,16 +172,15 @@ void ThreephaseModel::play_pulse(
         BSP_PrintDebugMsg("Current limit exceeded");
         int i = (interrupt_index - 2) % CONTEXT_SIZE;
         BSP_PrintDebugMsg("currents were: %f %f %f", context[i].i1_meas, context[i].i2_meas, context[i].i3_meas);
-        emergency_stop_fn();
+        emergency_stop_fn(FOCError::OUTPUT_OVER_CURRENT);
         while(1) {}
     }
 
     if (interrupt_index != producer_index) {
         BSP_DisableOutputs();
         BSP_PrintDebugMsg("Producer too slow %i %i", (int)interrupt_index, (int)producer_index);
-        emergency_stop_fn();
-        while(1) {
-        }
+        emergency_stop_fn(FOCError::MODEL_TIMING_ERROR);
+        while(1) {}
     }
 
     // process all update steps.

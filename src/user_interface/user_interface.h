@@ -24,22 +24,33 @@ public:
 	// TODO: detect display
 	void init();
 
-	// TODO: smarter refresh
-	void refresh();
+	// repaint onto internal memory buffer (~600µs)
+	void repaint();
+
+	// full display update (~5200µs)
+	void full_update();
+
+	// update display in chunks (~260us), updates 1/32 of the display.
+	void partial_update();
 
 	void setState(UIState state) {
+		dirty |= state != this->state;
 		this->state = state;
 	}
 	void setPowerLevel(float power) {
+		dirty |= power != this->power;
 		this->power = power;
 	}
 	void setBatteryPresent(bool is_present) {
+		dirty |= is_present != this->battery_is_present;
 		this->battery_is_present = is_present;
 	}
 	void setBatterySoc(float soc) {
+		dirty |= soc != this->battery_soc;
 		this->battery_soc = soc;
 	}
 	void setIP(uint32_t ip) {
+		dirty |= ip != this->ip;
 		this->ip = ip;
 	}
 
@@ -53,6 +64,9 @@ private:
 	bool battery_is_present;
 	float battery_soc;
 	uint32_t ip;
+
+	bool dirty;
+	int partial_update_index;
 };
 
 #endif

@@ -27,10 +27,6 @@ public:
 
     bool detect_battery();
 
-    void adjust_board_voltages();
-
-    void print_battery_stats();
-
     bool is_battery_present;
 
     // bool pgood;                 // cached value of 'batPGood' pin

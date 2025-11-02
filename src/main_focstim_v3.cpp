@@ -202,7 +202,6 @@ void setup()
     user_interface.refresh();
 
     power_manager.init();
-    power_manager.adjust_board_voltages();
     user_interface.setBatteryPresent(power_manager.is_battery_present);
     if (power_manager.is_battery_present) {
         unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)
@@ -235,7 +234,6 @@ void loop()
     static Clock vbus_high_clock;
     static uint32_t pulse_counter = 0;
     static float actual_pulse_frequency = 0;
-    static Clock adjust_board_voltage_clock;
     static Clock print_system_stats_clock;
     static float v_drive_max = 0;
     static Clock ip_refresh_clock;
@@ -305,14 +303,6 @@ void loop()
         potentiometer_notification_lastvalue = pot;
 
         user_interface.setPowerLevel(powf(pot, 1.f/2) * 100);
-        user_interface.refresh();
-    }
-
-    // adjust boost duty cycle
-    adjust_board_voltage_clock.step();
-    if (adjust_board_voltage_clock.time_seconds > 1) {
-        adjust_board_voltage_clock.reset();
-        power_manager.adjust_board_voltages();
     }
 
     // every few seconds, print system stats

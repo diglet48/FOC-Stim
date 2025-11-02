@@ -46,7 +46,11 @@ void PowerManager::init() {
         BSP_PrintDebugMsg("Battery already configured.");
     }
 
-
+    if (is_battery_present) {
+        BSP_SetBoostMinimumInputVoltage(3.3f);
+    } else {
+        BSP_SetBoostMinimumInputVoltage(4.3f);
+    }
 }
 
 bool PowerManager::detect_battery()
@@ -70,44 +74,5 @@ bool PowerManager::detect_battery()
     return true;
 }
 
-void PowerManager::adjust_board_voltages()
-{
-    // battery               -> vbat - 0.4
-    // no battery, usb power -> 4.3v
-    if (is_battery_present) {
-        float voltage = lipo.voltage() * 0.001f;
-        // battery present, set boost enable threshold
-        // slightly below battery voltage
-        BSP_SetBoostMinimumInputVoltage(voltage - 0.4f);
-    } else {
-        // no battery present, set static boost enable threshold
-        // to avoid starving the 3v3 buck/boost.
-        BSP_SetBoostMinimumInputVoltage(4.3);
-    }
-}
-
-void PowerManager::print_battery_stats()
-{
-    // Read battery stats from the BQ27441-G1A
-    unsigned int soc = lipo.soc();  // Read state-of-charge (%)
-    unsigned int volts = lipo.voltage(); // Read battery voltage (mV)
-    int current = lipo.current(AVG); // Read average current (mA)
-    unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)
-    unsigned int capacity = lipo.capacity(REMAIN); // Read remaining capacity (mAh)
-    int power = lipo.power(); // Read average power draw (mW)
-    int health = lipo.soh(); // Read state-of-health (%)
-
-    // Assemble a string to print
-    String toPrint = String(soc) + "% | ";
-    toPrint += String(volts) + " mV | ";
-    toPrint += String(current) + " mA | ";
-    toPrint += String(capacity) + " / ";
-    toPrint += String(fullCapacity) + " mAh | ";
-    toPrint += String(power) + " mW | ";
-    toPrint += String(health) + "%";
-    toPrint += " | 0x" + String(lipo.flags(), HEX);
-
-    Serial.println(toPrint);
-}
 
 #endif

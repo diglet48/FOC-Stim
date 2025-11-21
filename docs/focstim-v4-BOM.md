@@ -41,7 +41,9 @@ Equivalent parts, pick one:
 4x SMTSOM420STR [LCSC](https://www.lcsc.com/product-detail/C49236401.html)  
 
 ### 2mm banana jack with 4mm thread, 4 colors (red, blue, yellow, green)
-[Aliexpress](https://aliexpress.com/item/1005006083045067.html)  
+[Aliexpress](https://aliexpress.com/item/1005006083045067.html),
+[Aliexpress 2](https://aliexpress.com/item/1005008667160927.html)
+
 The manufacturer is Changzhou Amass Electronics, product 24.106.1 (red)
     
 ### Potentiometer
@@ -108,7 +110,9 @@ Colored 2mm to 2mm banana cables. [Aliexpress](https://aliexpress.com/item/10050
 
 Supplies for making your own cables if desired:  
 Colored 2mm TENS connectors: [Aliexpress](https://aliexpress.com/item/1005006066453610.html)  
-Colored 2mm banana connectors: [Aliexpress](https://aliexpress.com/item/1005005307850027.html) 
+Colored 2mm banana connectors: 
+[Aliexpress](https://aliexpress.com/item/1005005307850027.html)
+[Aliexpress 2](https://aliexpress.com/item/1005005914150447.html)
 
 4mm to 2mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005005565867054.html) (for using these cables with boxes with 4mm outputs)
 

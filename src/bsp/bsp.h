@@ -72,14 +72,15 @@ void BSP_WriteRedLedBrightness(float a);
 
 
 #if defined(BOARD_FOCSTIM_V4)
-bool BSP_ReadFault();           // Fault pin to MAX22213. Active low.
 void BSP_SetBoostEnable(bool enable);
 void BSP_SetBoostVoltage(float boost_voltage);
 void BSP_SetBoostMinimumInputVoltage(float voltage);
+void BSP_SetTriacEnable(bool enable);
 float BSP_ReadVSYS();
 Vec2f BSP_ReadVSYSRange();
 float BSP_BoostDutyCycle(); // debug, remove
 bool BSP_ReadPGood();       // low = usb5v present. high = not present.
+bool BSP_ReadEncoderButton();
 #endif
 
 

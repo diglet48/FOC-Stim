@@ -318,7 +318,7 @@ void loop()
 
     // every few seconds, print system stats
     print_system_stats_clock.step();
-    if (print_system_stats_clock.time_seconds > 5) {
+    if (print_system_stats_clock.time_seconds > .5) {
         print_system_stats_clock.reset();
         protobuf.transmit_notification_system_stats(v_boost_min, v_boost_max);
         v_boost_min = 99;
@@ -462,7 +462,7 @@ void loop()
             random_start_angle);
 
         BSP_OutputEnable(true, true, true);
-        delayMicroseconds(300); // DRV8231A turnon time (250µs) + bit of margin
+        delayMicroseconds(300); // the minimum of DRV8231A turnon time (datasheet: 250µs) and triac turnon time (experimental: 300µs)
         BSP_AdjustCurrentSenseOffsets();
 
         model3.play_pulse(points3.p1, points3.p2, points3.p3,
@@ -481,7 +481,7 @@ void loop()
             random_start_angle);
 
         BSP_OutputEnable(true, true, true, true);
-        delayMicroseconds(300); // DRV8231A turnon time (250µs) + bit of margin
+        delayMicroseconds(300); // the minimum of DRV8231A turnon time (datasheet: 250µs) and triac turnon time (experimental: 300µs)
         BSP_AdjustCurrentSenseOffsets();
 
         model4.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4,

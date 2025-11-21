@@ -1017,7 +1017,7 @@ void BSP_OutputEnable(bool a, bool b, bool c, bool d)
     HAL_GPIO_WritePin(DRIVER_ENABLE_GPIO_PORT, DRIVER_B_ENABLE_PIN, (GPIO_PinState)b);
     HAL_GPIO_WritePin(DRIVER_ENABLE_GPIO_PORT, DRIVER_C_ENABLE_PIN, (GPIO_PinState)c);
     HAL_GPIO_WritePin(DRIVER_ENABLE_GPIO_PORT, DRIVER_D_ENABLE_PIN, (GPIO_PinState)d);
-    HAL_GPIO_WritePin(OUT_D_EN_GPIO_PORT, OUT_D_EN_PIN, (GPIO_PinState)d);
+    HAL_GPIO_WritePin(OUT_D_EN_GPIO_PORT, OUT_D_EN_PIN, d ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
     if (a) {
         SET_BIT(pwm_timer->CCER, TIM_CCER_CC3E);
@@ -1137,11 +1137,6 @@ Vec4f BSP_ReadPhaseCurrents4()
         (bsp.current_d - bsp.current_d_offset) * factor);
 }
 
-bool BSP_ReadFault()
-{
-    return false;
-}
-
 void BSP_WriteStatusLED(bool on)
 {
 
@@ -1233,7 +1228,7 @@ void BSP_SetBoostVoltage(float boost_voltage)
     // DAC 2.4v or higher -> boost ~4v
     // DAC 0.2v           -> boost 31.9v
     // DAC 0.0v           -> boost 34.4v
-    // With output buffer on, min DAC output is 0.2v, and VM_sense caps out at 31.9v
+    // With output buffer on, min DAC output is 0.2v, and VM_sense caps out at 31.9v.
     // use 30v max to have some headroom for over-voltage detection.
     boost_voltage = min(30.f, max(0.f, boost_voltage));
 
@@ -1252,6 +1247,11 @@ void BSP_SetBoostVoltage(float boost_voltage)
 void BSP_SetBoostMinimumInputVoltage(float voltage)
 {
     vsys_comp_dac->DHR12R1 = (voltage / 2) * (ADC_SCALE / ADC_VOLTAGE);
+}
+
+void BSP_SetTriacEnable(bool enable)
+{
+    HAL_GPIO_WritePin(OUT_D_EN_GPIO_PORT, OUT_D_EN_PIN, enable ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
 float BSP_BoostDutyCycle()
@@ -1280,6 +1280,11 @@ void BSP_WriteLedPattern(LedPattern pattern)
 bool BSP_ReadPGood()
 {
     return LL_GPIO_IsInputPinSet(PGOOD_GPIO_PORT, PGOOD_PIN);
+}
+
+bool BSP_ReadEncoderButton()
+{
+    return LL_GPIO_IsInputPinSet(ENCODER_GPIO_PORT, ENCODER_BUTTON_PIN);
 }
 
 void BSP_PrintDebugMsg(const char *fmt, ...)

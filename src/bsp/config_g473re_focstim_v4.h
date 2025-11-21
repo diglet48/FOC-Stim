@@ -19,19 +19,19 @@
 #define MAXIMUM_TEMPERATURE 50.f    // degrees celsius.
 
 // boost voltage
-// #define STIM_DYNAMIC_VOLTAGE
-// #define STIM_BOOST_VOLTAGE 22.f                     // the configured boost voltage
-// #define STIM_BOOST_VOLTAGE_OK_THRESHOLD 21.5f       // the minimum boost voltage required before starting a pulse
-// #define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 15.f       // the lowest the boost voltage is allowed to drop during a pulse
-// #define STIM_BOOST_OVERVOLTAGE_THRESHOLD 23.f       // overvoltage threshold, estop if exceeded
-// #define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 12.f      // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
-
 #define STIM_DYNAMIC_VOLTAGE
-#define STIM_BOOST_VOLTAGE 15.f                     // the configured boost voltage
-#define STIM_BOOST_VOLTAGE_OK_THRESHOLD 14.5f       // the minimum boost voltage required before starting a pulse
-#define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 13.f       // the lowest the boost voltage is allowed to drop during a pulse
-#define STIM_BOOST_OVERVOLTAGE_THRESHOLD 16.f       // overvoltage threshold, estop if exceeded
-#define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 10.f      // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
+#define STIM_BOOST_VOLTAGE 22.f                     // the configured boost voltage
+#define STIM_BOOST_VOLTAGE_OK_THRESHOLD 21.5f       // the minimum boost voltage required before starting a pulse
+#define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 19.f       // the lowest the boost voltage is allowed to drop during a pulse
+#define STIM_BOOST_OVERVOLTAGE_THRESHOLD 23.f       // overvoltage threshold, estop if exceeded
+#define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 12.f      // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
+
+// #define STIM_DYNAMIC_VOLTAGE
+// #define STIM_BOOST_VOLTAGE 15.f                     // the configured boost voltage
+// #define STIM_BOOST_VOLTAGE_OK_THRESHOLD 14.5f       // the minimum boost voltage required before starting a pulse
+// #define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 13.f       // the lowest the boost voltage is allowed to drop during a pulse
+// #define STIM_BOOST_OVERVOLTAGE_THRESHOLD 16.f       // overvoltage threshold, estop if exceeded
+// #define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 10.f      // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
 
 // #define STIM_DYNAMIC_VOLTAGE
 // #define STIM_BOOST_VOLTAGE 12.f                     // the configured boost voltage

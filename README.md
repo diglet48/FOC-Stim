@@ -1,6 +1,9 @@
 FOC-Stim is a family of next-generation estim devices that generate current-controlled analogue waveforms.
 It can be controlled with [Restim](https://github.com/diglet48/restim).
 
+Unlike traditional devices with channels, the FOC-Stim can generate pulses
+between any of its outputs.
+
 # Version 1
 
 ![](docs/images/focstim-v1.jpg)
@@ -9,10 +12,10 @@ Version 1 has 3 outputs. It uses a three-phase motor drive development kit from 
 
 It is fairly easy to build with basic soldering skills, all parts can be ordered from mouser. For more information see [docs/focstim-v1.md](docs/focstim-v1.md)
 
-# Version 3
+# Version 4
 
-![](docs/images/focstim-v3-pcb.jpg)
+![](docs/images/focstim-v4-complete.jpg)
 
-Version 3 uses a custom PCB. It improves the original by adding one extra output, a battery, and wireless comms.
+Version 4 uses a custom PCB. It improves the original by adding one extra output, a battery, and wireless comms.
 
 Currently in development.

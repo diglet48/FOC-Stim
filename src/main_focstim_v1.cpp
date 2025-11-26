@@ -92,7 +92,7 @@ struct {
     SimpleAxis calib_lr{focstim_rpc_AxisType_AXIS_CALIBRATION_3_LEFT, 0, -10, 10};
 } simple_axes;
 
-void estop_triggered()
+void estop_triggered(FOCError error)
 {
     trace.print_mainloop_trace();
     model3.debug_stats_teleplot();
@@ -256,6 +256,7 @@ void loop()
     float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);
     pulse_pause_duration *= float_rand(1 - pulse_interval_random, 1 + pulse_interval_random);
     pulse_total_duration = pulse_active_duration + pulse_pause_duration;
+    traceline->dt_next = pulse_total_duration * 1e6f;
 
     // mix in potmeter
     float potmeter_value = BSP_ReadPotentiometerPercentage();
@@ -358,10 +359,6 @@ void loop()
         protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive_max);
         v_drive_max = 0;
     }
-
-    // store stats
-    total_pulse_length_timer.step();
-    traceline->dt_logs = total_pulse_length_timer.dt_micros;
 }
 
 #endif

@@ -764,7 +764,7 @@ Vec3f BSP_ReadPhaseCurrents3()
 float BSP_ReadPotentiometerPercentage()
 {
     float value = inverse_lerp(bsp.potentiometer, POTMETER_ZERO_PERCENT_VALUE, POTMETER_HUNDRED_PERCENT_VALUE);
-    return _constrain(value, 0.f, 1.f);
+    return std::clamp<float>(value, 0.f, 1.f);
 }
 
 float BSP_ReadTemperatureOnboardNTC()

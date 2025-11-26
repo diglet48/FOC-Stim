@@ -202,9 +202,9 @@ void ThreephaseModel::play_pulse(
         float zz3 = abs(dot(d1, p3)) * magnitude_error1 + abs(dot(d2, p3)) * magnitude_error2 + abs(dot(d3, p3)) * magnitude_error3;
         // only take small step sizes to avoid oscillating behavior at high volume/pulsewidth
         const float step_size =  .005f;
-        zz1 = _constrain(zz1, -step_size, 1/step_size);
-        zz2 = _constrain(zz2, -step_size, 1/step_size);
-        zz3 = _constrain(zz3, -step_size, 1/step_size);
+        zz1 = std::clamp<float>(zz1, -step_size, 1/step_size);
+        zz2 = std::clamp<float>(zz2, -step_size, 1/step_size);
+        zz3 = std::clamp<float>(zz3, -step_size, 1/step_size);
         z1 = z1 * (1 + zz1);
         z2 = z2 * (1 + zz2);
         z3 = z3 * (1 + zz3);

@@ -8,6 +8,7 @@
 #include <stm32g4xx_ll_dac.h>
 #include <stm32g4xx_ll_comp.h>
 #include <stm32g4xx_ll_exti.h>
+#include <algorithm>
 
 
 #define ADC_VOLTAGE 2.9f
@@ -1169,7 +1170,7 @@ float BSP_ReadPotentiometerPercentage()
         cnt = ENCODER_100_PERCENT_VALUE;
         MODIFY_REG(encoder_timer->CNT, 0xFFFF, cnt);
     }
-    return _constrain(cnt / float(ENCODER_100_PERCENT_VALUE), 0.f, 1.f);
+    return std::clamp<float>(cnt / float(ENCODER_100_PERCENT_VALUE), 0.f, 1.f);
 }
 
 float BSP_ReadTemperatureOnboardNTC()

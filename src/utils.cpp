@@ -1,7 +1,8 @@
 #include <cmath>
 
-#include <Arduino.h>
 #include "utils.h"
+#include "foc_utils.h"
+#include <algorithm>
 
 float float_rand(float min, float max)
 {
@@ -16,13 +17,13 @@ float norm(float x, float y)
 
 float lerp(float p, float a, float b)
 {
-    return a + min(1.0f, max(0.0f, p)) * (b - a);
+    return a + std::min(1.0f, std::max(0.0f, p)) * (b - a);
 }
 
 float inverse_lerp(float v, float a, float b)
 {
     float p = (a - v) / (a - b);
-    return constrain(p, 0.f, 1.f);
+    return std::clamp<float>(p, 0.f, 1.f);
 }
 
 float ntc_voltage_to_temp(float ADCVoltage)

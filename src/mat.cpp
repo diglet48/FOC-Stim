@@ -1,13 +1,12 @@
 #include "mat.h"
 
 #include <algorithm>
-#include <Arduino.h>
 
 static float LOBPCG(const Mat3f &mat, Vec3f guess, float ftol) {
     Vec3f x = guess;
     float previous_quotient = 0;
     float quotient = 0;
-    
+
     for (int i = 0; i < 100; i++) {
         quotient = dot(x, mat * x) / dot(x, x);
         Vec3f residual = mat * x - x * quotient;

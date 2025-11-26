@@ -24,20 +24,20 @@ void split_point(Complex m, float a, float b, Complex *out_1, Complex *out_2) {
     // :param m: complex point
     // :param a: float, desired distance of point from origin
     // :param b: float, desired distance of point from origin
-    
+
     Complex m_normalized;
     if (m.norm() < .001f) {
         m_normalized = Complex(1, 0);
     } else {
         m_normalized = m * (1 / m.norm());
     }
-   
+
     float c = m.norm();
     // handle special case c == 0. Note that if c==0 then a==b, therefore solution is trivial.
     c = std::max(0.0001f, c);
     float rational = (a*a - b*b + c*c) / (2 * c);
     float imaginary = sqrtf(std::max(a*a - rational*rational, 0.f));
-    
+
     Complex p = Complex(rational, imaginary) * m_normalized;
     Complex q = m - p;
 
@@ -57,7 +57,7 @@ Mat3f scale_in_arb_dir(Vec3f vec, float s) {
         vec.b * vec.a * q,
         vec.b * vec.b * q + 1,
         vec.b * vec.c * q,
-        
+
         vec.c * vec.a * q,
         vec.c * vec.b * q,
         vec.c * vec.c * q + 1
@@ -93,42 +93,29 @@ ComplexFourphasePoints project_fourphase(
     bool flip_polarity,
     float start_angle)
 {
-    
+
     // clamp input position norm to <= 1
     Vec3f position(alpha, beta, gamma);
-    float r = position.norm();  
-    if (r > 1) {   
+    float r = position.norm();
+    if (r > 1) {
         position = position * (1 / r);
         r = 1;
     }
-    
+
     // compute calibration matrix
     Mat3f calib = calibration_matrix(a_calibration, b_calibration, c_calibration, d_calibration);
     Vec3f vec1 = calib * basis1;
     Vec3f vec2 = calib * basis2;
     Vec3f vec3 = calib * basis3;
     Vec3f vec4 = calib * basis4;
-    
+
     // compute electrode amplitude
     float a1 = (1 - r) * vec1.norm() + abs(dot(vec1, position));
     float a2 = (1 - r) * vec2.norm() + abs(dot(vec2, position));
     float a3 = (1 - r) * vec3.norm() + abs(dot(vec3, position));
     float a4 = (1 - r) * vec4.norm() + abs(dot(vec4, position));
 
-    // construct point p, such that 
-    // abs(a1-a2) <= abs(p) <= a1+a2
-    // abs(a3-a4) <= abs(p) <= a3+a4
-    float p_min = abs(a3 - a4);
-    float p_max = a3 + a4;
-    p_max = std::min(p_max, a1 + a2);
-    p_min = std::max(p_min, abs(a1 - a2));
-    Complex p((p_min + p_max) * 0.5f, 0);
-
-    // use p to project points on complex plane
-    Complex p1, p2, p3, p4;
-    split_point(p, a1, a2, &p1, &p2);
-    p = Complex(-p.a, 0);
-    split_point(p, a3, a4, &p3, &p4);
+    ComplexFourphasePoints complex_points = fourphase_electrode_amplitude_to_complex_points({a1, a2, a3, a4});
 
     // center calibration
     float ratio = powf(10, (center_calibration / 10));
@@ -141,21 +128,47 @@ ComplexFourphasePoints project_fourphase(
         pulse_amplitude *= lerp(r, 1, 1 / ratio);
     }
 
+    return fourphase_permute_complex_points(complex_points, flip_polarity, start_angle, pulse_amplitude);
+}
+
+ComplexFourphasePoints fourphase_electrode_amplitude_to_complex_points(Vec4f amplitudes)
+{
+    // construct point p, such that
+    // abs(a1-a2) <= abs(p) <= a1+a2
+    // abs(a3-a4) <= abs(p) <= a3+a4
+    float p_min = abs(amplitudes.c - amplitudes.d);
+    float p_max = amplitudes.c + amplitudes.d;
+    p_max = std::min(p_max, amplitudes.a + amplitudes.b);
+    p_min = std::max(p_min, abs(amplitudes.a - amplitudes.b));
+    Complex p((p_min + p_max) * 0.5f, 0);
+
+    // use p to project points on complex plane
+    Complex p1, p2, p3, p4;
+    split_point(p, amplitudes.a, amplitudes.b, &p1, &p2);
+    p = Complex(-p.a, 0);
+    split_point(p, amplitudes.c, amplitudes.d, &p3, &p4);
+
+    return ComplexFourphasePoints{
+        p1, p2, p3, p4
+    };
+}
+
+ComplexFourphasePoints fourphase_permute_complex_points(ComplexFourphasePoints points, bool flip_polarity, float random_start_angle, float amplitude_multiplicator)
+{
     // flip polarity
     if (flip_polarity) {
-        p1 = Complex(-p1.a, p1.b);
-        p2 = Complex(-p2.a, p2.b);
-        p3 = Complex(-p3.a, p3.b);
-        p4 = Complex(-p4.a, p4.b);
+        points.p1 = Complex(-points.p1.a, points.p1.b);
+        points.p2 = Complex(-points.p2.a, points.p2.b);
+        points.p3 = Complex(-points.p3.a, points.p3.b);
+        points.p4 = Complex(-points.p4.a, points.p4.b);
     }
 
     // random start angle
-    Complex rotation(cosf(start_angle), sinf(start_angle));
+    Complex rotation(cosf(random_start_angle), sinf(random_start_angle));
 
-    return ComplexFourphasePoints{
-        .p1 = p1 * rotation * pulse_amplitude,
-        .p2 = p2 * rotation * pulse_amplitude,
-        .p3 = p3 * rotation * pulse_amplitude,
-        .p4 = p4 * rotation * pulse_amplitude
-    };
+    points.p1 = points.p1 * rotation * amplitude_multiplicator;
+    points.p2 = points.p2 * rotation * amplitude_multiplicator;
+    points.p3 = points.p3 * rotation * amplitude_multiplicator;
+    points.p4 = points.p4 * rotation * amplitude_multiplicator;
+    return points;
 }

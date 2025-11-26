@@ -47,9 +47,9 @@ enum PlayStatus{
 static PlayStatus play_status = PlayStatus::NotPlaying;
 
 
-class FocstimV3ProtobufAPI : public ProtobufAPI {
+class FocstimV4ProtobufAPI : public ProtobufAPI {
 public:
-    FocstimV3ProtobufAPI() {};
+    FocstimV4ProtobufAPI() {};
 
     focstim_rpc_Errors wifi_parameters_set(focstim_rpc_RequestWifiParametersSet &params) {
         // TODO: error checks
@@ -133,7 +133,7 @@ public:
     Clock time_since_signal_start;
 };
 
-FocstimV3ProtobufAPI protobuf{};
+FocstimV4ProtobufAPI protobuf{};
 ProtobufAPI* g_protobuf = &protobuf;
 
 struct {

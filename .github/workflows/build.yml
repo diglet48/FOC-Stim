@@ -58,5 +58,5 @@ jobs:
           tag_name: nightly
           files: |
             .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
-            .pio/build/disco_b_g431b_esc1/focstim_v4_1_firmware.bin
+            .pio/build/focstim_v4/focstim_v4_1_firmware.bin
           fail_on_unmatched_files: true

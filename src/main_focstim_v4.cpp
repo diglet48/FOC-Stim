@@ -24,11 +24,7 @@
 #include "bsp/bsp.h"
 #include "bsp/bootloader.h"
 
-#include <pb.h>
-#include <pb_encode.h>
-#include <pb_decode.h>
 #include "focstim_rpc.pb.h"
-
 #include "protobuf_api.h"
 
 
@@ -188,15 +184,168 @@ void trigger_emergency_stop(FOCError error)
 
 AS5311 as5311{};
 
+void self_test() {
+    auto check_value = [](bool passfail, const char* test_string) {
+        if (passfail) {
+            // pass
+            BSP_PrintDebugMsg("PASS: %s", test_string);
+        } else {
+            // fail
+            BSP_PrintDebugMsg("FAIL: %s", test_string);
+
+            user_interface.setState(UserInterface::SelfTestError);
+            user_interface.setSelfTestErrorString(test_string);
+            user_interface.repaint();
+            user_interface.full_update();
+
+            while (1) {
+                delay(1000);
+                BSP_PrintDebugMsg("FAIL: %s", test_string);
+            }
+        }
+    };
+
+    auto is_within = [](float value, float minimum, float maximum) {
+        return (value >= minimum) && (value <= maximum);
+    };
+
+    auto current_draw = [](float v1, float v2, float dt) {
+        float v_avg = (v1 + v2) / 2;
+        float capacitance = 230e-6;
+        float energy = 0.5f * capacitance * (v1 * v1 - v2 * v2);    // joules = 0.5 * capacitance * voltage^2
+        float watt = energy / dt;
+        return watt / v_avg;
+    };
+
+    char buffer[255];
+
+    BSP_PrintDebugMsg("self test starting");
+
+    // check if board temperature is in valid range
+    {
+        float temperature = BSP_ReadTemperatureSTM();
+        float minimum = 1.0f;
+        float maximum = MAXIMUM_TEMPERATURE;
+        snprintf(buffer, sizeof(buffer), "stm32 temperature %.2f deg C (valid range %.0f to %.0f)", temperature, minimum, maximum);
+        check_value(is_within(temperature, minimum, maximum), buffer);
+    }
+
+    // check if board analog value is in valid range
+    {
+        float temperature = BSP_ReadChipAnalogVoltage();
+        float minimum = 2.9f - 0.05f;
+        float maximum = 2.9f + 0.05f;
+        snprintf(buffer, sizeof(buffer), "stm32 analog voltage %.2fV (valid range %.2fV to %.2fV)", temperature, minimum, maximum);
+        check_value(is_within(temperature, minimum, maximum), buffer);
+    }
+
+    // Check if VSYS is in valid range
+    {
+        float vsys = BSP_ReadVSYS();
+        float minimum = 3.0f;
+        float maximum = 5.4f;
+        snprintf(buffer, sizeof(buffer), "vsys %.2fV (valid range %.2fV to %.2fV)", vsys, minimum, maximum);
+        check_value(is_within(vsys, minimum, maximum), buffer);
+    }
+
+    // check if boost caps are in valid range
+    {
+        float vbus = BSP_ReadVBus();
+        float minimum = 3.0f;
+        float maximum = 30.0f;
+        snprintf(buffer, sizeof(buffer), "vbus %.2fV (valid range %.2fV to %.2fV)", vbus, minimum, maximum);
+        check_value(is_within(vbus, minimum, maximum), buffer);
+    }
+
+    // discharge the boost caps to <= 6v
+    {
+        // enable drivers for faster draining
+        BSP_SetPWM4Atomic(0, 0, 0, 0);
+        BSP_OutputEnable(true, true, true, true);
+
+        Clock k;
+        float vbus_initial = BSP_ReadVBus();
+        float target = 6.0f;
+        float maximum_time = 1.0f;  // draiting from the maximum voltage of 30V takes 600ms
+        float vbus = vbus_initial;
+        while ((vbus >= target) && (k.time_seconds <= maximum_time)) {
+            vbus = BSP_ReadVBus();
+            k.step();
+            delay(1);
+        }
+        bool passfail = k.time_seconds <= maximum_time;
+        BSP_DisableOutputs();
+
+        snprintf(buffer, sizeof(buffer), "drain vbus from %.2fV to %.2fV in %.0fms (target < %.2fV)", vbus_initial, vbus, k.time_seconds * 1000, target);
+        check_value(passfail, buffer);
+    }
+
+    // charge the boost caps to 10V
+    {
+        Clock k;
+        float vbus_initial = BSP_ReadVBus();
+        float target = 10.0f;
+        float minimum = 9.5f;
+        float maximum = 10.5f;
+        float maximum_time = 0.05f;
+        BSP_SetBoostVoltage(target);
+        BSP_SetBoostEnable(true);
+        delay(int(maximum_time * 1000));
+        float vbus = BSP_ReadVBus();
+
+        snprintf(buffer, sizeof(buffer), "charge vbus to %.2fV (vbus: %.2f, valid range: %.2fV to %.2fV)", target, vbus, minimum, maximum);
+        check_value(is_within(vbus, minimum, maximum), buffer);
+    }
+
+    // measure the current draw from boost caps
+    // with various combinations of enabled drivers
+    // should be able to detect shorted or malfunctioning drivers.
+    {
+        auto test_current_draw = [&](float voltage, float dt, float minimum_draw, float maximum_draw, Vec4f driver_state, float pwm, const char* test_name) {
+            BSP_OutputEnable(bool(driver_state.a), bool(driver_state.b), bool(driver_state.c), bool(driver_state.d));
+            BSP_SetPWM4Atomic(pwm, pwm, pwm, pwm);
+            BSP_SetBoostVoltage(voltage);
+            BSP_SetBoostEnable(true);
+            delay(20);  // charge
+            BSP_SetBoostEnable(false);
+            float v1 = BSP_ReadVBus();
+            delay(int(dt * 1000)); // discharge
+            float v2 = BSP_ReadVBus();
+            BSP_DisableOutputs();
+            BSP_SetPWM4(0, 0, 0, 0);
+            float current = current_draw(v1, v2, dt);
+
+            snprintf(buffer, sizeof(buffer), "%s draw %5.2fmA (valid range %.1fmA to %.1fmA)", test_name, current*1000, minimum_draw*1000, maximum_draw*1000);
+            check_value(is_within(current, minimum_draw, maximum_draw), buffer);
+        };
+
+        float mA = 1e-3f;
+        float uA = 1e-6f;
+        // 'real' value here should be ~100µA, but not very accurate because of short test duration.
+        test_current_draw(10, 0.20f, -100 * uA, 400 * uA,  {0, 0, 0, 0}, 0,  "drv OFF");
+        test_current_draw(10, 0.05f, 1.5f * mA, 3 * mA,    {1, 0, 0, 0}, 0,  "drv A");
+        test_current_draw(10, 0.05f, 1.5f * mA, 3 * mA,    {0, 1, 0, 0}, 0,  "drv B");
+        test_current_draw(10, 0.05f, 1.5f * mA, 3 * mA,    {0, 0, 1, 0}, 0,  "drv C");
+        test_current_draw(10, 0.05f, 1.5f * mA, 3 * mA,    {0, 0, 0, 1}, 0,  "drv D");
+        test_current_draw(10, 0.02f, 7 * mA, 12 * mA,      {1, 1, 1, 1}, 0,  "drv ABCD/0%");
+        test_current_draw(10, 0.02f, 7 * mA, 12 * mA,      {1, 1, 1, 1}, .5, "drv ABCD/50%");
+    }
+
+    BSP_PrintDebugMsg("self test completed");
+}
+
 
 void setup()
 {
     BSP_CheckJumpToBootloader();
     Serial.begin(115200, SERIAL_8E1);   // match STM32 bootloader setting
-
     Wire.setSCL(PA15);
     Wire.setSDA(PB9);
+
     user_interface.init();
+    user_interface.setState(UserInterface::InitBSP);
+    user_interface.repaint();
+    user_interface.full_update();
 
     protobuf.init();
     protobuf.set_simple_axis(
@@ -209,16 +358,26 @@ void setup()
     user_interface.repaint();
     user_interface.full_update();
 
+    user_interface.setState(UserInterface::InitBattery);
+    user_interface.repaint();
+    user_interface.full_update();
+
     power_manager.init();
     user_interface.setBatteryPresent(power_manager.is_battery_present);
     if (power_manager.is_battery_present) {
         user_interface.setBatterySoc(power_manager.cached_soc());
     }
-    user_interface.setState(UserInterface::Idle);
+    esp32.init();
+
+    user_interface.setState(UserInterface::InitSelfTest);
     user_interface.repaint();
     user_interface.full_update();
 
-    esp32.init();
+    self_test();
+
+    user_interface.setState(UserInterface::Idle);
+    user_interface.repaint();
+    user_interface.full_update();
 
     // TODO: dynamic
     BSP_SetBoostVoltage(STIM_BOOST_VOLTAGE);

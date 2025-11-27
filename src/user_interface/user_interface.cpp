@@ -22,7 +22,7 @@
 
 UserInterface::UserInterface()
     : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, I2C_CLOCK_DURING, I2C_CLOCK_AFTER)
-    , state(UIState::DetectBattery)
+    , state(UIState::InitBSP)
 {
 }
 
@@ -61,9 +61,13 @@ void UserInterface::repaint()
     // ###############
     // ## display power level
     switch (state) {
-        case UIState::DetectBattery:
+        case UIState::InitBSP:
+        case UIState::InitBattery:
+        case UIState::InitSelfTest:
         case UIState::Error:
+        case UIState::SelfTestError:
             break;
+
 
         case UIState::Idle:
         case UIState::Connected:
@@ -89,40 +93,56 @@ void UserInterface::repaint()
     // ###############
     // ## display battery charge level
     switch (state) {
-        case UIState::DetectBattery:
+        case UIState::InitBSP:
+        case UIState::InitBattery:
+        case UIState::InitSelfTest:
         case UIState::Idle:
         case UIState::Connected:
         case UIState::Playing:
         case UIState::Error:
 
-        int x0 = 104;
-        int y0 = 0;
+        {
+            int x0 = 104;
+            int y0 = 0;
 
-        if (battery_is_present) {
-            int soc = min(100, max(int(battery_soc * 100), 0));
-            if (soc < 10) {
-                display.setCursor(x0+3+6, y0+2);
-            } else if (soc < 100) {
-                display.setCursor(x0+3+3, y0+2);
+            if (battery_is_present) {
+                int soc = min(100, max(int(battery_soc * 100), 0));
+                if (soc < 10) {
+                    display.setCursor(x0+3+6, y0+2);
+                } else if (soc < 100) {
+                    display.setCursor(x0+3+3, y0+2);
+                } else {
+                    display.setCursor(x0+3, y0+2);
+                }
+                display.drawXBitmap(x0, 0, battery_bits, battery_width, battery_height, SSD1306_WHITE);
+                display.setTextSize(1);
+                display.printf("%i", soc);
             } else {
-                display.setCursor(x0+3, y0+2);
+                // display.drawXBitmap(x0, 0, battery_empty_bits, battery_empty_width, battery_empty_height, SSD1306_WHITE);
+                display.drawXBitmap(x0, 0, battery_empty2_bits, battery_empty2_width, battery_empty2_height, SSD1306_WHITE);
             }
-            display.drawXBitmap(x0, 0, battery_bits, battery_width, battery_height, SSD1306_WHITE);
-            display.setTextSize(1);
-            display.printf("%i", soc);
-        } else {
-            // display.drawXBitmap(x0, 0, battery_empty_bits, battery_empty_width, battery_empty_height, SSD1306_WHITE);
-            display.drawXBitmap(x0, 0, battery_empty2_bits, battery_empty2_width, battery_empty2_height, SSD1306_WHITE);
+            break;
         }
+
+        case UIState::SelfTestError:
+        break;
     }
 
     // ###############
     // ## status msg
     display.setTextSize(1);
     switch (state) {
-        case UIState::DetectBattery:
+        case UIState::InitBSP:
+            display.setCursor(128 - 6*8, 31-7);
+            display.print("init BSP");
+            break;
+        case UIState::InitBattery:
             display.setCursor(128 - 6*10, 31-7);
             display.print("detect bat");
+            break;
+        case UIState::InitSelfTest:
+            display.setCursor(128 - 6*9, 31-7);
+            display.print("self test");
             break;
         case UIState::Idle:
             if (ip) {
@@ -146,6 +166,13 @@ void UserInterface::repaint()
         case UIState::Error:
             display.setCursor(128 - 6*10, 31-7);
             display.print("     error");
+            break;
+        case UIState::SelfTestError:
+            display.setCursor(128 - 6*15, 31-7);
+            display.print("self test error");
+
+            display.setCursor(0, 0);
+            display.print(error_string);
             break;
     }
 }

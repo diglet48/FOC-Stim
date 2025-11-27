@@ -7,16 +7,20 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <cstring>
 
 
 class UserInterface {
 public:
 	enum UIState {
-		DetectBattery,
+		InitBSP,
+		InitBattery,
+		InitSelfTest,
 		Idle,
 		Connected,
 		Playing,
 		Error,
+		SelfTestError,
 	};
 
 	UserInterface();
@@ -54,6 +58,10 @@ public:
 		this->ip = ip;
 	}
 
+	void setSelfTestErrorString(const char* error_string) {
+		strncpy(this->error_string, error_string, sizeof(this->error_string) - 1);
+	}
+
 	void hexdump();
 
 private:
@@ -67,6 +75,8 @@ private:
 
 	bool dirty;
 	int partial_update_index;
+
+	char error_string[256];
 };
 
 #endif

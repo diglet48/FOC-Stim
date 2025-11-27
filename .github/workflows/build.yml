@@ -26,20 +26,29 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
 
-      - name: Build PlatformIO Project
+      - name: Build PlatformIO Project (ESC1)
         run: pio run --environment disco_b_g431b_esc1
 
-      - name: Rename firmware binary
+      - name: Build PlatformIO Project (V4)
+        run: pio run --environment focstim_v4
+
+      - name: Rename firmware binary (ESC1)
         run: |
           cd .pio/build/disco_b_g431b_esc1
           cp firmware.bin b_g431b_esc1_firmware.bin
 
+      - name: Rename firmware binary (V4)
+        run: |
+          cd .pio/build/focstim_v4
+          cp firmware.bin focstim_v4_1_firmware.bin
+
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: b_g431b_esc1_firmware
+          name: firmwares
           path: |
             .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
+            .pio/build/focstim_v4/focstim_v4_1_firmware.bin
 
       - name: Release nightly
         uses: softprops/action-gh-release@v1
@@ -47,5 +56,7 @@ jobs:
           prerelease: true
           name: nightly
           tag_name: nightly
-          files: .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
+          files: |
+            .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
+            .pio/build/disco_b_g431b_esc1/focstim_v4_1_firmware.bin
           fail_on_unmatched_files: true

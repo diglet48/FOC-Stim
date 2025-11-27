@@ -1,8 +1,8 @@
 FOC-Stim is a family of next-generation estim devices that generate current-controlled analogue waveforms.
 It can be controlled with [Restim](https://github.com/diglet48/restim).
 
-Unlike traditional devices with channels, the FOC-Stim can generate pulses
-between any of its outputs.
+Unlike traditional devices, the FOC-Stim has no channels
+but offers an any-to-any output topology.
 
 # Version 1
 

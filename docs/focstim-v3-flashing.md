@@ -1,6 +1,6 @@
 
 > [!CAUTION]
-> Only applicable to FOC-Stim V3, not V3.1 or later.
+> Only applicable to FOC-Stim V3, not V4 or later.
 
 # Soldering
 

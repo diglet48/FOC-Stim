@@ -3,18 +3,18 @@
 
 # Mainboard
 
-Break off the side rails, lightly scrub the sides of the board with sandpaper to remove any burrs.
+Break off all the side rails, you can use some sandpaper to remove the sharp edges.
 
-![](images/focstim-v4-sandpaper.jpg)
+![](images/focstim-v4-side-rails.jpg)
 
 Snip off the middle pins of the 4 transformers, bend the metal tabs in.
 
 ![](images/focstim-v4-transformer.jpg)
 
-Solder the transformer to the unpopulated side of the board. The orientation is important!
+Solder the transformers to the unpopulated side of the board. The orientation is important!
 
-![](images/focstim-v4-transformer-2.jpg)
-![](images/focstim-v4-transformer-3.jpg)
+![](images/focstim-v4-transformer-4.jpg)
+
 
 Solder the battery connector and switch to the unpopulated side of the board.
 
@@ -22,7 +22,7 @@ Solder the battery connector and switch to the unpopulated side of the board.
 > Not all batteries have the same pinout. Connecting a battery with the wrong pinout will
 > destroy your board.
 
-![](images/focstim-v4-switch.jpg)
+![](images/focstim-v4-battery-connector.jpg)
 
 # Frontpanel
 
@@ -33,29 +33,36 @@ Solder the battery connector and switch to the unpopulated side of the board.
 > Follow this assembly order
 
 
-Solder the SMD nuts and the pin headers to the rear of the frontpanel.
+Solder the SMD nuts to the rear of the frontpanel.
 
-Put a good amount of solder on the top and bottom of the SMD nuts, 
-keeping the front free from solder.
-Check if the nuts are roughly centered in their holes. 
+Apply some solder and then heat up the entire nut to flow into place. 
+A good mechanical connection is important. When in doubt, a bit of solder
+can be added on the other side.
 
-![](images/focstim-v4-frontpanel-1.jpg)
-![](images/focstim-v4-frontpanel-2.jpg)
+![](images/focstim-v4-smd-nuts.jpg)
+![](images/focstim-v4-smd-nuts-2.jpg)
+
+Solder the 2.0mm connectors to the same side and test fit. 
+
+![](images/focstim-v4-test-fit.jpg)
 
 Solder the 2.54mm pins to the display.  
 Place the display and frontpanel into the assembly fixture and solder the parts together.
 
-![](images/focstim-v4-frontpanel-5.jpg)
-![](images/focstim-v4-frontpanel-6.jpg)
+![](images/focstim-v4-display.jpg)
+![](images/focstim-v4-assembly-fixture.jpg)
 
-Snip the pins of the display short (both sides).  
-If the frontpanel contacts the mainboard front edge completely, you have trimmed the pins enough.
+Snip all pins of the display short (both sides) for clearance with the PCB and case.
 
-![](images/focstim-v4-frontpanel-3.jpg)
+![](images/focstim-v4-display-pins.jpg)
 
-Solder the pot. 
+Snip off the very corner of the display for clearance in the case.
 
-![](images/focstim-v4-frontpanel-4.jpg)
+![](images/focstim-v4-display-corner.jpg)
+
+Solder the encoder and you're done.
+
+![](images/focstim-v4-encoder.jpg)
 
 # Case
 
@@ -75,6 +82,8 @@ TODO: wait for feet to arrive and make pictures
 
 Insert the frontpanel into the case and tighten the 2mm banana jacks.
 The best tool for grabbing onto the jacks is a small torx bit, just jam it into the hole.
+
+The order is be red - blue - yellow - green.
 
 Jacks should be a loose fit, if they are extremely tight you may delaminate the
 frontpanel during tightening.

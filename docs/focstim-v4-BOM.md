@@ -5,6 +5,8 @@ Frontpanel from JLCPCB, no assembly.
 
 # Mainboard components
 
+![](images/focstim-v4-bom-mb.jpg)
+
 ### Transformer
 4x Xicon 42TL004-RC. [Mouser](https://mouser.com/ProductDetail/Xicon/42TL004-RC?qs=%252BLh6ltJumVRX87vpOY3zCA%3D%3D)
 
@@ -17,6 +19,8 @@ JST B3B-PH-K-S(LF)(SN) [LCSC](https://www.lcsc.com/product-detail/C131339.html),
 
 
 # Frontpanel components
+
+![](images/focstim-v4-bom-fp.jpg)
 
 ### Display
 HS HS91L02W2C01. [LCSC](https://www.lcsc.com/product-detail/C5248081.html)  
@@ -46,7 +50,7 @@ Equivalent parts, pick one:
 
 The manufacturer is Changzhou Amass Electronics, product 24.106.1 (red)
     
-### Potentiometer
+### Encoder
 Bourns PEC11R-4015F-S0024 (metal shaft, button, no detents, 24 pos) [LCSC](https://www.lcsc.com/product-detail/C143789.html), [Mouser](https://mouser.com/ProductDetail/Bourns/PEC11R-4015F-S0024?qs=Zq5ylnUbLm4l0nvCUCX4Xw%3D%3D)
 
 Alternatives:  
@@ -58,7 +62,9 @@ A pot with detents can be used, but I prefer the smooth ones due to the higher r
 
 # Misc
 
-### Potentiometer knob
+![](images/focstim-v4-bom-misc.jpg)
+
+### Encoder knob
 My favorite: 
 [Aliexpress](https://aliexpress.com/item/1005007470191877.html), 
 [Aliexpress 2](https://aliexpress.com/item/1005007412387621.html),
@@ -108,11 +114,9 @@ A 6mm 1200mAh battery lasts about 4 hours. 10mm 2000mAh about 7 hours.
 Pre-made cables:
 Colored 2mm to 2mm banana cables. [Aliexpress](https://aliexpress.com/item/1005009474228825.html)
 
-Supplies for making your own cables if desired:
+Supplies for making your own cables if desired:  
+Colored 2mm banana connectors: [Aliexpress](https://aliexpress.com/item/1005005307850027.html), [Aliexpress 2](https://aliexpress.com/item/1005005914150447.html)  
 Colored 2mm TENS connectors: [Aliexpress](https://aliexpress.com/item/1005006066453610.html)  
-Colored 2mm banana connectors:
-[Aliexpress](https://aliexpress.com/item/1005005307850027.html), 
-[Aliexpress 2](https://aliexpress.com/item/1005005914150447.html)  
 
 4mm to 2mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005005565867054.html) (for using these cables with boxes with 4mm outputs)
 

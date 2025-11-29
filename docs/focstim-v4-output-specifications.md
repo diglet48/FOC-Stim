@@ -9,9 +9,9 @@ with an oscilloscope and power supply:
 
 ![](images/42tl004-saturation.png)
 
-The area under the curve is about $7500 V*µs$, 
+The area under the curve is about $`7500 V*\mu s`$, 
 which is the saturation point of the small 42TL004. 
-It could be argued $6000 V*µs$, 20% less, is the practical limit
+It could be argued $`6000 V*\mu s`$, 20% less, is the practical limit
 for undistorted waveforms.
 
 For the larger 42TU200 used in the V1, multiply these numbers by 4.
@@ -29,7 +29,7 @@ Most e-stim boxes have one transformer per path,
 calculations have to be performed
 with the body resistance (twice the skin resistance).
 
-| skin resistance<br/>(one-way) | example                                                              | maximum charge<br/>$7500Vµs / (12Ω + xΩ)$ | Practical limit<br/>80% |
+| skin resistance<br/>(one-way) | example                                                              | maximum charge<br/>$7500V\mu s / (12Ω + xΩ)$ | Practical limit<br/>80% |
 |------------------------------:|----------------------------------------------------------------------|------------------------------------------:|------------------------:|
 |                          25 Ω | Large metal insertable                                               |                                    202 µC |                  161 µC |
 |                          50 Ω | Electro-rings (metal)                                                |                                    121 µC |                   97 µC |
@@ -45,7 +45,7 @@ Measurements performed with varying carrier frequency.
 
 The maximum signal intensity I use is about 5µC, but there is a catch: 
 the lower the signal frequency, the more charge is needed to get an effective
-signal intensity of 5µC. The correction factor is $1 + \frac{pulsewidth}{355µs}$.
+signal intensity of 5µC. The correction factor is $1 + \frac{pulsewidth}{355\mu s}$.
 
 | frequency (Hz) | correction factor | required charge for<br/>5µC signal intensity | waveform aplitude for<br/>5µC signal intensity |
 |----------------|-------------------|---------------------------------------------:|-----------------------------------------------:|
@@ -57,15 +57,15 @@ signal intensity of 5µC. The correction factor is $1 + \frac{pulsewidth}{355µs
 ## Verification
 
 I tested a resistor network representing bad quality rubber (three $500 Ω$ resistors in star network). 
-According to our calculations the maximum charge delivery should be $15 µC$.
+According to our calculations the maximum charge delivery should be $15 \mu C$.
 
-With 1000hz waveforms, the waveforms look perfect on the scope up to an amplitude of $76mA, 12 µC$.
+With 1000hz waveforms, the waveforms look perfect on the scope up to an amplitude of $76mA, 12 \mu C$.
 At higher signal intensities the waveform starts to look a bit distorted. 
 This confirms the practical output limit is about 80% of the transformer saturation point.
 
 # Drive circuit limits
 
-The FOC v4 has an internal voltage of $30V$ and $220µH$ inductors. 
+The FOC v4 has an internal voltage of $30V$ and $220\mu H$ inductors. 
 For technical reasons, the maximum driving voltage (relative to the circuit virtual neutral)
 is about $10V$.
 
@@ -74,7 +74,7 @@ With the winding ratio of the 42TL004
 the maximum voltage amplitude is $55V$ to neutral or $110V$ output-to-output.
 
 With $500 Ω$ skin resistance, the maximum output current is approx $110mA$.
-The tables show this limits the maximum frequency to about $2000Hz$ for a $5µC$ signal intensity.
+The tables show this limits the maximum frequency to about $2000Hz$ for a $5\mu C$ signal intensity.
 
 # Boost circuit limits
 

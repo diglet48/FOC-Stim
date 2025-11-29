@@ -24,7 +24,7 @@ JST B3B-PH-K-S(LF)(SN) [LCSC](https://www.lcsc.com/product-detail/C131339.html),
 
 ### Display
 HS HS91L02W2C01. [LCSC](https://www.lcsc.com/product-detail/C5248081.html)  
-Alternative part: search for SSD1306 I2C 128x32 0.91 OLED Display. Make sure dimensions are 12x38mm, monochrome (1-color). Active display area might be shifted slightly. [Aliexpress](https://aliexpress.com/item/1005005301005280.html)
+Alternative part: search for SSD1306 I2C 128x32 0.91 OLED Display. Make sure dimensions are 12x38mm, monochrome (1-color). Not recommended because every display has the actual display area in a slightly different spot. [Aliexpress](https://aliexpress.com/item/1005005301005280.html)
 
 ### 2.54mm 1x4 header, male
 For the display. Cut off length that you need. [Alixpress](https://aliexpress.com/item/1005009749780893.html)

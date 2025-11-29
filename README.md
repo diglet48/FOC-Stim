@@ -18,4 +18,4 @@ It is fairly easy to build with basic soldering skills, all parts can be ordered
 
 Version 4 uses a custom PCB. It improves the original by adding one extra output, a battery, and wireless comms.
 
-Currently in development.
+See [docs/focstim-v4](docs/focstim-v4.md) for more info.

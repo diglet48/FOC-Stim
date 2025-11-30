@@ -1,65 +1,31 @@
-The FOC-Stim contains 2 chips that need software to work, an ESP32 and STM32.
+![](images/focstim-v4-chips.jpg)
 
-# ESP32
+The FOC-Stim V4 contains 2 chips that need software to work, an ESP32 and STM32.
 
-The ESP32 handles usb and wifi communication.
+Each chip has a boot button, hold the button and flip the power switch
+to put the chip in firmware update mode. This should only be required when
+programming for the boards for the first time.
 
-## build/upload from source
+# The easy way
 
-Clone this repository: https://github.com/diglet48/FOC-Stim-esp32
+ESP32: Use the webflasher  at https://github.com/diglet48/FOC-Stim-esp32-Webflasher
 
-Open the project in visual studio code. 
-Make sure the plugin platformio is installed.
-Build and upload the software using the controls on the left-hand pane of the screen.
+STM32: Start Restim, use tools -> firmware updater. Download firmware binary here: https://github.com/diglet48/FOC-Stim/releases
 
-## disaster recovery
+# Development
 
-If you brick your ESP32 firmware, you can force
-the chip into bootloader mode where you can upload the firmware as normal.
+Development for both chips is done with Visual Studio Code.
+Install the plugins PlatformIO and optionally Teleplot.
 
-To do this, open your box and hold the `ESP32_PRG` button located next
-to the USB port. Then turn on the power to the box.
+## ESP32
+
+Get the code here: https://github.com/diglet48/FOC-Stim-esp32  
+Make sure the correct environment is selected. (`focstim_v4_1`).
+Click the `upload` button in the sidebar.
 
 # STM32
 
-The STM32 handles all realtime control and user interface tasks.
+Get the code here: https://github.com/diglet48/FOC-Stim  
+Make sure the correct environment is selected. (`focstim_v4`).
 
-## pre-built binaries
-
-TODO
-
-## build from source
-
-Clone this repository. https://github.com/diglet48/FOC-Stim
-
-Open the project in visual studio code.
-Make sure the plugin platformio is installed.
-Select the environment "focstim_v4" and build the software.
-
-## upload with Restim
-
-This requires your ESP32 to have valid firmware.
-
-Open Restim. Go to tools -> firmware updater and follow the instructions.
-
-## upload with STM32CubeProgrammer
-
-This requires your ESP32 to have valid firmware.
-
-Follow the disaster recovery instructions to put the chip in bootloader mode.
-Then use STM32CubeProgrammer (UART mode) to upload the binary to the chip.
-
-## upload the code with jtag probe
-
-Connect your probe to the header marked "TJAG" with the cable sticking
-towards the frontpanel connectors.
-
-I had good luck with Segger J-link probes and Ozone.
-
-## disaster recovery
-
-If you do not have a jtag probe and brick your STM32, you can force the chip
-into bootloader mode where you can upload the firmware as normal.
-
-To do this, open your box and hold the `STM_BOOT` button located near the
-frontpanel connector. Then turn on the power to the box.
+Use Restim or attach a debugger to upload the code to the board.

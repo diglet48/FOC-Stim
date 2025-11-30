@@ -1,5 +1,8 @@
 ![](images/focstim-v4-complete.jpg)
 
+Schematics, PCB and case design by Sekizen.  
+Software by Diglet.
+
 # Useful pages
 
 * [Bill of materials](focstim-v4-BOM.md)

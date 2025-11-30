@@ -4,7 +4,7 @@
 
 * [Bill of materials](focstim-v4-BOM.md)
 * [3D files](../3d%20files/V4)
-* [Assembly guide](focstim-v4-BOM.md)
+* [Assembly guide](focstim-v4-assembly.md)
 * [Flashing your board](focstim-v4-flashing.md)
 
 Schematics/gerbers coming at a later date.

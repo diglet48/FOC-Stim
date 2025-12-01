@@ -331,6 +331,103 @@ void self_test() {
         test_current_draw(10, 0.02f, 7 * mA, 12 * mA,      {1, 1, 1, 1}, .5, "drv ABCD/50%");
     }
 
+    // verify low current sense offsets
+    {
+        // TODO
+    }
+
+    // send a short pulse on all drivers
+    // verify that the current sense readings are sensible.
+    {
+        // testing procedure:
+        // We set pwm to (0, .1, .1, .1) for 1 cycle, which results in 2µs blip (with 50khz pwm)
+        // due to driver deadtime, it's about 1.8µs.
+        // with 10V and 220uH, delta-I can be calculated as:
+        // V = 10; L = 220e-6 * 4/3; dt = 1.8e-6; V / L * dt
+        // = 60mA
+        // with sampletime delay, the expected value is slightly less.
+        //
+        // with the outputs open-circuit, this results in a ~2v amplitude 8000khz oscillation
+        // on the output which should be far below detection threshold.
+
+
+        BSP_SetBoostVoltage(10);
+        BSP_SetBoostEnable(true);
+
+        BSP_SetPWM4(0, 0, 0, 0);
+        BSP_OutputEnable(1, 1, 1, 1);
+        // init offsets for better accuracy
+        for(int i = 0; i < 1000; i++) {
+            BSP_AdjustCurrentSenseOffsets();
+            delayMicroseconds(10);
+        };
+        BSP_OutputEnable(0, 0, 0, 0);
+
+        auto test_blip = [](Vec4f pwm) {
+            BSP_SetPWM4(0, 0, 0, 0);
+            BSP_OutputEnable(1, 1, 1, 1);
+
+            // wait for drivers to actually turn on
+            delayMicroseconds(500);
+
+            volatile int i = 0;
+            Vec4f currents;
+            auto interrrupt_fn = [&]{
+                switch (i++) {
+                    case 0:
+                        // set pwm for exactly one cycle
+                        BSP_SetPWM4(pwm.a, pwm.b, pwm.c, pwm.d);
+                        break;
+                    case 1:
+                        BSP_SetPWM4(0, 0, 0, 0);
+                        break;
+                    case 2:
+                        // measurement delayed by 2 cycles.
+                        currents = BSP_ReadPhaseCurrents4();
+                        break;
+                }
+            };
+
+            BSP_AttachPWMInterrupt(interrrupt_fn);
+            while(i <= 5) {
+                delayMicroseconds(10);
+            };
+            BSP_DisableOutputs();
+            BSP_AttachPWMInterrupt(nullptr);
+
+            return currents;
+        };
+
+        float current_min = 30; // mA
+        float current_max = 60; // mA
+        {
+            Vec4f currents = test_blip(Vec4f(0, .1, .1, .1));
+            float current = -1000 * currents.a; // mA
+            snprintf(buffer, sizeof(buffer), "sense A %.1fmA (valid range %.0fmA to %.0fmA)", current, current_min, current_max);
+            check_value(is_within(current, current_min, current_max), buffer);
+        }
+        {
+            Vec4f currents = test_blip(Vec4f(.1, 0, .1, .1));
+            float current = -1000 * currents.b; // mA
+            snprintf(buffer, sizeof(buffer), "sense B %.1fmA (valid range %.0fmA to %.0fmA)", current, current_min, current_max);
+            check_value(is_within(current, current_min, current_max), buffer);
+        }
+        {
+            Vec4f currents = test_blip(Vec4f(.1, .1, 0, .1));
+            float current = -1000 * currents.c; // mA
+            snprintf(buffer, sizeof(buffer), "sense C %.1fmA (valid range %.0fmA to %.0fmA)", current, current_min, current_max);
+            check_value(is_within(current, current_min, current_max), buffer);
+        }
+        {
+            Vec4f currents = test_blip(Vec4f(.1, .1, .1, 0));
+            float current = -1000 * currents.d; // mA
+            snprintf(buffer, sizeof(buffer), "sense D %.1fmA (valid range %.0fmA to %.0fmA)", current, current_min, current_max);
+            check_value(is_within(current, current_min, current_max), buffer);
+        }
+
+        BSP_SetBoostEnable(false);
+    }
+
     BSP_PrintDebugMsg("self test completed");
 }
 

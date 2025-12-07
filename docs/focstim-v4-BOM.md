@@ -10,6 +10,10 @@ Frontpanel from JLCPCB, no assembly.
 ### Transformer
 4x Xicon 42TL004-RC. [Mouser](https://mouser.com/ProductDetail/Xicon/42TL004-RC?qs=%252BLh6ltJumVRX87vpOY3zCA%3D%3D)
 
+Alternatives, not tested:  
+42TL004-RC on ebay, a knockoff without the xicon brand, but very close to the original.  
+Xicon 42TL001-RC. 5-10% lower battery life with 20% higher output power.
+
 ### Switch
 XKB Connection SS-12D28G5. [LCSC](https://www.lcsc.com/product-detail/C1121878.html)  
 alternative part: SS-12D28L5  
@@ -111,14 +115,19 @@ A 6mm 1200mAh battery lasts about 4 hours. 10mm 2000mAh about 7 hours.
 
 # Cables
 
-Pre-made cables:
-Colored 2mm to 2mm banana cables. [Aliexpress](https://aliexpress.com/item/1005009474228825.html)
+Pre-made cables:  
+Colored 2mm to 2mm banana cables. [Aliexpress](https://aliexpress.com/item/1005009474228825.html)  
+Colored 2mm to 2mm banana, stackable. [Aliexpress](https://aliexpress.com/item/1005009284748694.html)
 
 Supplies for making your own cables if desired:  
 Colored 2mm banana connectors: [Aliexpress](https://aliexpress.com/item/1005005307850027.html), [Aliexpress 2](https://aliexpress.com/item/1005005914150447.html)  
 Colored 2mm TENS connectors: [Aliexpress](https://aliexpress.com/item/1005006066453610.html)  
 
-4mm to 2mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005005565867054.html) (for using these cables with boxes with 4mm outputs)
+other useful parts:  
+4mm to 2mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005005565867054.html), [Aliexpress 2](https://aliexpress.com/item/1005009690976598.html)
+2mm to 4mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005009682438992.html)
+
+
 
 
 TODO: low-profile solution for electrodes with 4mm connector

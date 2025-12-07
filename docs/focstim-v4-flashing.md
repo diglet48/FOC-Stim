@@ -2,13 +2,15 @@
 
 The FOC-Stim V4 contains 2 chips that need software to work, an ESP32 and STM32.
 
-Each chip has a boot button, hold the button and flip the power switch
-to put the chip in firmware update mode. This should only be required when
-programming for the boards for the first time.
+Only the switch is required to be soldered before flashing.
 
 # The easy way
 
-ESP32: Use the webflasher  at https://github.com/diglet48/FOC-Stim-esp32-Webflasher
+The first time flashing the board, you will need to hold the boot
+button next to the respective chip while flipping the power switch.
+This puts the chip in firmware update mode.
+
+ESP32: Use the webflasher at https://github.com/diglet48/FOC-Stim-esp32-Webflasher
 
 STM32: Start Restim, use tools -> firmware updater. Download firmware binary here: https://github.com/diglet48/FOC-Stim/releases
 
@@ -20,7 +22,7 @@ Install the plugins PlatformIO and optionally Teleplot.
 ## ESP32
 
 Get the code here: https://github.com/diglet48/FOC-Stim-esp32  
-Make sure the correct environment is selected. (`focstim_v4_1`).
+Make sure the correct environment is selected. (`focstim_v4_1` or `focstim_v4_0`).
 Click the `upload` button in the sidebar.
 
 V4.0 and V4.1 are not compatible.

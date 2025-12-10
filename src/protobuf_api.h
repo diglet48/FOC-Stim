@@ -40,6 +40,7 @@ public:
     void transmit_notification_battery(
         float voltage, float soc, float charge_rate,
         float temperature, bool usb5v_present);
+    void transmit_notification_lsm6dsox(int acc_x, int acc_y, int acc_z, int gyr_x, int gyr_y, int gyr_z);
 
     void transmit_error_response(focstim_rpc_Errors errorcode, uint32_t id);
 

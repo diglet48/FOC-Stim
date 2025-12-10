@@ -10,11 +10,10 @@
 #include "bsp/bsp.h"
 
 void PowerManager::init() {
-    Wire.setSCL(PB8);
-    Wire.setSDA(PB7);
     Wire.setTimeout(10);
     Wire.begin();
 
+    Wire.setClock(I2C_CLOCK_BQ27411);
     BSP_PrintDebugMsg("detecting battery...");
     if (detect_battery()) {
         is_battery_present = lipo.begin();
@@ -26,6 +25,7 @@ void PowerManager::init() {
         BSP_PrintDebugMsg("Battery detected!");
     } else {
         BSP_PrintDebugMsg("Battery NOT detected.");
+        Wire.setClock(I2C_CLOCK_NORMAL);
         return;
     }
 
@@ -53,6 +53,7 @@ void PowerManager::init() {
     }
 
     update_all();
+    Wire.setClock(I2C_CLOCK_NORMAL);
 }
 
 void PowerManager::update()
@@ -68,7 +69,7 @@ void PowerManager::update()
     }
     update_clock.reset();
 
-    Wire.setClock(400'000ULL);
+    Wire.setClock(I2C_CLOCK_BQ27411);
     update_step = (update_step + 1) % 6;
     switch (update_step) {
         case 0:
@@ -90,19 +91,17 @@ void PowerManager::update()
         read_power();
         break;
     }
-    Wire.setClock(100'000ULL);
+    Wire.setClock(I2C_CLOCK_NORMAL);
 }
 
 void PowerManager::update_all()
 {
-    Wire.setClock(400'000ULL);
     read_temperature();
     read_voltage();
     read_soh();
     read_remaining_capacity_uf();
     read_full_charge_capacity_uf();
     read_power();
-    Wire.setClock(100'000ULL);
 }
 
 void PowerManager::print_battery_stats()

@@ -74,6 +74,14 @@ message NotificationBattery {
     // todo: usb connected?
 }
 
+message NotificationLSM6DSOX {
+    int32 acc_x = 1;     // acceleration in units of 1/1000 G
+    int32 acc_y = 2;
+    int32 acc_z = 3;
+    int32 gyr_x = 4;     // angular velocity in units of 1/1000 degrees per second (mDPS)
+    int32 gyr_y = 5;
+    int32 gyr_z = 6;
+}
 
 message NotificationDebugString {
     string message = 1;

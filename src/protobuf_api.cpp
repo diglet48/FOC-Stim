@@ -170,6 +170,20 @@ void ProtobufAPI::transmit_notification_battery(
     transmit_message(message);
 }
 
+void ProtobufAPI::transmit_notification_lsm6dsox(int acc_x, int acc_y, int acc_z, int gyr_x, int gyr_y, int gyr_z)
+{
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_notification_tag;
+    message.message.notification.which_notification = focstim_rpc_Notification_notification_lsm6dsox_tag;
+    message.message.notification.notification.notification_lsm6dsox.acc_x = acc_x;
+    message.message.notification.notification.notification_lsm6dsox.acc_y = acc_y;
+    message.message.notification.notification.notification_lsm6dsox.acc_z = acc_z;
+    message.message.notification.notification.notification_lsm6dsox.gyr_x = gyr_x;
+    message.message.notification.notification.notification_lsm6dsox.gyr_y = gyr_y;
+    message.message.notification.notification.notification_lsm6dsox.gyr_z = gyr_z;
+    transmit_message(message);
+}
+
 void ProtobufAPI::transmit_error_response(focstim_rpc_Errors errorcode, uint32_t id)
 {
     focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;

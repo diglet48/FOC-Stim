@@ -62,6 +62,12 @@
 #define MODEL_PHASE_ANGLE_MIN -1.5f
 #define MODEL_PHASE_ANGLE_MAX 1.5f
 
+#define I2C_CLOCK_NORMAL    400'000ULL
+#define I2C_CLOCK_DISPLAY   1'000'000ULL
+#define I2C_CLOCK_LSM6DSOX  1'000'000ULL
+#define I2C_CLOCK_BQ27411   400'000ULL
+#define I2C_CLOCK_ESP32     100'000ULL
+
 // enable for nicer looking waveforms on the scope. Not safe for humans!
 // #define THREEPHASE_PULSE_DEFEAT_RANDOMIZATION
 

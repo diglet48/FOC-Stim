@@ -1,5 +1,6 @@
 #ifndef FOCSTIM_ESP32_H
 #define FOCSTIM_ESP32_H
+#ifdef BOARD_FOCSTIM_V4
 
 #include <cstdint>
 
@@ -50,5 +51,5 @@ private:
 	uint16_t i2cWriteBytes(uint8_t subAddress, uint8_t * src, uint8_t count);
 };
 
-
+#endif
 #endif

@@ -15,6 +15,7 @@ message Notification{
         NotificationSystemStats notification_system_stats = 5;
         NotificationSignalStats notification_signal_stats = 6;
         NotificationBattery notification_battery = 7;
+        NotificationLSM6DSOX notification_lsm6dsox = 8;
 
         NotificationDebugString notification_debug_string = 1000;
         NotificationDebugAS5311 notification_debug_as5311 = 1001;

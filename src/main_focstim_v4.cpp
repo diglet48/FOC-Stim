@@ -17,6 +17,7 @@
 #include "axis/simple_axis.h"
 #include "timestamp_sync.h"
 #include "sensors/as5311.h"
+#include "sensors/imu.h"
 #include "user_interface/user_interface.h"
 #include "esp32.h"
 #include "foc_error.h"
@@ -27,13 +28,15 @@
 #include "focstim_rpc.pb.h"
 #include "protobuf_api.h"
 
-
 Trace trace{};
 ThreephaseModel model3{};
 FourphaseModel model4{};
 PowerManager power_manager{};
 UserInterface user_interface{};
 ESP32 esp32;
+IMU imu;
+
+
 
 enum PlayStatus{
     NotPlaying,
@@ -483,6 +486,7 @@ void setup()
     model4.init(&trigger_emergency_stop);
 
     // as5311.init(0.001f, 0.01f);
+    // imu.init();
 }
 
 void loop()
@@ -551,7 +555,7 @@ void loop()
                     BSP_PrintDebugMsg(
                         "boost undervoltage detected %.2f. Current boost=%.2f. Restart device to proceed.",
                         vbus, BSP_ReadVBus());
-                        delay(5000);
+                    delay(5000);
                 }
             }
         }
@@ -599,6 +603,7 @@ void loop()
     }
 
     as5311.update();
+    imu.update();
     power_manager.update();
 
     // update small slice of the display
@@ -722,9 +727,9 @@ void loop()
         BSP_AdjustCurrentSenseOffsets();
 
         model3.play_pulse(points3.p1, points3.p2, points3.p3,
-            pulse_carrier_frequency,
-            pulse_width, pulse_rise,
-            driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
+                          pulse_carrier_frequency,
+                          pulse_width, pulse_rise,
+                          driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
 
         BSP_DisableOutputs();
     } else if (play_status == PlayStatus::PlayingFourphase) {
@@ -741,9 +746,9 @@ void loop()
         BSP_AdjustCurrentSenseOffsets();
 
         model4.play_pulse(points4.p1, points4.p2, points4.p3, points4.p4,
-            pulse_carrier_frequency,
-            pulse_width, pulse_rise,
-            driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
+                          pulse_carrier_frequency,
+                          pulse_width, pulse_rise,
+                          driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN);
 
         BSP_DisableOutputs();
     }

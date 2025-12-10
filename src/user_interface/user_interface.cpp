@@ -17,24 +17,25 @@
 #define OLED_RESET -1		// Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
-#define I2C_CLOCK_DURING    1'000'000ULL
-#define I2C_CLOCK_AFTER     100'000ULL
 
 UserInterface::UserInterface()
-    : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, I2C_CLOCK_DURING, I2C_CLOCK_AFTER)
+    : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, I2C_CLOCK_DISPLAY, I2C_CLOCK_NORMAL)
     , state(UIState::InitBSP)
 {
 }
 
 void UserInterface::init()
 {
+    BSP_PrintDebugMsg("init display");
     // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
 	if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
 	{
-		Serial.println(F("SSD1306 allocation failed"));
+        // TODO: allow headless
+        BSP_PrintDebugMsg("SSD1306 init failed");
 		for (;;)
 			; // Don't proceed, loop forever
 	}
+
 
     // Show initial display buffer contents on the screen --
 	// the library initializes this with an Adafruit splash screen.
@@ -184,7 +185,7 @@ void UserInterface::full_update()
 
 void UserInterface::partial_update()
 {
-    Wire.setClock(I2C_CLOCK_DURING);
+    Wire.setClock(I2C_CLOCK_DISPLAY);
 
     int bytes_per_block = 16;
     int blocks_per_row = 128 / bytes_per_block;
@@ -209,7 +210,7 @@ void UserInterface::partial_update()
     }
     Wire.endTransmission();
 
-    Wire.setClock(I2C_CLOCK_AFTER);
+    Wire.setClock(I2C_CLOCK_NORMAL);
 }
 
 void UserInterface::hexdump()

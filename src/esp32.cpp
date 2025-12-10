@@ -1,5 +1,7 @@
+#ifdef BOARD_FOCSTIM_V4
 #include "esp32.h"
 #include <Wire.h>
+#include "bsp/bsp.h"
 
 ESP32::ESP32()
 {
@@ -36,6 +38,7 @@ void ESP32::wifi_reconnect()
 // Read a specified number of bytes over I2C at a given subAddress
 int16_t ESP32::i2cReadBytes(uint8_t subAddress, uint8_t * dest, uint8_t count)
 {
+	Wire.setClock(I2C_CLOCK_ESP32);
 	Wire.beginTransmission((uint8_t)ESP32_I2C_ADDRESS);
 	Wire.write(subAddress);
 	Wire.endTransmission(true);
@@ -47,12 +50,14 @@ int16_t ESP32::i2cReadBytes(uint8_t subAddress, uint8_t * dest, uint8_t count)
 		dest[i] = Wire.read();
 	}
 
+	Wire.setClock(I2C_CLOCK_NORMAL);
 	return true;
 }
 
 // Write a specified number of bytes over I2C to a given subAddress
 uint16_t ESP32::i2cWriteBytes(uint8_t subAddress, uint8_t * src, uint8_t count)
 {
+	Wire.setClock(I2C_CLOCK_ESP32);
 	Wire.beginTransmission((uint8_t)ESP32_I2C_ADDRESS);
 	Wire.write(subAddress);
 	for (int i=0; i<count; i++)
@@ -61,5 +66,8 @@ uint16_t ESP32::i2cWriteBytes(uint8_t subAddress, uint8_t * src, uint8_t count)
 	}
 	Wire.endTransmission(true);
 
+	Wire.setClock(I2C_CLOCK_NORMAL);
 	return true;
 }
+
+#endif

@@ -16,7 +16,7 @@
 #define ESTOP_CURRENT_LIMIT_MARGIN 0.08f                // accounts for measurement noise, driving current
 
 // board temperature limits
-#define MAXIMUM_TEMPERATURE 50.f    // degrees celsius.
+#define MAXIMUM_TEMPERATURE 60.f    // degrees celsius.
 
 // boost voltage
 #define STIM_DYNAMIC_VOLTAGE

@@ -82,7 +82,7 @@ struct {
     SimpleAxis alpha{focstim_rpc_AxisType_AXIS_POSITION_ALPHA, 0, -1, 1};
     SimpleAxis beta{focstim_rpc_AxisType_AXIS_POSITION_BETA, 0, -1, 1};
     SimpleAxis waveform_amplitude_amps{focstim_rpc_AxisType_AXIS_WAVEFORM_AMPLITUDE_AMPS, 0, 0, BODY_CURRENT_MAX};
-    SimpleAxis carrier_frequency{focstim_rpc_AxisType_AXIS_CARRIER_FREQUENCY_HZ, 800, 500, 2000};
+    SimpleAxis carrier_frequency{focstim_rpc_AxisType_AXIS_CARRIER_FREQUENCY_HZ, 800, 300, 2000};
     SimpleAxis pulse_frequency{focstim_rpc_AxisType_AXIS_PULSE_FREQUENCY_HZ, 50, 1, 100};
     SimpleAxis pulse_width{focstim_rpc_AxisType_AXIS_PULSE_WIDTH_IN_CYCLES, 6, 3, 20};
     SimpleAxis pulse_rise{focstim_rpc_AxisType_AXIS_PULSE_RISE_TIME_CYCLES, 5, 2, 10};
@@ -251,6 +251,9 @@ void loop()
     float calibration_center = simple_axes.calib_center.get(now_ms);
     float calibration_lr = simple_axes.calib_lr.get(now_ms);
     float calibration_ud = simple_axes.calib_ud.get(now_ms);
+
+    // clip pulse width to 35ms to avoid uart overflows from super long pulses.
+    pulse_width = std::min<float>(pulse_width, 0.035f * pulse_carrier_frequency);
 
     float pulse_active_duration = pulse_width / pulse_carrier_frequency;
     float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);

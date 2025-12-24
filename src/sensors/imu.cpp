@@ -85,6 +85,13 @@ void IMU::update()
     // Get number of samples in buffer
     lsm6dsoxSensor.Get_FIFO_Num_Samples(&numSamples);
 
+    if (numSamples > IMU_MAX_SAMPLES_IN_BUFFER) {
+        BSP_PrintDebugMsg("LSM6DSOX FIFO full");
+        lsm6dsoxSensor.Set_FIFO_Mode(LSM6DSOX_BYPASS_MODE); // flush FIFO data
+        lsm6dsoxSensor.Set_FIFO_Mode(LSM6DSOX_STREAM_MODE); // continue batching
+        numSamples = 0;
+    }
+
     // fetch data from FIFO
     for (uint16_t i = 0; i < numSamples; i++)
     {
@@ -104,16 +111,6 @@ void IMU::update()
                 acceleration[0], acceleration[1], acceleration[2],
                 rotation[0], rotation[1], rotation[2]);
         }
-    }
-
-    // Check if FIFO is full.
-    lsm6dsoxSensor.Get_FIFO_Full_Status(&fullStatus);
-
-    if (fullStatus != 0)
-    {
-        BSP_PrintDebugMsg("LSM6DSOX FIFO full");
-        lsm6dsoxSensor.Set_FIFO_Mode(LSM6DSOX_BYPASS_MODE); // flush FIFO data
-        lsm6dsoxSensor.Set_FIFO_Mode(LSM6DSOX_STREAM_MODE); // continue batching
     }
 
     Wire.setClock(I2C_CLOCK_NORMAL);

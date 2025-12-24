@@ -8,6 +8,7 @@ enum FOCError {
     BOOST_UNDER_VOLTAGE,
     BOOST_OVER_VOLTAGE,
     BOARD_OVER_TEMPERATURE,
+    I2C_BUS_HANG,
 };
 
 #endif

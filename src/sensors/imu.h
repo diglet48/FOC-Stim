@@ -5,7 +5,8 @@
 #include "LSM6DSOXSensor.h"
 
 // one update is around 46 bytes.
-#define IMU_SAMPLERATE 26     // Sample rate. Options are: 12.5, 26, 52, 104, 208, 417, 833, 1667, 3333 and 6667 Hz.
+#define IMU_SAMPLERATE 104     // Sample rate. Options are: 12.5, 26, 52, 104, 208, 417, 833, 1667, 3333 and 6667 Hz.
+#define IMU_MAX_SAMPLES_IN_BUFFER   10
 
 class IMU {
 public:

@@ -43,6 +43,9 @@ int16_t ESP32::i2cReadBytes(uint8_t subAddress, uint8_t * dest, uint8_t count)
 	Wire.write(subAddress);
 	Wire.endTransmission(true);
 
+	// Sometimes the buggy ESP32 driver will wrongly interprent successive read/write commands
+	// as a repeated start condition, and infinitely hang the bus. Small delay avoids this :/
+	delayMicroseconds(100);
 	Wire.requestFrom((uint8_t)ESP32_I2C_ADDRESS, count);
 
 	for (int i=0; i<count; i++)

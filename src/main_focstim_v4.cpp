@@ -176,6 +176,7 @@ void trigger_emergency_stop(FOCError error)
         case BOOST_UNDER_VOLTAGE:
         case BOOST_OVER_VOLTAGE:
         case BOARD_OVER_TEMPERATURE:
+        case I2C_BUS_HANG:
         break;
     }
 
@@ -442,15 +443,16 @@ void setup()
     Wire.setSCL(PA15);
     Wire.setSDA(PB9);
 
+    protobuf.init();
+    protobuf.set_simple_axis(
+        reinterpret_cast<SimpleAxis *>(&simple_axes),
+        sizeof(simple_axes) / sizeof(SimpleAxis));
+
     user_interface.init();
     user_interface.setState(UserInterface::InitBSP);
     user_interface.repaint();
     user_interface.full_update();
 
-    protobuf.init();
-    protobuf.set_simple_axis(
-        reinterpret_cast<SimpleAxis *>(&simple_axes),
-        sizeof(simple_axes) / sizeof(SimpleAxis));
     BSP_PrintDebugMsg("BSP init");
     BSP_Init();
     BSP_WriteLedPattern(LedPattern::Idle);
@@ -558,6 +560,16 @@ void loop()
                     delay(5000);
                 }
             }
+        }
+    }
+
+    // check for hung I2C bus
+    // note: if the I2C bus hangs, we can't update the display anymore...
+    if (digitalRead(PA15) == 0 && digitalRead(PB9) == 0) {
+        trigger_emergency_stop(FOCError::I2C_BUS_HANG);
+        while (1) {
+            BSP_PrintDebugMsg("I2C bus hang");
+            delay(5000);
         }
     }
 

@@ -66,7 +66,7 @@
 #define I2C_CLOCK_DISPLAY   1'000'000ULL
 #define I2C_CLOCK_LSM6DSOX  1'000'000ULL
 #define I2C_CLOCK_BQ27411   400'000ULL
-#define I2C_CLOCK_ESP32     100'000ULL
+#define I2C_CLOCK_ESP32     400'000ULL
 
 // enable for nicer looking waveforms on the scope. Not safe for humans!
 // #define THREEPHASE_PULSE_DEFEAT_RANDOMIZATION

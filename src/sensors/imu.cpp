@@ -43,7 +43,7 @@ void IMU::init()
     }
 
     // Set accelerometer scale. Available values are: 2, 4, 8, 16 G
-    lsm6dsoxSensor.Set_X_FS(8);
+    lsm6dsoxSensor.Set_X_FS(4);
     // Set gyroscope scale. Available values are: 125, 250, 500, 1000, 2000 dps
     lsm6dsoxSensor.Set_G_FS(500);
 

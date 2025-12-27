@@ -351,6 +351,7 @@ void ProtobufAPI::handle_request_capabilities_get(focstim_rpc_RequestCapabilitie
     message.message.response.result.response_capabilities_get.fourphase = capability_fourphase();
     message.message.response.result.response_capabilities_get.battery = capability_battery();
     message.message.response.result.response_capabilities_get.potentiometer = capability_potmeter();
+    message.message.response.result.response_capabilities_get.lsm6dsox = capability_lsm6dsox();
     message.message.response.result.response_capabilities_get.maximum_waveform_amplitude_amps = BODY_CURRENT_MAX;
     transmit_message(message);
 }
@@ -394,6 +395,40 @@ void ProtobufAPI::handle_request_wifi_ip_get(focstim_rpc_RequestWifiIPGet &reque
         message.message.response.has_error = true;
         message.message.response.error.code = error;
     }
+    transmit_message(message);
+}
+
+void ProtobufAPI::handle_request_lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart &request, uint32_t id)
+{
+    focstim_rpc_Errors error = focstim_rpc_Errors_ERROR_UNKNOWN;
+    float acc_sensitivity = 0;
+    float gyr_sensitivity = 0;
+
+    error = lsm6dsox_start(
+        request, &acc_sensitivity, &gyr_sensitivity
+    );
+
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_response_tag;
+    message.message.response.id = id;
+    if (error == focstim_rpc_Errors_ERROR_UNKNOWN) {
+        message.message.response.which_result = focstim_rpc_Response_response_lsm6dsox_start_tag;
+        message.message.response.result.response_lsm6dsox_start.acc_sensitivity = acc_sensitivity;
+        message.message.response.result.response_lsm6dsox_start.gyr_sensitivity = gyr_sensitivity;
+    } else {
+        message.message.response.has_error = true;
+        message.message.response.error.code = error;
+    }
+    transmit_message(message);
+}
+
+void ProtobufAPI::handle_request_lsm6dsox_stop(focstim_rpc_RequestLSM6DSOXStop &request, uint32_t id)
+{
+    lsm6dsox_stop();
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_response_tag;
+    message.message.response.id = id;
+    message.message.response.which_result = focstim_rpc_Response_response_lsm6dsox_stop_tag;
     transmit_message(message);
 }
 
@@ -453,6 +488,14 @@ void ProtobufAPI::handle_request(focstim_rpc_Request &request)
 
         case focstim_rpc_Request_request_wifi_ip_get_tag:
             handle_request_wifi_ip_get(request.params.request_wifi_ip_get, id);
+        break;
+
+        case focstim_rpc_Request_request_lsm6dsox_start_tag:
+            handle_request_lsm6dsox_start(request.params.request_lsm6dsox_start, id);
+        break;
+
+        case focstim_rpc_Request_request_lsm6dsox_stop_tag:
+            handle_request_lsm6dsox_stop(request.params.request_lsm6dsox_stop, id);
         break;
 
         case focstim_rpc_Request_request_debug_stm32_deep_sleep_tag:

@@ -4,8 +4,7 @@
 
 #include "LSM6DSOXSensor.h"
 
-// one update is around 46 bytes.
-#define IMU_SAMPLERATE 104     // Sample rate. Options are: 12.5, 26, 52, 104, 208, 417, 833, 1667, 3333 and 6667 Hz.
+
 #define IMU_MAX_SAMPLES_IN_BUFFER   10
 
 class IMU {
@@ -14,15 +13,27 @@ public:
 
     void init();
 
+    void start_stream(int imu_samplerate, int x_fullscale, int g_fullscale);
+
+    void stop_stream();
+
     void update();
 
-private:
-    LSM6DSOXSensor lsm6dsoxSensor;
+    float acc_sensitivity;
+    float gyr_sensitivity;
 
     bool is_sensor_detected;
 
-    int32_t acceleration[3];      // X, Y, Z accelerometer values in mg
-    int32_t rotation[3];          // X, Y, Z giroscope values in mdps
+private:
+    LSM6DSOXStatusTypeDef read_fifo_data(int16_t* data_out);
+
+    LSM6DSOXSensor lsm6dsoxSensor;
+
+    // int32_t acceleration[3];      // X, Y, Z accelerometer values in mg
+    // int32_t rotation[3];          // X, Y, Z giroscope values in mdps
+
+    int16_t acceleration[3];      // X, Y, Z accelerometer values in mg
+    int16_t rotation[3];          // X, Y, Z giroscope values in mdps
 
 };
 

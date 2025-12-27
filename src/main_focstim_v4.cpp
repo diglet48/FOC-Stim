@@ -104,12 +104,32 @@ public:
         BSP_WriteLedPattern(LedPattern::Idle);
         user_interface.setState(UserInterface::Idle);   // TOOD: force display update
         play_status = PlayStatus::NotPlaying;
+        imu.stop_stream();
+    }
+
+    virtual focstim_rpc_Errors lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart& params,
+        float *acc_sensitivity_out, float *gyr_sensitivity_out)
+    {
+        if (!imu.is_sensor_detected) {
+            return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;
+        }
+        imu.start_stream(params.imu_samplerate, (int)params.acc_fullscale, (int)params.gyr_fullscale);
+
+        *acc_sensitivity_out = imu.acc_sensitivity;
+        *gyr_sensitivity_out = imu.gyr_sensitivity;
+        return focstim_rpc_Errors_ERROR_UNKNOWN;
+    }
+
+    virtual focstim_rpc_Errors lsm6dsox_stop() {
+        imu.stop_stream();
+        return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
     virtual bool capability_threephase() {return true;};
     virtual bool capability_fourphase() {return true;};
     virtual bool capability_potmeter() {return true;};
     virtual bool capability_battery() {return power_manager.is_battery_present;};
+    virtual bool capability_lsm6dsox() {return imu.is_sensor_detected;};
 
     void transmit_notification_system_stats(float v_boost_min, float v_boost_max) {
         focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
@@ -488,7 +508,7 @@ void setup()
     model4.init(&trigger_emergency_stop);
 
     // as5311.init(0.001f, 0.01f);
-    // imu.init();
+    imu.init();
 }
 
 void loop()
@@ -636,6 +656,7 @@ void loop()
         user_interface.setState(UserInterface::Idle);
         BSP_DisableOutputs();
         BSP_SetBoostEnable(false);
+        imu.stop_stream();
         return;
     }
 

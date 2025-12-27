@@ -57,6 +57,7 @@ public:
     virtual bool capability_fourphase() {return false;};
     virtual bool capability_potmeter() {return true;};
     virtual bool capability_battery() {return false;};
+    virtual bool capability_lsm6dsox() {return false;};
 
     void transmit_notification_system_stats() {
         focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;

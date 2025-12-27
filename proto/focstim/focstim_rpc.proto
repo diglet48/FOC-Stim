@@ -46,6 +46,10 @@ message Request {
         RequestWifiParametersSet request_wifi_parameters_set = 507;
         RequestWifiIPGet request_wifi_ip_get = 508;
 
+        // sensors
+        RequestLSM6DSOXStart request_lsm6dsox_start = 600;
+        RequestLSM6DSOXStop request_lsm6dsox_stop = 601;
+
         // debug
         RequestDebugStm32DeepSleep request_debug_stm32_deep_sleep = 1000;
         RequestDebugEnterBootloader request_debug_enter_bootloader = 1001;
@@ -73,6 +77,10 @@ message Response {
         // network
         ResponseWifiParametersSet response_wifi_parameters_set = 507;
         ResponseWifiIPGet response_wifi_ip_get = 508;
+
+        // sensors
+        ResponseLSM6DSOXStart response_lsm6dsox_start = 600;
+        ResponseLSM6DSOXStop response_lsm6dsox_stop = 601;
 
         // debug
         ResponseDebugStm32DeepSleep response_debug_stm32_deep_sleep = 1000;

@@ -58,6 +58,8 @@ public:
     void handle_request_capabilities_get(focstim_rpc_RequestCapabilitiesGet &request, uint32_t id);
     void handle_request_wifi_parameters_set(focstim_rpc_RequestWifiParametersSet &request, uint32_t id);
     void handle_request_wifi_ip_get(focstim_rpc_RequestWifiIPGet &request, uint32_t id);
+    void handle_request_lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart &request, uint32_t id);
+    void handle_request_lsm6dsox_stop(focstim_rpc_RequestLSM6DSOXStop &request, uint32_t id);
 
     void handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebugStm32DeepSleep &request, uint32_t id);
     void handle_request_debug_enter_bootloader(focstim_rpc_RequestDebugEnterBootloader &request, uint32_t id);
@@ -69,6 +71,9 @@ public:
     virtual focstim_rpc_Errors wifi_parameters_set(focstim_rpc_RequestWifiParametersSet& params) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
     virtual focstim_rpc_Errors wifi_ip_get(focstim_rpc_RequestWifiIPGet& params, uint32_t *ip_out) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
 
+    virtual focstim_rpc_Errors lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart& params, float *acc_sensitivity_out, float *gyr_sensitivity_out) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
+    virtual focstim_rpc_Errors lsm6dsox_stop() {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
+
     virtual focstim_rpc_Errors signal_start_threephase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual focstim_rpc_Errors signal_start_fourphase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual void signal_stop() {}
@@ -77,6 +82,7 @@ public:
     virtual bool capability_fourphase() = 0;
     virtual bool capability_potmeter() = 0;
     virtual bool capability_battery() = 0;
+    virtual bool capability_lsm6dsox() = 0;
 
 
     SimpleAxis *simple;

@@ -3,7 +3,7 @@
 
 #include "stim_clock.h"
 
-# pins for V4
+// pins for V4
 #define PORT_DO GPIOC
 #define PIN_DO  LL_GPIO_PIN_4
 #define PORT_CSN GPIOC

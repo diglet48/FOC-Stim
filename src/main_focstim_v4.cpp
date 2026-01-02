@@ -507,7 +507,7 @@ void setup()
     model3.init(&trigger_emergency_stop);
     model4.init(&trigger_emergency_stop);
 
-    // as5311.init(0.001f, 0.01f);
+    as5311.init(0.001f, 0.01f);
     imu.init();
 }
 

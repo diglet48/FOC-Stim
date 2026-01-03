@@ -35,11 +35,11 @@ For the display. Cut off length that you need. [Alixpress](https://aliexpress.co
 
 ### 2.0mm 2x2 header, female
 [Aliexpress](https://aliexpress.com/item/1005006954403874.html)  
-[LCSC](https://www.lcsc.com/product-detail/C41417314.html)  
+[LCSC](https://www.lcsc.com/product-detail/C18723064.html)  
 
 ### 2.0mm 2x4 header, female
 [Aliexpress](https://aliexpress.com/item/1005006954403874.html)  
-[LCSC](https://www.lcsc.com/product-detail/C41417316.html)
+[LCSC](https://www.lcsc.com/product-detail/C18723066.html)
 
 ### SMD nut
 Equivalent parts, pick one:  
@@ -108,6 +108,10 @@ Alternative: search for 303450, 403450, 503450, 603450, 703450, 803450, 903450, 
 
 A 6mm 1200mAh battery lasts about 4 hours. 10mm 2000mAh about 7 hours.
 
+# Power supply
+
+The FOC-Stim V4 takes power from a standard USB-C cable. A normal 5V / 500mA
+port is sufficient for most use cases.
 
 # Case
 

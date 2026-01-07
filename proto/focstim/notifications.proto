@@ -83,6 +83,10 @@ message NotificationLSM6DSOX {
     sint32 gyr_z = 6;
 }
 
+message NotificationPressure {
+    float pressure = 1;   // Pascal
+}
+
 message NotificationDebugString {
     string message = 1;
 }

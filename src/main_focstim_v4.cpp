@@ -18,6 +18,7 @@
 #include "timestamp_sync.h"
 #include "sensors/as5311.h"
 #include "sensors/imu.h"
+#include "sensors/pressure.h"
 #include "user_interface/user_interface.h"
 #include "esp32.h"
 #include "foc_error.h"
@@ -35,7 +36,8 @@ PowerManager power_manager{};
 UserInterface user_interface{};
 ESP32 esp32;
 IMU imu;
-
+AS5311 as5311{};
+PressureSensor pressureSensor{};
 
 
 enum PlayStatus{
@@ -205,8 +207,6 @@ void trigger_emergency_stop(FOCError error)
     user_interface.repaint();
     user_interface.full_update();
 }
-
-AS5311 as5311{};
 
 void self_test() {
     auto check_value = [](bool passfail, const char* test_string) {
@@ -509,6 +509,7 @@ void setup()
 
     as5311.init(0.001f, 0.01f);
     imu.init();
+    pressureSensor.init();
 }
 
 void loop()
@@ -636,6 +637,7 @@ void loop()
 
     as5311.update();
     imu.update();
+    pressureSensor.update();
     power_manager.update();
 
     // update small slice of the display

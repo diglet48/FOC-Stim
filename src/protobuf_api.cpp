@@ -184,6 +184,15 @@ void ProtobufAPI::transmit_notification_lsm6dsox(int acc_x, int acc_y, int acc_z
     transmit_message(message);
 }
 
+void ProtobufAPI::transmit_notification_pressure(float pressure)
+{
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_notification_tag;
+    message.message.notification.which_notification = focstim_rpc_Notification_notification_pressure_tag;
+    message.message.notification.notification.notification_pressure.pressure = pressure;
+    transmit_message(message);
+}
+
 void ProtobufAPI::transmit_error_response(focstim_rpc_Errors errorcode, uint32_t id)
 {
     focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;

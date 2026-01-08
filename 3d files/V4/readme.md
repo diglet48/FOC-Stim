@@ -13,4 +13,5 @@ bending, it can be jammed behind the display.
 
 # Changelog
 
-* 29/11/2025 initial release for V4.1 PCB
+* 08/01/2026 Modified rear panel for V4.2 (1 capacitor moved)
+* 29/11/2025 Initial release for V4.1 PCB

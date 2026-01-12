@@ -1,7 +1,7 @@
 # PCB
 
 Mainboard from JLCPCB, one-sided assembly.  
-Frontpanel from JLCPCB, no assembly.  
+Frontpanel from JLCPCB, one-sided assembly or bare PCB.  
 
 # Mainboard components
 
@@ -34,14 +34,20 @@ Alternative part: search for SSD1306 I2C 128x32 0.91 OLED Display. Make sure dim
 For the display. Cut off length that you need. [Alixpress](https://aliexpress.com/item/1005009749780893.html)
 
 ### 2.0mm 2x2 header, female
+JLC can assemble the component for you.
+
 [Aliexpress](https://aliexpress.com/item/1005006954403874.html)  
 [LCSC](https://www.lcsc.com/product-detail/C18723064.html)  
 
 ### 2.0mm 2x4 header, female
+JLC can assemble the component for you.
+
 [Aliexpress](https://aliexpress.com/item/1005006954403874.html)  
 [LCSC](https://www.lcsc.com/product-detail/C18723066.html)
 
 ### SMD nut
+JLC can assemble the component for you.
+
 Equivalent parts, pick one:  
 4x SMTSO-M4-2ET [Aliexpress](https://aliexpress.com/item/1005003780208153.html)      
 4x SMTSO-M4-2ET [Mouser](https://mouser.com/ProductDetail/PEM/SMTSO-M4-2ET?qs=l4Gc20tDgJJftsdplEey1w%3D%3D)  

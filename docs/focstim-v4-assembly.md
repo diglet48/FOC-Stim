@@ -44,6 +44,9 @@ Solder the battery connector and switch to the unpopulated side of the board.
 > [!NOTE]  
 > Follow this assembly order
 
+> [!NOTE]
+> JLC can assemble the SMD nuts and 2.0mm headers for you.
+
 
 Solder the SMD nuts to the rear of the frontpanel.
 
@@ -81,9 +84,7 @@ Solder the encoder and you're done.
 
 # Case
 
-Print the case. No supports needed if printing at .2 layer height.
-
-TODO: print instructions.
+[3D files and print instructions](/3d%20files/V4/readme.md)
 
 Install the M3 heatset inserts in the battery sled.
 
@@ -91,7 +92,7 @@ TOOD: image showing this assembly step.
 
 Attach the feet.
 
-TODO: wait for feet to arrive and make pictures
+TODO: image showing this assembly step.
 
 # Assembly
 

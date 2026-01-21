@@ -16,6 +16,9 @@ bending, it can be jammed behind the display.
 `extras/switch clip` a clip designed to fit in the nintendo switch leg strap,
 for wearing the device on your leg. Designed for M3x8 countersink.
 
+`extras/rear panel exp` a modified rear panel with a cutout for 2x5 1.27mm connector,
+can be used to break out the expansion header with a standard 10cm SWD cable.
+
 # Changelog
 
 * 08/01/2026 Modified rear panel for V4.2 (1 capacitor moved)

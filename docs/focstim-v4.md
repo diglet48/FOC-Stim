@@ -3,6 +3,15 @@
 Schematics, PCB and case design by Sekizen.  
 Software by Diglet.
 
+# Specifications
+
+* Three and four-phase output capability.
+* 7-hour battery life with typical electrodes.
+* Wireless communication (Wifi).
+* Small display for diagnostics, knob for volume adjustments.
+* Built-in accelerometer.
+* Optional external sensors for nogasm/edge-o-matic functionality.
+
 # Useful pages
 
 * [Schematics / Gerbers](/schematics/V4/README.md)
@@ -10,8 +19,6 @@ Software by Diglet.
 * [3D files](../3d%20files/V4)
 * [Assembly guide](focstim-v4-assembly.md)
 * [Flashing your board](focstim-v4-flashing.md)
-
-Schematics/gerbers coming at a later date.
 
 # Nerd zone
 

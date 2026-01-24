@@ -20,6 +20,7 @@ Inside the box, it will connect to the header marked "EXPD".
 ![](/docs/images/as5311-rear-panel.jpg)
 
 Cut off part of the 50cm flatcable and swap wires 1/2, 3/4, 5/6, 7/8, 9/10.
+Then crimp on a new header.
 
 This needs to be done because the male-to-female cable mirrors the pins. It
 is not needed if you plug the sensor with a simple female-to-female cable
@@ -29,10 +30,12 @@ directly into the mainboard.
 
 Solder the breakout board with 4 2.54mm pins to the sensor.
 
-Connect the line of pins "vref, gnd, gnd, key" on the breakout board to
+Connect the line of (four) pins "vref, gnd, gnd, key" on the breakout board to
 "gnd, DO, CLK, CSn" on the AS5311. Then use a small piece of wire to bridge
 SWO to both 3v3 and 5v.
 
 ![](/docs/images/as5311-soldering-1.jpg)
 
 ![](/docs/images/as5311-soldering-2.jpg)
+
+![](/docs/images/as5311-soldering-3.jpg)

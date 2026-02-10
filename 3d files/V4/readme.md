@@ -21,5 +21,6 @@ can be used to break out the expansion header with a standard 10cm SWD cable.
 
 # Changelog
 
+* 10/02/2026 Increase PCB rail clearance from 0.2mm to 0.3mm
 * 08/01/2026 Modified rear panel for V4.2 (1 capacitor moved)
 * 29/11/2025 Initial release for V4.1 PCB

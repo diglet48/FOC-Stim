@@ -117,8 +117,10 @@ Insert the battery connector and fold the cable under the battery.
 
 Slide the whole assembly into the case. Tighten the single screw on the bottom to lock the assembly.
 
-The extra holes can be used for a belt clip (todo: design).
+The extra holes can be used for a belt clip.
 
+> [!NOTE]  
+> After removing/inserting the battery, USB-C power is required to power-on (just once).   
 
 
 

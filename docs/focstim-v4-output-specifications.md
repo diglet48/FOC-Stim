@@ -56,7 +56,7 @@ $Q_0 = 5 \mu C$, the maximum tolerable signal intensity.
 $Q_t = Q_0 \times (1 + \dfrac{\text{pulsewidth}}{355 \times 10^{-6}})$, the amount of charge we 
 actually have to deliver to get the maximum signal intensity.
 
-$Q_t = \dfrac{\text{current amplitude}}{2 \times \pi \times \text{frequency}}$, the amount of charge.
+$Q_t = \dfrac{\text{current amplitude}}{2 \times \pi \times \text{frequency}}$, the amount of charge in a pulse.
 
 $Vs = \dfrac{Q_t}{R}$, transformer saturation.
 

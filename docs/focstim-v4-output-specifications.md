@@ -47,24 +47,26 @@ I used this number as a benchmark.
 The FOC V4 boost circuit can deliver about 4W of power, 
 this is assumed to not be a limitation.
 
+Time constant of the nerves is $355\mu s$
+
 ## Math
 
 $Q_0 = 5 \mu C$, the maximum tolerable signal intensity.
 
-$Q_t = Q_0 * (1 + \frac{\text{pulsewidth}}{355e-6})$, the amount of charge we 
+$Q_t = Q_0 \times (1 + \frac{\text{pulsewidth}}{355 \times 10^{-6}})$, the amount of charge we 
 actually have to deliver to get the maximum signal intensity.
 
-$Q_t = \frac{\text{current amplitude}}{\text{frequency} * \pi * 2}$, the amount of charge.
+$Q_t = \frac{\text{current amplitude}}{2 \times \pi \times \text{frequency}}$, the amount of charge.
 
 $Vs = \frac{Q_t}{R}$, transformer saturation.
 
 It follows that the maximum resistance before we run into 
 transformer saturation is:
 
-$R = \frac{6000V*\mu s}{5\mu C * (1 + \frac{1}{2 * frequency * 355e^{-6}})}$
+$R = \frac{6000V\mu s}{5\mu C \times (1 + \frac{1}{2 \times frequency \times 355\times 10^{-6}})}$
 
 And the maximum resistance before the drive circuit maxes out is:
 
-$R = \frac{10V * \text{winding ratio}}{5\mu C * \pi * (\text{frequency} * 2 + \frac{1}{355e^{-6}})} - \text{drive circuit resistance}$
+$R = \frac{10V \times \text{winding ratio}}{5\mu C \times \pi \times (\text{frequency} \times 2 + \frac{1}{355 \times 10^{-6}})} - \text{drive circuit resistance}$
 
-The drive circuit resistance is about $1.75 \Omega * \text{winding_ratio}^{2}$
+The drive circuit resistance is about $1.75 \Omega * \text{winding ratio}^{2}$

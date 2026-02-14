@@ -59,6 +59,10 @@ Equivalent parts, pick one:
 [Aliexpress 2](https://aliexpress.com/item/1005008667160927.html)
 
 The manufacturer is Changzhou Amass Electronics, product 24.106.1 (red)
+
+Many sellers have been observed to randomly ship the blue jacks with
+either M4 or M4 fine thread, even within the same bag. If this happens
+reorder and pray they send you the correct thread pitch next time.
     
 ### Encoder
 Bourns PEC11R-4015F-S0024 (metal shaft, button, no detents, 24 pos) [LCSC](https://www.lcsc.com/product-detail/C143789.html), [Mouser](https://mouser.com/ProductDetail/Bourns/PEC11R-4015F-S0024?qs=Zq5ylnUbLm4l0nvCUCX4Xw%3D%3D)
@@ -113,6 +117,7 @@ A battery is optional.
 Alternative: search for 303450, 403450, 503450, 603450, 703450, 803450, 903450, 103450
 
 A 6mm 1200mAh battery lasts about 4 hours. 10mm 2000mAh about 7 hours.
+By default, the software assumes you have a 2000mAh battery installed.
 
 # Power supply
 
@@ -132,9 +137,10 @@ Colored 2mm to 2mm banana, stackable. [Aliexpress](https://aliexpress.com/item/1
 Supplies for making your own cables if desired:  
 Colored 2mm banana connectors: [Aliexpress](https://aliexpress.com/item/1005005307850027.html), [Aliexpress 2](https://aliexpress.com/item/1005005914150447.html)  
 Colored 2mm TENS connectors: [Aliexpress](https://aliexpress.com/item/1005006066453610.html)  
+AWG 20 cable fits perfectly in these jacks and is quite sturdy.
 
 other useful parts:  
-4mm to 2mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005005565867054.html), [Aliexpress 2](https://aliexpress.com/item/1005009690976598.html)
+4mm to 2mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005005565867054.html), [Aliexpress 2](https://aliexpress.com/item/1005009690976598.html)  
 2mm to 4mm banana adapter: [Aliexpress](https://aliexpress.com/item/1005009682438992.html)
 
 

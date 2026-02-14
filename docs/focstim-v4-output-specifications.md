@@ -56,9 +56,11 @@ $Q_0 = 5 \mu C$, the maximum tolerable signal intensity.
 $Q_t = Q_0 \times (1 + \dfrac{\text{pulsewidth}}{355\mu s})$, the amount of charge we 
 actually have to deliver to get the maximum signal intensity.
 
-$Q_t = \dfrac{\text{current amplitude}}{2 \times \pi \times \text{frequency}}$, the amount of charge in a pulse.
+$Q_t = \dfrac{I_{\text{peak}}}{2 \times \pi \times \text{frequency}}$, the amount of charge in a pulse.
 
-$Vs = \dfrac{Q_t}{R}$, transformer saturation.
+$R = \dfrac{Vs}{Q_t}$, link transformer saturation to resistance and charge.
+
+$R = \dfrac{10V \times \text{winding ratio}}{I_{\text{peak}}}$, ohms law assuming inductance is negligible. 
 
 It follows that the maximum resistance before we run into 
 transformer saturation is:

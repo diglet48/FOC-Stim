@@ -53,7 +53,7 @@ Time constant of the nerves is $355\mu s$
 
 $Q_0 = 5 \mu C$, the maximum tolerable signal intensity.
 
-$Q_t = Q_0 \times (1 + \dfrac{\text{pulsewidth}}{355 \times 10^{-6}})$, the amount of charge we 
+$Q_t = Q_0 \times (1 + \dfrac{\text{pulsewidth}}{355\mu s})$, the amount of charge we 
 actually have to deliver to get the maximum signal intensity.
 
 $Q_t = \dfrac{\text{current amplitude}}{2 \times \pi \times \text{frequency}}$, the amount of charge in a pulse.
@@ -63,10 +63,10 @@ $Vs = \dfrac{Q_t}{R}$, transformer saturation.
 It follows that the maximum resistance before we run into 
 transformer saturation is:
 
-$R = \dfrac{6000V\mu s}{5\mu C \times (1 + \dfrac{1}{2 \times \text{frequency} \times 355\times 10^{-6}})}$
+$R = \dfrac{6000V\mu s}{5\mu C \times (1 + \dfrac{1}{2 \times \text{frequency} \times 355\mu s})}$
 
 And the maximum resistance before the drive circuit maxes out is:
 
-$R = \dfrac{10V \times \text{winding ratio}}{5\mu C \times \pi \times (\text{frequency} \times 2 + \frac{1}{355 \times 10^{-6}})} - \text{drive circuit resistance}$
+$R = \dfrac{10V \times \text{winding ratio}}{5\mu C \times \pi \times (\text{frequency} \times 2 + \frac{1}{355\mu s})} - \text{drive circuit resistance}$
 
 The drive circuit resistance is about $1.75 \Omega \times \text{winding ratio}^{2}$

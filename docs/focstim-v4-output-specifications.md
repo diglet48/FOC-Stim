@@ -1,4 +1,4 @@
-# Setup
+# Introduction
 
 The maximum output the FOC-Stim V4 can deliver depends on the skin resistance.
 
@@ -9,9 +9,9 @@ The answer is approximately $500 \Omega$.
 
 # Skin resistance?
 
-The hardware of the FOC makes it natural to talk about the skin resistance, 
-which is half the body resistance. For channel-based devices, the
-body resistance is generally more convenient to use.
+I like using the skin resistance instead of the body resistance,
+as the basic concept of body resistance starts to become fuzzy with more
+than 2 electrodes. In most cases, skin resistance * 2 = body resistance.
 
 I collected some data under various circumstances:
 
@@ -39,13 +39,17 @@ undistorted waveforms. The winding ratio is 5.5.
 The FOC-Stim V4 drive circuit is limited to $30V$. For technical
 reasons, the effective voltage-to-neutral is a bit less than half that,
 I use a conservative limit of $10V$. This results in an output-to-output
-voltage of $110V$
+voltage of $110V$.
 
 The maximum signal intensity I use is a bit less than $5\mu C$. 
 I used this number as a benchmark.
 
-The FOC V4 boost circuit can deliver about 4W of power, 
-this is assumed to not be a limitation.
+The FOC V4 boost circuit can deliver about 4W of power. 
+This is assumed to be not a limitation.
+
+The device $\frac{dI}{dt}$, current sense range, control loop bandwidth
+and transformer specifications all start to become problematic around
+$3000Hz$ to $5000Hz$.
 
 Time constant of the nerves is $355\mu s$
 

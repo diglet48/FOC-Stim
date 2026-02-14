@@ -14,9 +14,9 @@ Software by Diglet.
 
 # Useful pages
 
-* [Schematics / Gerbers](/schematics/V4/README.md)
+* [Schematics / Gerbers](/schematics/V4/readme.md)
 * [Bill of materials](focstim-v4-BOM.md)
-* [3D files](../3d%20files/V4)
+* [3D files](/3d%20files/V4)
 * [Assembly guide](focstim-v4-assembly.md)
 * [Flashing your board](focstim-v4-flashing.md)
 * [AS5311 sensor](as5311%20sensor.md)

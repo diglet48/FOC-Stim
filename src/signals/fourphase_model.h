@@ -38,14 +38,20 @@ public:
     Complex z4 = Complex(MODEL_RESISTANCE_INIT, 0);
 
 
-    // log stats
-    float v_drive_last = 0;
-    float v_min = 0;
-    float v_max = 0;
-    Vec4f current_squared = Vec4f(0, 0, 0, 0);
-    Vec4f current_max = Vec4f(0, 0, 0, 0);
-    float v_bus_min = 0;
-    float v_bus_max = 0;
+    // stats for one pulse, reset after every pulse.
+    struct {
+        Vec4f current_squared = Vec4f(0, 0, 0, 0);
+        Vec4f current_max = Vec4f(0, 0, 0, 0);
+        float v_bus_min = 0;    // the min/max bus voltage observed during the pulse
+        float v_bus_max = 0;
+        float v_drive = 0;      // v_drive of the pulse
+    } pulse_stats;
+
+    // total stats, can be reset by caller.
+    struct {
+        Vec4f current_squared = Vec4f(0, 0, 0, 0);
+        Vec4f current_max = Vec4f(0, 0, 0, 0);
+    } total_stats;
 
     static constexpr int CONTEXT_SIZE = 256;
     static constexpr int max_producer_queue_length = 20;    // (producer_index - interrupt_index) % CONTEXT_SIZE

@@ -305,9 +305,9 @@ void loop()
     // store trace
     {
         traceline->skipped_update_steps = model3.skipped_update_steps;
-        traceline->v_drive = model3.v_drive_last;
-        v_drive_max = max(v_drive_max, model3.v_drive_last);
-        auto current_max = model3.current_max;
+        traceline->v_drive = model3.pulse_stats.v_drive;
+        v_drive_max = max(v_drive_max, model3.pulse_stats.v_drive);
+        auto current_max = model3.pulse_stats.current_max;
         traceline->i_max_a = current_max.a;
         traceline->i_max_b = current_max.b;
         traceline->i_max_c = current_max.c;
@@ -335,15 +335,15 @@ void loop()
             rms.b / STIM_WINDING_RATIO,
             rms.c / STIM_WINDING_RATIO,
             0,
-            abs(model3.current_max.a) / STIM_WINDING_RATIO,
-            abs(model3.current_max.b) / STIM_WINDING_RATIO,
-            abs(model3.current_max.c) / STIM_WINDING_RATIO,
+            abs(model3.total_stats.current_max.a) / STIM_WINDING_RATIO,
+            abs(model3.total_stats.current_max.b) / STIM_WINDING_RATIO,
+            abs(model3.total_stats.current_max.c) / STIM_WINDING_RATIO,
             0,
             p, 0,
             abs(driving_current_amps) / STIM_WINDING_RATIO
         );
-        model3.current_max = {};
-        model3.current_squared = {};
+        model3.total_stats.current_max = {};
+        model3.total_stats.current_squared = {};
     }
 
     // send notification: skin resistance estimation

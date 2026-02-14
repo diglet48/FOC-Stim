@@ -53,8 +53,13 @@ void ThreephaseModel::play_pulse(
     skipped_update_steps = 0;
     current_limit_exceeded = 0;
     current_limit = estop_current_limit;
-    v_bus_min = 99;
-    v_bus_max = 0;
+
+    // reset pulse stats
+    pulse_stats.current_squared = {0, 0, 0};
+    pulse_stats.current_max = {0, 0, 0};
+    pulse_stats.v_bus_min = 99;
+    pulse_stats.v_bus_max = 0;
+    pulse_stats.v_drive = 0;
 
     // make debug easier by clearing out stale data.
     for (int i = 0; i < CONTEXT_SIZE; i++) {
@@ -85,7 +90,7 @@ void ThreephaseModel::play_pulse(
         v3 = v3 * factor;
         v_drive = v_drive * factor;
     }
-    v_drive_last = v_drive;
+    pulse_stats.v_drive = v_drive;
 
     // compute pulse length etc.
     int samples = int(STIM_PWM_FREQ * pulse_width / carrier_frequency);
@@ -224,6 +229,10 @@ void ThreephaseModel::play_pulse(
     z1.constrain_in_bound(MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
     z2.constrain_in_bound(MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
     z3.constrain_in_bound(MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+
+    // update stats
+    total_stats.current_max = total_stats.current_max + pulse_stats.current_max;
+    total_stats.current_squared = total_stats.current_squared + pulse_stats.current_squared;
 }
 
 Vec3f ThreephaseModel::estimate_rms_current(float dt)
@@ -231,15 +240,15 @@ Vec3f ThreephaseModel::estimate_rms_current(float dt)
     dt = dt * STIM_PWM_FREQ;
 #if defined(CURRENT_SENSE_SCALE_FULL)
     return Vec3f(
-        sqrtf(current_squared.a / dt),
-        sqrtf(current_squared.b / dt),
-        sqrtf(current_squared.c / dt)
+        sqrtf(total_stats.current_squared.a / dt),
+        sqrtf(total_stats.current_squared.b / dt),
+        sqrtf(total_stats.current_squared.c / dt)
     );
 #elif defined(CURRENT_SENSE_SCALE_HALF)
     return Vec3f(
-        sqrtf(current_squared.a / dt) * _SQRT2,
-        sqrtf(current_squared.b / dt) * _SQRT2,
-        sqrtf(current_squared.c / dt) * _SQRT2
+        sqrtf(total_stats.current_squared.a / dt) * _SQRT2,
+        sqrtf(total_stats.current_squared.b / dt) * _SQRT2,
+        sqrtf(total_stats.current_squared.c / dt) * _SQRT2
     );
 #else
 #error unknown current sense method
@@ -305,8 +314,8 @@ void ThreephaseModel::interrupt_fn()
     });
 #ifdef STIM_DYNAMIC_VOLTAGE
     float vbus = BSP_ReadVBus();
-    v_bus_max = max(v_bus_max, vbus);
-    v_bus_min = min(v_bus_min, vbus);
+    pulse_stats.v_bus_max = max(pulse_stats.v_bus_max, vbus);
+    pulse_stats.v_bus_min = min(pulse_stats.v_bus_min, vbus);
     vbus = max(vbus, STIM_BOOST_VOLTAGE_LOW_THRESHOLD);
 #else
     float vbus = STIM_PSU_VOLTAGE;
@@ -330,15 +339,15 @@ void ThreephaseModel::interrupt_fn()
         context[write_index].i3_meas = currents.c;
 
         // log stats
-        current_squared = Vec3f(
-            current_squared.a + currents.a * currents.a,
-            current_squared.b + currents.b * currents.b,
-            current_squared.c + currents.c * currents.c
+        pulse_stats.current_squared = Vec3f(
+            pulse_stats.current_squared.a + currents.a * currents.a,
+            pulse_stats.current_squared.b + currents.b * currents.b,
+            pulse_stats.current_squared.c + currents.c * currents.c
         );
-        current_max = Vec3f(
-            max(current_max.a, abs(currents.a)),
-            max(current_max.b, abs(currents.b)),
-            max(current_max.c, abs(currents.c))
+        pulse_stats.current_max = Vec3f(
+            max(pulse_stats.current_max.a, abs(currents.a)),
+            max(pulse_stats.current_max.b, abs(currents.b)),
+            max(pulse_stats.current_max.c, abs(currents.c))
         );
     }
 

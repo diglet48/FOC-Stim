@@ -804,35 +804,35 @@ void loop()
     {
         if (play_status == PlayStatus::PlayingThreephase) {
             traceline->skipped_update_steps = model3.skipped_update_steps;
-            traceline->v_drive = model3.v_drive_last;
-            v_drive_max = max(v_drive_max, model3.v_drive_last);
+            traceline->v_drive = model3.pulse_stats.v_drive;
+            v_drive_max = max(v_drive_max, model3.pulse_stats.v_drive);
 
-            auto current_max = model3.current_max;
+            auto current_max = model3.pulse_stats.current_max;
             traceline->i_max_a = current_max.a;
             traceline->i_max_b = current_max.b;
             traceline->i_max_c = current_max.c;
             traceline->i_max_d = 0;
 
-            traceline->v_boost_min = model3.v_bus_min;
-            traceline->v_boost_max = model3.v_bus_max;
-            v_boost_min = min(v_boost_min, model3.v_bus_min);
-            v_boost_max = max(v_boost_max, model3.v_bus_max);
+            traceline->v_boost_min = model3.pulse_stats.v_bus_min;
+            traceline->v_boost_max = model3.pulse_stats.v_bus_max;
+            v_boost_min = min(v_boost_min, model3.pulse_stats.v_bus_min);
+            v_boost_max = max(v_boost_max, model3.pulse_stats.v_bus_max);
 
         } else {
             traceline->skipped_update_steps = model4.skipped_update_steps;
-            traceline->v_drive = model4.v_drive_last;
-            v_drive_max = max(v_drive_max, model4.v_drive_last);
+            traceline->v_drive = model4.pulse_stats.v_drive;
+            v_drive_max = max(v_drive_max, model4.pulse_stats.v_drive);
 
-            auto current_max = model4.current_max;
+            auto current_max = model4.pulse_stats.current_max;
             traceline->i_max_a = current_max.a;
             traceline->i_max_b = current_max.b;
             traceline->i_max_c = current_max.c;
             traceline->i_max_d = current_max.d;
 
-            traceline->v_boost_min = model4.v_bus_min;
-            traceline->v_boost_max = model4.v_bus_max;
-            v_boost_min = min(v_boost_min, model4.v_bus_min);
-            v_boost_max = max(v_boost_max, model4.v_bus_max);
+            traceline->v_boost_min = model4.pulse_stats.v_bus_min;
+            traceline->v_boost_max = model4.pulse_stats.v_bus_max;
+            v_boost_min = min(v_boost_min, model4.pulse_stats.v_bus_min);
+            v_boost_max = max(v_boost_max, model4.pulse_stats.v_bus_max);
         }
         traceline->Z_a = z1;
         traceline->Z_b = z2;
@@ -858,15 +858,15 @@ void loop()
                 rms.b / STIM_WINDING_RATIO,
                 rms.c / STIM_WINDING_RATIO,
                 0,
-                abs(model3.current_max.a) / STIM_WINDING_RATIO,
-                abs(model3.current_max.b) / STIM_WINDING_RATIO,
-                abs(model3.current_max.c) / STIM_WINDING_RATIO,
+                abs(model3.total_stats.current_max.a) / STIM_WINDING_RATIO,
+                abs(model3.total_stats.current_max.b) / STIM_WINDING_RATIO,
+                abs(model3.total_stats.current_max.c) / STIM_WINDING_RATIO,
                 0,
                 p, 0,
                 abs(driving_current_amps) / STIM_WINDING_RATIO
             );
-            model3.current_max = {};
-            model3.current_squared = {};
+            model3.total_stats.current_max = {};
+            model3.total_stats.current_squared = {};
         }
         if (play_status == PlayStatus::PlayingFourphase) {
             auto rms = model4.estimate_rms_current(rms_current_clock.dt_seconds);
@@ -884,15 +884,15 @@ void loop()
                 rms.b / STIM_WINDING_RATIO,
                 rms.c / STIM_WINDING_RATIO,
                 rms.d / STIM_WINDING_RATIO,
-                abs(model4.current_max.a) / STIM_WINDING_RATIO,
-                abs(model4.current_max.b) / STIM_WINDING_RATIO,
-                abs(model4.current_max.c) / STIM_WINDING_RATIO,
-                abs(model4.current_max.d) / STIM_WINDING_RATIO,
+                abs(model4.total_stats.current_max.a) / STIM_WINDING_RATIO,
+                abs(model4.total_stats.current_max.b) / STIM_WINDING_RATIO,
+                abs(model4.total_stats.current_max.c) / STIM_WINDING_RATIO,
+                abs(model4.total_stats.current_max.d) / STIM_WINDING_RATIO,
                 p, 0,
                 abs(driving_current_amps) / STIM_WINDING_RATIO
             );
-            model4.current_max = {};
-            model4.current_squared = {};
+            model4.total_stats.current_max = {};
+            model4.total_stats.current_squared = {};
         }
     }
 

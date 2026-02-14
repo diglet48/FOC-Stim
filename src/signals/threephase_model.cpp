@@ -231,7 +231,11 @@ void ThreephaseModel::play_pulse(
     z3.constrain_in_bound(MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
 
     // update stats
-    total_stats.current_max = total_stats.current_max + pulse_stats.current_max;
+    total_stats.current_max = {
+        std::max(total_stats.current_max.a, + pulse_stats.current_max.a),
+        std::max(total_stats.current_max.b, + pulse_stats.current_max.b),
+        std::max(total_stats.current_max.c, + pulse_stats.current_max.c),
+    };
     total_stats.current_squared = total_stats.current_squared + pulse_stats.current_squared;
 }
 

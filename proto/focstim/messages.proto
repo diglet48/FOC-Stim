@@ -3,13 +3,23 @@ package focstim_rpc;
 
 import "constants.proto";
 
+message FirmwareVersion {
+    uint32 major = 1;
+    uint32 minor = 2;
+    uint32 revision = 3;
+    string branch = 4;
+    string comment = 5;
+}
+
 // general commands
 message RequestFirmwareVersion {
 }
 message ResponseFirmwareVersion {
     BoardIdentifier board = 1;
-    string stm32_firmware_version = 2;  // TODO: implement
-    // string esp32_firmware_version = 3;  // TODO: implement
+    // string stm32_firmware_version = 2;  // DEPRECATED
+
+    FirmwareVersion stm32_firmware_version_2 = 3;
+    // FirmwareVersion esp32_firmware = ???;  // TODO: implement
 }
 
 message RequestCapabilitiesGet {

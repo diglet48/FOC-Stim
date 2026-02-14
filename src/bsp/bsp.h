@@ -1,6 +1,7 @@
 #ifndef FOCSTIM_BSP_H
 #define FOCSTIM_BSP_H
 
+#include "bsp/config_version.h"
 #include "bsp/config_g431b_esc1.h"
 #include "bsp/config_g473re_focstim_v4.h"
 #include "vec.h"

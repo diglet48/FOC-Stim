@@ -21,7 +21,7 @@ enum AxisType{
     AXIS_CALIBRATION_3_UP = 31;
     AXIS_CALIBRATION_3_LEFT = 32;
 
-    AXIS_CALIBRATION_4_CENTER = 40;
+    AXIS_CALIBRATION_4_CENTER = 40; // not used
     AXIS_CALIBRATION_4_A = 41;
     AXIS_CALIBRATION_4_B = 42;
     AXIS_CALIBRATION_4_C = 43;
@@ -43,7 +43,7 @@ enum OutputMode {
     OUTPUT_UNKNOWN = 0;
     // OUTPUT_OFF = 1;
     OUTPUT_THREEPHASE = 2;
-    OUTPUT_FOURPHASE = 3;   // alpha, beta, gamma
+    OUTPUT_FOURPHASE = 3;   // alpha, beta, gamma. DEPRECATED
     OUTPUT_FOURPHASE_INDIVIDUAL_ELECTRODES = 4;  // e1/e2/e3/e4
 }
 

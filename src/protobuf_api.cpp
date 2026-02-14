@@ -237,7 +237,8 @@ void ProtobufAPI::transmit_notification_debug_as5311(int raw, int tracked, int f
 
 void ProtobufAPI::handle_request_firmware_version(focstim_rpc_RequestFirmwareVersion &request, uint32_t id)
 {
-    const char* FIRMWARE_VERSION = "1.0";
+    const char* branch = focstim_api_branch_name;
+    const char* comment = focstim_api_comment;
 
     focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
     message.which_message = focstim_rpc_RpcMessage_response_tag;
@@ -248,8 +249,18 @@ void ProtobufAPI::handle_request_firmware_version(focstim_rpc_RequestFirmwareVer
 #elif defined(BOARD_FOCSTIM_V4)
     message.message.response.result.response_firmware_version.board = focstim_rpc_BoardIdentifier_BOARD_FOCSTIM_V4;
 #endif
-    message.message.response.result.response_firmware_version.stm32_firmware_version.arg = (char*)FIRMWARE_VERSION;
-    message.message.response.result.response_firmware_version.stm32_firmware_version.funcs.encode = encode_string;
+    message.message.response.result.response_firmware_version.has_stm32_firmware_version_2 = true;
+    focstim_rpc_FirmwareVersion &stm32 = message.message.response.result.response_firmware_version.stm32_firmware_version_2;
+    stm32.major = focstim_api_version_major;
+    stm32.minor = focstim_api_version_minor;
+    stm32.revision = focstim_api_version_revision;
+    stm32.branch.arg = (char*)branch;
+    stm32.branch.funcs.encode = encode_string;
+    stm32.comment.arg = (char*)comment;
+    stm32.comment.funcs.encode = encode_string;
+
+    // TODO: esp32 firmware
+
     transmit_message(message);
 }
 

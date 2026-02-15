@@ -13,7 +13,7 @@
 
 // current limits
 #define BODY_CURRENT_MAX  0.15f  // in amps
-#define ESTOP_CURRENT_LIMIT_MARGIN 0.08f                // accounts for measurement noise, driving current
+#define ESTOP_CURRENT_LIMIT_MARGIN 0.12f                // accounts for measurement noise, driving current
 
 // board temperature limits
 #define MAXIMUM_TEMPERATURE 60.f    // degrees celsius.

@@ -60,7 +60,7 @@ $Q_0 = 5 \mu C$, the maximum tolerable signal intensity.
 $Q_t = Q_0 \times (1 + \dfrac{\text{pulsewidth}}{355\mu s})$, the amount of charge we 
 actually have to deliver to get the maximum signal intensity.
 
-$Q_t = \dfrac{I_{\text{peak}}}{2 \times \pi \times \text{frequency}}$, the amount of charge in a pulse.
+$Q_t = \pm \dfrac{I_{\text{peak}}}{2 \times \pi \times \text{frequency}}$, minimum and maximum charge in sine wave signal.
 
 $R = \dfrac{Vs}{Q_t}$, link transformer saturation to resistance and charge.
 

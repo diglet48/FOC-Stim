@@ -9,7 +9,7 @@
 #include "complex.h"
 #include "signals/threephase_math.h"
 #include "signals/threephase_model.h"
-#include "signals/fourphase_math.h"
+#include "signals/fourphase_math_2.h"
 #include "signals/fourphase_model.h"
 #include "battery/power_manager.h"
 #include <Wire.h>
@@ -82,7 +82,7 @@ public:
         return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
-    focstim_rpc_Errors signal_start_fourphase()
+    focstim_rpc_Errors signal_start_fourphase_individual_electrodes()
     {
         if (play_status != PlayStatus::NotPlaying) {
             return focstim_rpc_Errors_ERROR_ALREADY_PLAYING;
@@ -160,7 +160,7 @@ ProtobufAPI* g_protobuf = &protobuf;
 struct {
     SimpleAxis alpha{focstim_rpc_AxisType_AXIS_POSITION_ALPHA, 0, -1, 1};
     SimpleAxis beta{focstim_rpc_AxisType_AXIS_POSITION_BETA, 0, -1, 1};
-    SimpleAxis gamma{focstim_rpc_AxisType_AXIS_POSITION_GAMMA, 0, -1, 1};
+    // SimpleAxis gamma{focstim_rpc_AxisType_AXIS_POSITION_GAMMA, 0, -1, 1};
     SimpleAxis waveform_amplitude_amps{focstim_rpc_AxisType_AXIS_WAVEFORM_AMPLITUDE_AMPS, 0, 0, BODY_CURRENT_MAX};
     SimpleAxis carrier_frequency{focstim_rpc_AxisType_AXIS_CARRIER_FREQUENCY_HZ, 800, 300, 2000};
     SimpleAxis pulse_frequency{focstim_rpc_AxisType_AXIS_PULSE_FREQUENCY_HZ, 50, 1, 100};
@@ -175,6 +175,10 @@ struct {
     SimpleAxis calib_4b{focstim_rpc_AxisType_AXIS_CALIBRATION_4_B, 0, -10, 10};
     SimpleAxis calib_4c{focstim_rpc_AxisType_AXIS_CALIBRATION_4_C, 0, -10, 10};
     SimpleAxis calib_4d{focstim_rpc_AxisType_AXIS_CALIBRATION_4_D, 0, -10, 10};
+    SimpleAxis e1{focstim_rpc_AxisType_AXIS_ELECTRODE_1_POWER, 0, 0, 1};
+    SimpleAxis e2{focstim_rpc_AxisType_AXIS_ELECTRODE_2_POWER, 0, 0, 1};
+    SimpleAxis e3{focstim_rpc_AxisType_AXIS_ELECTRODE_3_POWER, 0, 0, 1};
+    SimpleAxis e4{focstim_rpc_AxisType_AXIS_ELECTRODE_4_POWER, 0, 0, 1};
 } simple_axes;
 
 void trigger_emergency_stop(FOCError error)
@@ -690,7 +694,7 @@ void loop()
     uint32_t now_ms = millis();
     float pulse_alpha = simple_axes.alpha.get(now_ms);
     float pulse_beta = simple_axes.beta.get(now_ms);
-    float pulse_gamma = simple_axes.gamma.get(now_ms);
+    // float pulse_gamma = simple_axes.gamma.get(now_ms);
     float body_current_amps = simple_axes.waveform_amplitude_amps.get(now_ms);
 
     float pulse_carrier_frequency = simple_axes.carrier_frequency.get(now_ms);
@@ -707,6 +711,11 @@ void loop()
     float calibration_4b = simple_axes.calib_4b.get(now_ms);
     float calibration_4c = simple_axes.calib_4c.get(now_ms);
     float calibration_4d = simple_axes.calib_4d.get(now_ms);
+
+    float electrode_a = simple_axes.e1.get(now_ms);
+    float electrode_b = simple_axes.e2.get(now_ms);
+    float electrode_c = simple_axes.e3.get(now_ms);
+    float electrode_d = simple_axes.e4.get(now_ms);
 
     // clip pulse width to 35ms to avoid uart overflows from super long pulses.
     pulse_width = std::min<float>(pulse_width, 0.035f * pulse_carrier_frequency);
@@ -771,13 +780,13 @@ void loop()
 
         BSP_DisableOutputs();
     } else if (play_status == PlayStatus::PlayingFourphase) {
-        ComplexFourphasePoints points4 = project_fourphase(
+        ComplexFourphasePoints points4 = project_fourphase_2(
             driving_current_amps,
-            pulse_alpha, pulse_beta, pulse_gamma,
-            calibration_center,
-            calibration_4a, calibration_4b, calibration_4c, calibration_4d,
+            Vec4f{electrode_a, electrode_b, electrode_c, electrode_d},
+            Vec4f{calibration_4a, calibration_4b, calibration_4c, calibration_4d},
             polarity,
-            random_start_angle);
+            random_start_angle
+        );
 
         BSP_OutputEnable(true, true, true, true);
         delayMicroseconds(300); // the minimum of DRV8231A turnon time (datasheet: 250µs) and triac turnon time (experimental: 300µs)
@@ -920,6 +929,10 @@ void loop()
         // transmit_notification
         protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive_max);
         v_drive_max = 0;
+    }
+
+    if (pulse_interval_random >= .05) {
+        model4.debug_stats_teleplot();
     }
 }
 

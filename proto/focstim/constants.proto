@@ -26,6 +26,11 @@ enum AxisType{
     AXIS_CALIBRATION_4_B = 42;
     AXIS_CALIBRATION_4_C = 43;
     AXIS_CALIBRATION_4_D = 44;
+
+    AXIS_ELECTRODE_1_POWER = 50;
+    AXIS_ELECTRODE_2_POWER = 51;
+    AXIS_ELECTRODE_3_POWER = 52;
+    AXIS_ELECTRODE_4_POWER = 53;
 }
 
 enum BoardIdentifier {
@@ -38,7 +43,8 @@ enum OutputMode {
     OUTPUT_UNKNOWN = 0;
     // OUTPUT_OFF = 1;
     OUTPUT_THREEPHASE = 2;
-    OUTPUT_FOURPHASE = 3;
+    OUTPUT_FOURPHASE = 3;   // alpha, beta, gamma
+    OUTPUT_FOURPHASE_INDIVIDUAL_ELECTRODES = 4;  // e1/e2/e3/e4
 }
 
 // TODO: implement

@@ -316,7 +316,7 @@ void ProtobufAPI::handle_request_timestamp_get(focstim_rpc_RequestTimestampGet &
 }
 
 void ProtobufAPI::handle_request_signal_start(focstim_rpc_RequestSignalStart &request, uint32_t id) {
-    focstim_rpc_Errors error = focstim_rpc_Errors_ERROR_UNKNOWN;
+    focstim_rpc_Errors error = focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;
 
     switch (request.mode) {
         default:
@@ -327,6 +327,9 @@ void ProtobufAPI::handle_request_signal_start(focstim_rpc_RequestSignalStart &re
         break;
         case focstim_rpc_OutputMode_OUTPUT_FOURPHASE:
         error = signal_start_fourphase();
+        break;
+        case focstim_rpc_OutputMode_OUTPUT_FOURPHASE_INDIVIDUAL_ELECTRODES:
+        error = signal_start_fourphase_individual_electrodes();
         break;
     }
     focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;

@@ -23,27 +23,25 @@ void PowerManager::init() {
 
     if (is_battery_present) {
         BSP_PrintDebugMsg("Battery detected!");
+
+        BSP_PrintDebugMsg("Check battery configuration.");
+        bool gpout_polarity = lipo.GPOUTPolarity();
+        if (gpout_polarity == 0) {
+            BSP_PrintDebugMsg("No battery configuration. Programming...");
+
+            lipo.enterConfig(); // To configure the values below, you must be in config mode
+            lipo.setCapacity(BATTERY_CAPACITY);     // Set the battery capacity
+            lipo.setGPOUTPolarity(HIGH);            // Set GPOUT to active-high
+            lipo.setGPOUTFunction(BAT_LOW);         // Set GPOUT to BAT_LOW mode
+            lipo.setSOCFThresholds(SOCF_SET, SOCF_CLR); // Set SOCF set and clear thresholds
+            lipo.setSOC1Thresholds(SOCI_SET, SOCI_CLR); // Set SOCI set and clear thresholds
+            lipo.exitConfig();
+
+        } else {
+            BSP_PrintDebugMsg("Battery already configured.");
+        }
     } else {
         BSP_PrintDebugMsg("Battery NOT detected.");
-        Wire.setClock(I2C_CLOCK_NORMAL);
-        return;
-    }
-
-    BSP_PrintDebugMsg("Check battery configuration.");
-    bool gpout_polarity = lipo.GPOUTPolarity();
-    if (gpout_polarity == 0) {
-        BSP_PrintDebugMsg("No battery configuration. Programming...");
-
-        lipo.enterConfig(); // To configure the values below, you must be in config mode
-        lipo.setCapacity(BATTERY_CAPACITY);     // Set the battery capacity
-        lipo.setGPOUTPolarity(HIGH);            // Set GPOUT to active-high
-        lipo.setGPOUTFunction(BAT_LOW);         // Set GPOUT to BAT_LOW mode
-        lipo.setSOCFThresholds(SOCF_SET, SOCF_CLR); // Set SOCF set and clear thresholds
-        lipo.setSOC1Thresholds(SOCI_SET, SOCI_CLR); // Set SOCI set and clear thresholds
-        lipo.exitConfig();
-
-    } else {
-        BSP_PrintDebugMsg("Battery already configured.");
     }
 
     if (is_battery_present) {
@@ -96,6 +94,10 @@ void PowerManager::update()
 
 void PowerManager::update_all()
 {
+    if (!is_battery_present) {
+        return;
+    }
+
     read_temperature();
     read_voltage();
     read_soh();

@@ -930,10 +930,6 @@ void loop()
         protobuf.transmit_notification_signal_stats(actual_pulse_frequency, v_drive_max);
         v_drive_max = 0;
     }
-
-    if (pulse_interval_random >= .05) {
-        model4.debug_stats_teleplot();
-    }
 }
 
 #endif

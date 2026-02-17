@@ -40,7 +40,7 @@ jobs:
       - name: Rename firmware binary (V4)
         run: |
           cd .pio/build/focstim_v4
-          cp firmware.bin focstim_v4_1_firmware.bin
+          cp firmware.bin focstim_v4_firmware.bin
 
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
@@ -48,7 +48,7 @@ jobs:
           name: firmwares
           path: |
             .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
-            .pio/build/focstim_v4/focstim_v4_1_firmware.bin
+            .pio/build/focstim_v4/focstim_v4_firmware.bin
 
       - name: Release nightly
         uses: softprops/action-gh-release@v1
@@ -58,5 +58,5 @@ jobs:
           tag_name: nightly
           files: |
             .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
-            .pio/build/focstim_v4/focstim_v4_1_firmware.bin
+            .pio/build/focstim_v4/focstim_v4_firmware.bin
           fail_on_unmatched_files: true

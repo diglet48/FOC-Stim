@@ -837,6 +837,7 @@ void initDAC()
     LL_DAC_Enable(vsys_comp_dac, LL_DAC_CHANNEL_1);
     // while (vsys_comp_dac->SR & DAC_SR_DAC1RDY) {}    // wait until DAC is ready
 
+    delayMicroseconds(10); // Wait for the DAC to be ready (datasheet: max 7.5 µs)
     boost_control_dac->DHR12R1 = DAC_MAX_VALUE;
     vsys_comp_dac->DHR12R1 = DAC_MAX_VALUE;
 }

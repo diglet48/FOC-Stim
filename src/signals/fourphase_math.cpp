@@ -4,6 +4,7 @@
 #include "mat.h"
 #include "utils.h"
 #include <cmath>
+#include <complex>
 
 constexpr float COEF_1 = 1;
 constexpr float COEF_2 = sqrtf(8) / 3;         // sqrt(1 - coef_1**2/3)
@@ -26,13 +27,13 @@ void split_point(Complex m, float a, float b, Complex *out_1, Complex *out_2) {
     // :param b: float, desired distance of point from origin
 
     Complex m_normalized;
-    if (m.norm() < .001f) {
+    if (std::abs(m) < .001f) {
         m_normalized = Complex(1, 0);
     } else {
-        m_normalized = m * (1 / m.norm());
+        m_normalized = m * (1 / std::abs(m));
     }
 
-    float c = m.norm();
+    float c = std::abs(m);
     // handle special case c == 0. Note that if c==0 then a==b, therefore solution is trivial.
     c = std::max(0.0001f, c);
     float rational = (a*a - b*b + c*c) / (2 * c);
@@ -145,7 +146,7 @@ ComplexFourphasePoints fourphase_electrode_amplitude_to_complex_points(Vec4f amp
     // use p to project points on complex plane
     Complex p1, p2, p3, p4;
     split_point(p, amplitudes.a, amplitudes.b, &p1, &p2);
-    p = Complex(-p.a, 0);
+    p = Complex(-p.real(), 0);
     split_point(p, amplitudes.c, amplitudes.d, &p3, &p4);
 
     return ComplexFourphasePoints{
@@ -157,10 +158,10 @@ ComplexFourphasePoints fourphase_permute_complex_points(ComplexFourphasePoints p
 {
     // flip polarity
     if (flip_polarity) {
-        points.p1 = Complex(-points.p1.a, points.p1.b);
-        points.p2 = Complex(-points.p2.a, points.p2.b);
-        points.p3 = Complex(-points.p3.a, points.p3.b);
-        points.p4 = Complex(-points.p4.a, points.p4.b);
+        points.p1 = Complex(-points.p1.real(), points.p1.imag());
+        points.p2 = Complex(-points.p2.real(), points.p2.imag());
+        points.p3 = Complex(-points.p3.real(), points.p3.imag());
+        points.p4 = Complex(-points.p4.real(), points.p4.imag());
     }
 
     // random start angle

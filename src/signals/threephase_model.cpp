@@ -13,9 +13,9 @@ static float find_v_drive(Complex p1, Complex p2, Complex p3) {
     Complex rotator(cosf(_2PI / float(steps)), sinf(_2PI / float(steps)));
     float v_drive = 0;
     for (int i = 0; i < steps; i++) {
-        float a = (p1 * proj).a;
-        float b = (p2 * proj).a;
-        float c = (p3 * proj).a;
+        float a = (p1 * proj).real();
+        float b = (p2 * proj).real();
+        float c = (p3 * proj).real();
         float range = max({a, b, c}) - min({a, b, c});
         v_drive = max(range, v_drive);
         proj = proj * rotator;
@@ -34,7 +34,7 @@ void ThreephaseModel::play_pulse(
     float pulse_width, float rise_time,
     float estop_current_limit)
 {
-    if ((p1 + p2 + p3).norm() > .001f) {
+    if (std::abs(p1 + p2 + p3) > .001f) {
         BSP_PrintDebugMsg("Invalid pulse coordinates");
         return;
     }
@@ -123,14 +123,14 @@ void ThreephaseModel::play_pulse(
             envelope = Complex(1, 0);
         }
 
-        Complex q = proj * envelope.a;
+        Complex q = proj * envelope.real();
         proj = proj * rotator;
-        context[i % CONTEXT_SIZE].i1_cmd = (p1 * q).a;  // desired current, used for update step.
-        context[i % CONTEXT_SIZE].i2_cmd = (p2 * q).a;
-        context[i % CONTEXT_SIZE].i3_cmd = (p3 * q).a;
-        context[i % CONTEXT_SIZE].v1_cmd = (v1 * q).a;  // cmd voltage.
-        context[i % CONTEXT_SIZE].v2_cmd = (v2 * q).a;
-        context[i % CONTEXT_SIZE].v3_cmd = (v3 * q).a;
+        context[i % CONTEXT_SIZE].i1_cmd = (p1 * q).real();  // desired current, used for update step.
+        context[i % CONTEXT_SIZE].i2_cmd = (p2 * q).real();
+        context[i % CONTEXT_SIZE].i3_cmd = (p3 * q).real();
+        context[i % CONTEXT_SIZE].v1_cmd = (v1 * q).real();  // cmd voltage.
+        context[i % CONTEXT_SIZE].v2_cmd = (v2 * q).real();
+        context[i % CONTEXT_SIZE].v3_cmd = (v3 * q).real();
 
 #if defined(DEADTIME_COMPENSATION_ENABLE)
         // note1: This does not result in current flow if all voltages are zero or very close to zero.
@@ -198,9 +198,9 @@ void ThreephaseModel::play_pulse(
     // apply impedance magnitude error
     // done in special way to avoid drift when the input signal
     // is not sufficienctly exciting.
-    Complex d1 = p1 * (1 / max(p1.norm(), 0.01f));
-    Complex d2 = p2 * (1 / max(p2.norm(), 0.01f));
-    Complex d3 = p3 * (1 / max(p3.norm(), 0.01f));
+    Complex d1 = p1 * (1 / max(std::abs(p1), 0.01f));
+    Complex d2 = p2 * (1 / max(std::abs(p2), 0.01f));
+    Complex d3 = p3 * (1 / max(std::abs(p3), 0.01f));
     {
         float zz1 = abs(dot(d1, p1)) * magnitude_error1 + abs(dot(d2, p1)) * magnitude_error2 + abs(dot(d3, p1)) * magnitude_error3;
         float zz2 = abs(dot(d1, p2)) * magnitude_error1 + abs(dot(d2, p2)) * magnitude_error2 + abs(dot(d3, p2)) * magnitude_error3;
@@ -226,9 +226,9 @@ void ThreephaseModel::play_pulse(
     }
 
     // constrain impedance magnitude/angle
-    z1.constrain_in_bound(MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
-    z2.constrain_in_bound(MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
-    z3.constrain_in_bound(MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+    z1 = constrain_in_bound(z1, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+    z2 = constrain_in_bound(z2, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+    z3 = constrain_in_bound(z3, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
 
     // update stats
     total_stats.current_max = {

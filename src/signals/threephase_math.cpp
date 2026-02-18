@@ -104,9 +104,9 @@ ComplexThreephasePoints project_threephase(
     }
 
     if (flip_polarity) {
-        p1 = Complex(-p1.a, p1.b);
-        p2 = Complex(-p2.a, p2.b);
-        p3 = Complex(-p3.a, p3.b);
+        p1 = Complex(-p1.real(), p1.imag());
+        p2 = Complex(-p2.real(), p2.imag());
+        p3 = Complex(-p3.real(), p3.imag());
     }
 
     Complex rotation(cosf(start_angle), sinf(start_angle));

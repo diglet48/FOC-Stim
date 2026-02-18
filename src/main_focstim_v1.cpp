@@ -322,9 +322,9 @@ void loop()
     // if (pulse_counter % 1 == 0) {
         rms_current_clock.step();
         auto rms = model3.estimate_rms_current(rms_current_clock.dt_seconds);
-        auto r_a = model3.z1.a;
-        auto r_b = model3.z2.a;
-        auto r_c = model3.z3.a;
+        auto r_a = model3.z1.real();
+        auto r_b = model3.z2.real();
+        auto r_c = model3.z3.real();
         float p =
             (rms.a * rms.a) * r_a +
             (rms.b * rms.b) * r_b +
@@ -351,9 +351,9 @@ void loop()
     // if (pulse_counter % 1 == 0) {
         float m = STIM_WINDING_RATIO_SQ;
         protobuf.transmit_notification_model_estimation(
-            model3.z1.a * m, model3.z1.b * m,
-            model3.z2.a * m, model3.z2.b * m,
-            model3.z3.a * m, model3.z3.b * m,
+            model3.z1.real() * m, model3.z1.imag() * m,
+            model3.z2.real() * m, model3.z2.imag() * m,
+            model3.z3.real() * m, model3.z3.imag() * m,
             0, 0);
     }
 

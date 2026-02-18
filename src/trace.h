@@ -76,10 +76,10 @@ public:
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
             BSP_PrintDebugMsg("%10f %10f %10f %10f",
-                          p->Z_a.norm(),
-                          p->Z_b.norm(),
-                          p->Z_c.norm(),
-                          p->Z_d.norm());
+                          std::abs(p->Z_a),
+                          std::abs(p->Z_b),
+                          std::abs(p->Z_c),
+                          std::abs(p->Z_d));
         }
     }
 

@@ -51,10 +51,6 @@
 #define DEADTIME_COMPENSATION_MAGIC_VALUE  160e-9f   // experimentally determined. Close to driver deadtime (200ns).
 #define DEADTIME_COMPENSATION_PERCENTAGE (DEADTIME_COMPENSATION_MAGIC_VALUE * STIM_PWM_FREQ)
 
-// potentiometer volume control
-#define POTMETER_ZERO_PERCENT_VALUE      0.f
-#define POTMETER_HUNDRED_PERCENT_VALUE   float(4096 * .99f)
-
 // initial conditions and limits for the model
 #define MODEL_RESISTANCE_INIT (200.f / STIM_WINDING_RATIO_SQ)
 #define MODEL_RESISTANCE_MIN (50.f / STIM_WINDING_RATIO_SQ)

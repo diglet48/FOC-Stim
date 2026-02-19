@@ -315,6 +315,7 @@ void loop()
         traceline->Z_a = model3.z1;
         traceline->Z_b = model3.z2;
         traceline->Z_c = model3.z3;
+        traceline->saturation_v_s = model3.pulse_stats.volt_seconds;
     }
 
      // send notification: pulse current

@@ -826,6 +826,7 @@ void loop()
             traceline->v_boost_max = model3.pulse_stats.v_bus_max;
             v_boost_min = min(v_boost_min, model3.pulse_stats.v_bus_min);
             v_boost_max = max(v_boost_max, model3.pulse_stats.v_bus_max);
+            traceline->saturation_v_s = model3.pulse_stats.volt_seconds;
 
         } else {
             traceline->skipped_update_steps = model4.skipped_update_steps;
@@ -842,6 +843,7 @@ void loop()
             traceline->v_boost_max = model4.pulse_stats.v_bus_max;
             v_boost_min = min(v_boost_min, model4.pulse_stats.v_bus_min);
             v_boost_max = max(v_boost_max, model4.pulse_stats.v_bus_max);
+            traceline->saturation_v_s = model4.pulse_stats.volt_seconds;
         }
         traceline->Z_a = z1;
         traceline->Z_b = z2;

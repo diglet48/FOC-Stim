@@ -39,6 +39,7 @@ public:
         float v_bus_min = 0;    // the min/max bus voltage observed during the pulse
         float v_bus_max = 0;
         float v_drive = 0;      // v_drive of the pulse
+        float volt_seconds = 0;
     } pulse_stats;
 
     // total stats, can be reset by caller.

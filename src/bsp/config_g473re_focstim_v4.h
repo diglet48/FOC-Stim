@@ -5,11 +5,9 @@
 // transformer winding ratio
 #define STIM_WINDING_RATIO 6.66f    // xicon 42TL004
 #define STIM_WINDING_RATIO_SQ (STIM_WINDING_RATIO * STIM_WINDING_RATIO)
-// board resistance: 0.4 ohm (inductor) + 1.06 ohm (transformer input) + 0.30 ohm (DRV8231A Rdson)
-// high side 11.5 ohm (transformer output)
-// total 2.02 ohm driving / 89.6 ohm output
-// measured value: 115 ohm ?
-
+// The true winding ratio actually is 5.5, but due to core losses not all
+// current makes it to the output. Over-estimating the winding ratio
+// accounts for this in the general case (1000hz / 200ohm)
 
 // current limits
 #define BODY_CURRENT_MAX  0.15f  // in amps
@@ -58,6 +56,11 @@
 #define MODEL_PHASE_ANGLE_MIN -1.5f
 #define MODEL_PHASE_ANGLE_MAX 1.5f
 
+// transformer saturation
+#define MODEL_FIXED_RESISTANCE      1.6f        // driver Rdson (0.3) + low pass filter (0.3) + transformer low-side resistance (1.0)
+#define MODEL_MAXIMUM_VOLT_SECONDS  1100e-6f    // Xicon 42TL004 and 001
+
+// I2C clocks
 #define I2C_CLOCK_NORMAL        400'000ULL
 #define I2C_CLOCK_DISPLAY       1'000'000ULL
 #define I2C_CLOCK_LSM6DSOX      1'000'000ULL

@@ -21,6 +21,7 @@ struct MainLoopTraceLine
     float i_max_c;
     float i_max_d;
     float i_max_cmd;
+    float saturation_v_s;
     Complex Z_a;
     Complex Z_b;
     Complex Z_c;
@@ -56,11 +57,11 @@ public:
                           p->skipped_update_steps);
         }
         BSP_PrintDebugMsg("mainloop signals:");
-        BSP_PrintDebugMsg("   v_drive|   max I_a|   max I_b|   max I_c|   max I_d| i_max_cmd| boost_min| boost_max|");
+        BSP_PrintDebugMsg("   v_drive|   max I_a|   max I_b|   max I_c|   max I_d| i_max_cmd| boost_min| boost_max| sat (Vus)|");
         for (int i = 0; i < MAINLOOP_NUM_ENTRIES; i++)
         {
             MainLoopTraceLine *p = &main_loop_trace[(i + main_loop_trace_index) % MAINLOOP_NUM_ENTRIES];
-            BSP_PrintDebugMsg("%10f %10f %10f %10f %10f %10f %10f %10f",
+            BSP_PrintDebugMsg("%10f %10f %10f %10f %10f %10f %10f %10f %10f",
                           p->v_drive,
                           p->i_max_a,
                           p->i_max_b,
@@ -68,7 +69,8 @@ public:
                           p->i_max_d,
                           p->i_max_cmd,
                           p->v_boost_min,
-                          p->v_boost_max);
+                          p->v_boost_max,
+                          p->saturation_v_s * 1e6f);
         }
         BSP_PrintDebugMsg("mainloop model:");
         BSP_PrintDebugMsg("       Z_a|       Z_b|       Z_c|       Z_d|");

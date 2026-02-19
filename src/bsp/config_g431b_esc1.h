@@ -36,6 +36,10 @@
 #define MODEL_PHASE_ANGLE_MIN -1.5f
 #define MODEL_PHASE_ANGLE_MAX 1.5f
 
+// transformer saturation
+#define MODEL_FIXED_RESISTANCE      1.0f        // driver Rdson + low pass filter + transformer low-side resistance
+#define MODEL_MAXIMUM_VOLT_SECONDS  3600e-6f    // Xicon 42TU200
+
 // enable for nicer looking waveforms on the scope. Not safe for humans!
 // TODO: implement
 // #define THREEPHASE_PULSE_DEFEAT_RANDOMIZATION

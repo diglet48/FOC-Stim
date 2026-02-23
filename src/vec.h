@@ -2,6 +2,7 @@
 #define FOCSTIM_VEC_H
 
 #include <cmath>
+#include <algorithm>
 
 struct Vec2f {
     Vec2f() = default;
@@ -137,6 +138,12 @@ struct Vec4f {
 
     Vec3f const bcd() const {
         return {b, c, d};
+    }
+
+    Vec4f sorted() {
+        Vec4f copy(*this);
+        std::sort(&copy.a, &copy.a + 4);
+        return copy;
     }
 
     friend bool operator==(const Vec4f &l, const Vec4f &r) {

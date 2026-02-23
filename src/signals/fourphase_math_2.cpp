@@ -718,47 +718,31 @@ Vec4f fourphase_interpolate(Vec4f p, Vec4f max_amplitude)
 
 float fourphase_intensity(Vec4f electrode_power_in_percent)
 {
-    // empirically, these feel about the same intensity:
+    // Desired properties:
+    //
+    // The following inputs return a value very close to 1,
+    // as they are (empirically) close in intensity:
     // 1,   .33, .33, .33
     // .86, .86, .86, .86
     // .86, .86, 0,   0
+    //
+    // intensity(vec * c) == intensity(vec) * c
+    //
+    // to get these properties, the intensity is the p-norm of the largest
+    // 2 values.
 
-    // find largest and second-largest component.
-    float m1 = electrode_power_in_percent.max();
-    float m2;
-    if (m1 == electrode_power_in_percent.a) {
-        m2 = electrode_power_in_percent.bcd().max();
-    }
-    else if (m1 == electrode_power_in_percent.b) {
-        m2 = electrode_power_in_percent.acd().max();
-    }
-    else if (m1 == electrode_power_in_percent.c) {
-        m2 = electrode_power_in_percent.abd().max();
-    }
-    else {
-        m2 = electrode_power_in_percent.abc().max();
-    }
-    m2 = std::max(1/3.f, m2);
+    auto norm = [](float a, float b, float exponent) {
+        return powf(powf(a, exponent) + powf(b, exponent), 1/exponent);
+    };
 
-    // z is chosen such that (1, .333) and (.86, .86) results in the same value.
-    // which empirically works well.
-    float z = 4.5f;
-    float left = 0;
-    float right = 10;
-    float x;
-    // solve magic formula 1 = (m1 * x)**z + (m2 * x)**z
-    for (int i = 0; i < 100; i++) {
-        x = (left + right) / 2;
-        float intensity = powf(m1 * x, z) + powf(m2 * x, z);
-        if (intensity > 1) {
-            right = x;
-        } else {
-            left = x;
-        }
-    }
+    // get largest and second-largest elements. Ignore the rest.
+    Vec4f order = electrode_power_in_percent.sorted();
+    float rank_1 = order.d;
+    float rank_2 = order.c;
+    rank_2 = std::max(1/3.f * rank_1, rank_2); // not possible.
 
-    // normalize such that fourphase_intensity(1, 1/3, 1/3, 1/3) is 1
-    x *= float(1 / 0.9984229);
-
-    return 1 / x;
+    float z = 4.5f; // empirically determined
+    float intensity = norm(rank_1, rank_2, z);
+    intensity /= norm(1, 1.f/3, z);
+    return intensity;
 }

@@ -162,12 +162,15 @@ void test_continuity() {
 
 void test_intensity() {
     Vec4f vec1 = {1, 1/3.f, 1/3.f, 1/3.f};
-    TEST_ASSERT_EQUAL_FLOAT(1, 1/fourphase_intensity(vec1));
+    TEST_ASSERT_EQUAL_FLOAT(1, fourphase_intensity(vec1));
 
     // .86 = empirically nice value
     Vec4f vec2 = {.86, .86, .86, .86};
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 1, fourphase_intensity(vec2));
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 2, fourphase_intensity(vec2 * 2));
+
+    TEST_ASSERT_EQUAL_FLOAT(2, fourphase_intensity(vec1 * 2));
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, fourphase_intensity(vec1 / 2));
 }
 
 static Vec4f calculate_maximum_amplitudes2(Vec4f calibration_vector_in_db) {

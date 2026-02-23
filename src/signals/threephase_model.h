@@ -25,7 +25,8 @@ public:
     void debug_stats_teleplot();
 
     void interrupt_fn();
-    void perform_one_update_step();
+    void accumulate_errors();
+    void model_update(Complex p1, Complex p2, Complex p3);
 
 
     Complex z1 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of first output

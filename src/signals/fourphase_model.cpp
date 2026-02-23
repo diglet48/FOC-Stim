@@ -1,4 +1,4 @@
-#include "signals/fourphase_model.h"
+#include "fourphase_model.h"
 
 #include "bsp/bsp.h"
 
@@ -188,7 +188,7 @@ void FourphaseModel::play_pulse(
 
         // perform update steps when queue has plenty of items.
         while ((i - interrupt_index) >= max_producer_queue_length && !interrupt_finished) {
-            perform_one_update_step();
+            accumulate_errors();
         }
 
         if (interrupt_finished) {
@@ -204,7 +204,7 @@ void FourphaseModel::play_pulse(
 
     // wait until pulse completion
     while (!interrupt_finished) {
-        perform_one_update_step();
+        accumulate_errors();
     }
 
     // stop pwm, all phases to ground.
@@ -229,51 +229,11 @@ void FourphaseModel::play_pulse(
 
     // process all update steps.
     while (updater_index != (interrupt_index - 2)) {
-        perform_one_update_step();
+        accumulate_errors();
     }
 
     // TODO: if v_boost dropped too much during the pulse, do not perform update step.
-
-    // apply impedance magnitude error
-    // done in special way to avoid drift when the input signal
-    // is not sufficienctly exciting.
-    Complex d1 = p1 * (1 / max(std::abs(p1), 0.01f));
-    Complex d2 = p2 * (1 / max(std::abs(p2), 0.01f));
-    Complex d3 = p3 * (1 / max(std::abs(p3), 0.01f));
-    Complex d4 = p4 * (1 / max(std::abs(p4), 0.01f));
-    {
-        float zz1 = abs(dot(d1, p1)) * magnitude_error1 + abs(dot(d2, p1)) * magnitude_error2 + abs(dot(d3, p1)) * magnitude_error3 + abs(dot(d4, p1)) * magnitude_error4;
-        float zz2 = abs(dot(d1, p2)) * magnitude_error1 + abs(dot(d2, p2)) * magnitude_error2 + abs(dot(d3, p2)) * magnitude_error3 + abs(dot(d4, p2)) * magnitude_error4;
-        float zz3 = abs(dot(d1, p3)) * magnitude_error1 + abs(dot(d2, p3)) * magnitude_error2 + abs(dot(d3, p3)) * magnitude_error3 + abs(dot(d4, p3)) * magnitude_error4;
-        float zz4 = abs(dot(d1, p4)) * magnitude_error1 + abs(dot(d2, p4)) * magnitude_error2 + abs(dot(d3, p4)) * magnitude_error3 + abs(dot(d4, p4)) * magnitude_error4;
-        const float step_size =  .005f;
-        zz1 = std::clamp<float>(zz1, -step_size, 1/step_size);
-        zz2 = std::clamp<float>(zz2, -step_size, 1/step_size);
-        zz3 = std::clamp<float>(zz3, -step_size, 1/step_size);
-        zz4 = std::clamp<float>(zz4, -step_size, 1/step_size);
-        z1 = z1 * (1 + zz1);
-        z2 = z2 * (1 + zz2);
-        z3 = z3 * (1 + zz3);
-        z4 = z4 * (1 + zz4);
-    }
-
-    // apply impedance angle error
-    {
-        float zz1 = abs(dot(d1, p1)) * angle_error1 + abs(dot(d2, p1)) * angle_error2 + abs(dot(d3, p1)) * angle_error3 + abs(dot(d4, p1)) * angle_error4;
-        float zz2 = abs(dot(d1, p2)) * angle_error1 + abs(dot(d2, p2)) * angle_error2 + abs(dot(d3, p2)) * angle_error3 + abs(dot(d4, p2)) * angle_error4;
-        float zz3 = abs(dot(d1, p3)) * angle_error1 + abs(dot(d2, p3)) * angle_error2 + abs(dot(d3, p3)) * angle_error3 + abs(dot(d4, p3)) * angle_error4;
-        float zz4 = abs(dot(d1, p4)) * angle_error1 + abs(dot(d2, p4)) * angle_error2 + abs(dot(d3, p4)) * angle_error3 + abs(dot(d4, p4)) * angle_error4;
-        z1 = z1 * Complex(cosf(zz1), sinf(zz1));
-        z2 = z2 * Complex(cosf(zz2), sinf(zz2));
-        z3 = z3 * Complex(cosf(zz3), sinf(zz3));
-        z4 = z4 * Complex(cosf(zz4), sinf(zz4));
-    }
-
-    // constrain impedance magnitude/angle
-    z1 = constrain_in_bound(z1, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
-    z2 = constrain_in_bound(z2, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
-    z3 = constrain_in_bound(z3, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
-    z4 = constrain_in_bound(z4, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+    model_update(p1, p2, p3, p4);
 
     // update stats
     total_stats.current_max = {
@@ -426,7 +386,7 @@ void FourphaseModel::interrupt_fn()
     interrupt_index = i + 1;
 }
 
-void FourphaseModel::perform_one_update_step()
+void FourphaseModel::accumulate_errors()
 {
     int samples_available = (interrupt_index - 2) - updater_index;
     if (samples_available <= 0) {
@@ -485,6 +445,50 @@ void FourphaseModel::perform_one_update_step()
         magnitude_error4 += gamma1 * (context[i].i4_cmd * err4);
         angle_error4 += gamma2 * (dx4 * err4);
     }
+}
+
+void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4)
+{
+    // apply impedance magnitude error
+    // done in special way to avoid drift when the input signal
+    // is not sufficienctly exciting.
+    Complex d1 = p1 * (1 / max(std::abs(p1), 0.01f));
+    Complex d2 = p2 * (1 / max(std::abs(p2), 0.01f));
+    Complex d3 = p3 * (1 / max(std::abs(p3), 0.01f));
+    Complex d4 = p4 * (1 / max(std::abs(p4), 0.01f));
+    {
+        float zz1 = abs(dot(d1, p1)) * magnitude_error1 + abs(dot(d2, p1)) * magnitude_error2 + abs(dot(d3, p1)) * magnitude_error3 + abs(dot(d4, p1)) * magnitude_error4;
+        float zz2 = abs(dot(d1, p2)) * magnitude_error1 + abs(dot(d2, p2)) * magnitude_error2 + abs(dot(d3, p2)) * magnitude_error3 + abs(dot(d4, p2)) * magnitude_error4;
+        float zz3 = abs(dot(d1, p3)) * magnitude_error1 + abs(dot(d2, p3)) * magnitude_error2 + abs(dot(d3, p3)) * magnitude_error3 + abs(dot(d4, p3)) * magnitude_error4;
+        float zz4 = abs(dot(d1, p4)) * magnitude_error1 + abs(dot(d2, p4)) * magnitude_error2 + abs(dot(d3, p4)) * magnitude_error3 + abs(dot(d4, p4)) * magnitude_error4;
+        const float step_size =  .005f;
+        zz1 = std::clamp<float>(zz1, -step_size, 1/step_size);
+        zz2 = std::clamp<float>(zz2, -step_size, 1/step_size);
+        zz3 = std::clamp<float>(zz3, -step_size, 1/step_size);
+        zz4 = std::clamp<float>(zz4, -step_size, 1/step_size);
+        z1 = z1 * (1 + zz1);
+        z2 = z2 * (1 + zz2);
+        z3 = z3 * (1 + zz3);
+        z4 = z4 * (1 + zz4);
+    }
+
+    // apply impedance angle error
+    {
+        float zz1 = abs(dot(d1, p1)) * angle_error1 + abs(dot(d2, p1)) * angle_error2 + abs(dot(d3, p1)) * angle_error3 + abs(dot(d4, p1)) * angle_error4;
+        float zz2 = abs(dot(d1, p2)) * angle_error1 + abs(dot(d2, p2)) * angle_error2 + abs(dot(d3, p2)) * angle_error3 + abs(dot(d4, p2)) * angle_error4;
+        float zz3 = abs(dot(d1, p3)) * angle_error1 + abs(dot(d2, p3)) * angle_error2 + abs(dot(d3, p3)) * angle_error3 + abs(dot(d4, p3)) * angle_error4;
+        float zz4 = abs(dot(d1, p4)) * angle_error1 + abs(dot(d2, p4)) * angle_error2 + abs(dot(d3, p4)) * angle_error3 + abs(dot(d4, p4)) * angle_error4;
+        z1 = z1 * Complex(cosf(zz1), sinf(zz1));
+        z2 = z2 * Complex(cosf(zz2), sinf(zz2));
+        z3 = z3 * Complex(cosf(zz3), sinf(zz3));
+        z4 = z4 * Complex(cosf(zz4), sinf(zz4));
+    }
+
+    // constrain impedance magnitude/angle
+    z1 = constrain_in_bound(z1, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+    z2 = constrain_in_bound(z2, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+    z3 = constrain_in_bound(z3, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
+    z4 = constrain_in_bound(z4, MODEL_RESISTANCE_MIN, MODEL_RESISTANCE_MAX, MODEL_PHASE_ANGLE_MIN, MODEL_PHASE_ANGLE_MAX);
 }
 
 #endif

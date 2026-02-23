@@ -859,7 +859,7 @@ void loop()
             auto r_a = model3.z1.real();
             auto r_b = model3.z2.real();
             auto r_c = model3.z3.real();
-            float p =
+            float power_watt =
                 (rms.a * rms.a) * r_a +
                 (rms.b * rms.b) * r_b +
                 (rms.c * rms.c) * r_c;
@@ -873,7 +873,7 @@ void loop()
                 abs(model3.total_stats.current_max.b) / STIM_WINDING_RATIO,
                 abs(model3.total_stats.current_max.c) / STIM_WINDING_RATIO,
                 0,
-                p, 0,
+                power_watt, 0,
                 abs(driving_current_amps) / STIM_WINDING_RATIO
             );
             model3.total_stats.current_max = {};
@@ -885,10 +885,11 @@ void loop()
             auto r_b = model4.z2.real();
             auto r_c = model4.z3.real();
             auto r_d = model4.z4.real();
-            float p =
+            float power_watt =
                 (rms.a * rms.a) * r_a +
                 (rms.b * rms.b) * r_b +
-                (rms.c * rms.c) * r_c;
+                (rms.c * rms.c) * r_c +
+                (rms.d * rms.d) * r_d;
 
             protobuf.transmit_notification_currents(
                 rms.a / STIM_WINDING_RATIO,
@@ -899,7 +900,7 @@ void loop()
                 abs(model4.total_stats.current_max.b) / STIM_WINDING_RATIO,
                 abs(model4.total_stats.current_max.c) / STIM_WINDING_RATIO,
                 abs(model4.total_stats.current_max.d) / STIM_WINDING_RATIO,
-                p, 0,
+                power_watt, 0,
                 abs(driving_current_amps) / STIM_WINDING_RATIO
             );
             model4.total_stats.current_max = {};

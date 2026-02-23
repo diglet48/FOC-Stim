@@ -398,24 +398,34 @@ void ThreephaseModel::accumulate_errors()
 #error unknown current sense method
 #endif
 
-    float gamma1 = -0.005f;
-    float gamma2 = -0.01f;
     if (context[i].i1_cmd < minimum_current) {
-        magnitude_error1 += gamma1 * (context[i].i1_cmd * err1);
-        angle_error1 += gamma2 * (dx1 * err1);
+        magnitude_error1 += context[i].i1_cmd * err1;
+        angle_error1 += dx1 * err1;
     }
     if (context[i].i2_cmd < minimum_current) {
-        magnitude_error2 += gamma1 * (context[i].i2_cmd * err2);
-        angle_error2 += gamma2 * (dx2 * err2);
+        magnitude_error2 += context[i].i2_cmd * err2;
+        angle_error2 += dx2 * err2;
     }
     if (context[i].i3_cmd < minimum_current) {
-        magnitude_error3 += gamma1 * (context[i].i3_cmd * err3);
-        angle_error3 += gamma2 * (dx3 * err3);
+        magnitude_error3 += context[i].i3_cmd * err3;
+        angle_error3 += dx3 * err3;
     }
 }
 
 void ThreephaseModel::model_update(Complex p1, Complex p2, Complex p3)
 {
+    // magic numbers, determined experimentally
+    float gamma1 = -0.005f;
+    float gamma2 = -0.01f;
+
+    magnitude_error1 *= gamma1;
+    magnitude_error2 *= gamma1;
+    magnitude_error3 *= gamma1;
+
+    angle_error1 *= gamma2;
+    angle_error2 *= gamma2;
+    angle_error3 *= gamma2;
+
     // apply impedance magnitude error
     // done in special way to avoid drift when the input signal
     // is not sufficienctly exciting.

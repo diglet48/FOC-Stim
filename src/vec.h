@@ -22,6 +22,15 @@ struct Vec3f {
     Vec3f(float a, float b, float c)
     : a(a), b(b), c(c) {}
 
+    float const sum() const {
+        return a + b + c ;
+    }
+
+    float const abs_sum() const {
+        return std::abs(a) + std::abs(b) + std::abs(c);
+    }
+
+
     float const min() const {
         return std::min(std::min(a, b), c);
     }
@@ -30,23 +39,23 @@ struct Vec3f {
         return std::max(std::max(a, b), c);
     }
 
-    float norm() {
+    float norm() const {
         return sqrtf(a*a + b*b + c*c);
     }
 
-    Vec3f const operator*(float f) {
+    Vec3f const operator*(float f) const {
         return Vec3f(a * f, b * f, c * f);
     }
 
-    Vec3f const operator/(float f) {
+    Vec3f const operator/(float f) const {
         return Vec3f(a / f, b / f, c / f);
     }
 
-    Vec3f const operator-(const Vec3f &other) {
+    Vec3f const operator-(const Vec3f &other) const {
         return Vec3f(a - other.a, b - other.b, c - other.c);
     }
 
-    Vec3f const operator+(const Vec3f &other) {
+    Vec3f const operator+(const Vec3f &other) const  {
         return Vec3f(a + other.a, b + other.b, c + other.c);
     }
 
@@ -74,6 +83,10 @@ struct Vec4f {
 
     float const sum() const {
         return a + b + c + d;
+    }
+
+    float const abs_sum() const {
+        return std::abs(a) + std::abs(b) + std::abs(c) + std::abs(d);
     }
 
     float const min() const {

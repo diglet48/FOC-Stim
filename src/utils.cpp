@@ -20,6 +20,18 @@ float lerp(float p, float a, float b)
     return a + std::min(1.0f, std::max(0.0f, p)) * (b - a);
 }
 
+float interpolate(
+    float x,
+    float x0, float x1,
+    float y0, float y1)
+{
+    if (x1 == x0)  // prevent divide-by-zero
+        return y0;
+
+    float p = std::clamp((x - x0) / (x1 - x0), 0.f, 1.f);
+    return y0 + p * (y1 - y0);
+}
+
 float inverse_lerp(float v, float a, float b)
 {
     float p = (a - v) / (a - b);

@@ -11,7 +11,7 @@ float norm(float x, float y);
 // linear interpolate
 float lerp(float p, float a, float b);
 float inverse_lerp(float v, float a, float b);
-
+float interpolate(float x, float x0, float x1, float y0, float y1);
 
 float ntc_voltage_to_temp(float ADCVoltage);
 

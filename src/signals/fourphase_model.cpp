@@ -4,6 +4,7 @@
 
 #if defined(BSP_ENABLE_FOURPHASE)
 
+#include "protobuf_api.h"
 #include "foc_utils.h"
 #include "utils.h"
 
@@ -30,6 +31,16 @@ float find_v_drive(Complex p1, Complex p2, Complex p3, Complex p4) {
 
 void FourphaseModel::init(std::function<void(FOCError)> emergency_stop_fn) {
     this->emergency_stop_fn = emergency_stop_fn;
+
+    phase_IQ_sum_1 = Complex(.1, 0);
+    phase_IQ_sum_2 = Complex(.1, 0);
+    phase_IQ_sum_3 = Complex(.1, 0);
+    phase_IQ_sum_4 = Complex(.1, 0);
+
+    z1 = Complex(MODEL_RESISTANCE_INIT, 0);
+    z2 = Complex(MODEL_RESISTANCE_INIT, 0);
+    z3 = Complex(MODEL_RESISTANCE_INIT, 0);
+    z4 = Complex(MODEL_RESISTANCE_INIT, 0);
 }
 
 void FourphaseModel::play_pulse(
@@ -44,14 +55,6 @@ void FourphaseModel::play_pulse(
     }
 
     // reset variables for pulse playback
-    magnitude_error1 = 0;
-    magnitude_error2 = 0;
-    magnitude_error3 = 0;
-    magnitude_error4 = 0;
-    angle_error1 = 0;
-    angle_error2 = 0;
-    angle_error3 = 0;
-    angle_error4 = 0;
     producer_index = 0;
     interrupt_index = 0;
     updater_index = 0;
@@ -59,6 +62,21 @@ void FourphaseModel::play_pulse(
     skipped_update_steps = 0;
     current_limit_exceeded = 0;
     current_limit = estop_current_limit;
+
+    cmd_IQ_1 = {};
+    cmd_IQ_2 = {};
+    cmd_IQ_3 = {};
+    cmd_IQ_4 = {};
+
+    meas_IQ_1 = {};
+    meas_IQ_2 = {};
+    meas_IQ_3 = {};
+    meas_IQ_4 = {};
+
+    phase_IQ_1 = {};
+    phase_IQ_2 = {};
+    phase_IQ_3 = {};
+    phase_IQ_4 = {};
 
     // reset pulse stats
     pulse_stats.current_squared = {0, 0, 0, 0};
@@ -158,7 +176,10 @@ void FourphaseModel::play_pulse(
         }
 
         Complex q = proj * envelope.real();
+        Complex q_quadrature = Complex(-q.imag(), q.real());
         proj = proj * rotator;
+        context[i % CONTEXT_SIZE].cosine = proj.real();
+        context[i % CONTEXT_SIZE].sine = proj.imag();
         context[i % CONTEXT_SIZE].i1_cmd = (p1 * q).real();  // desired current, used for update step.
         context[i % CONTEXT_SIZE].i2_cmd = (p2 * q).real();
         context[i % CONTEXT_SIZE].i3_cmd = (p3 * q).real();
@@ -167,6 +188,10 @@ void FourphaseModel::play_pulse(
         context[i % CONTEXT_SIZE].v2_cmd = (v2 * q).real();
         context[i % CONTEXT_SIZE].v3_cmd = (v3 * q).real();
         context[i % CONTEXT_SIZE].v4_cmd = (v4 * q).real();
+        context[i % CONTEXT_SIZE].v1_cmd_quadrature = (v1 * q_quadrature).real();  // cmd voltage.
+        context[i % CONTEXT_SIZE].v2_cmd_quadrature = (v2 * q_quadrature).real();
+        context[i % CONTEXT_SIZE].v3_cmd_quadrature = (v3 * q_quadrature).real();
+        context[i % CONTEXT_SIZE].v4_cmd_quadrature = (v4 * q_quadrature).real();
 
 #if defined(DEADTIME_COMPENSATION_ENABLE)
         // note1: This does not result in current flow if all voltages are zero or very close to zero.
@@ -233,7 +258,7 @@ void FourphaseModel::play_pulse(
     }
 
     // TODO: if v_boost dropped too much during the pulse, do not perform update step.
-    model_update(p1, p2, p3, p4);
+    model_update(p1, p2, p3, p4, v1, v2, v3, v4);
 
     // update stats
     total_stats.current_max = {
@@ -395,6 +420,7 @@ void FourphaseModel::accumulate_errors()
     if (samples_available >= max_updater_lag) {
         skipped_update_steps++;
         updater_index++;
+        return;
     }
     int i = updater_index++;
 
@@ -403,21 +429,7 @@ void FourphaseModel::accumulate_errors()
     }
 
     atomic_signal_fence(std::memory_order_acquire);
-
-    int i_plus_one = (i + 1) % CONTEXT_SIZE;
-    int i_minus_one = (i - 1) % CONTEXT_SIZE;
     i = i % CONTEXT_SIZE;
-
-
-    float err1 = context[i].i1_meas - context[i].i1_cmd;
-    float err2 = context[i].i2_meas - context[i].i2_cmd;
-    float err3 = context[i].i3_meas - context[i].i3_cmd;
-    float err4 = context[i].i4_meas - context[i].i4_cmd;
-
-    float dx1 = context[i_plus_one].i1_cmd - context[i_minus_one].i1_cmd;    // derivative
-    float dx2 = context[i_plus_one].i2_cmd - context[i_minus_one].i2_cmd;
-    float dx3 = context[i_plus_one].i3_cmd - context[i_minus_one].i3_cmd;
-    float dx4 = context[i_plus_one].i4_cmd - context[i_minus_one].i4_cmd;
 
 #if defined(CURRENT_SENSE_SCALE_FULL)
     const float minimum_current = infinityf();
@@ -427,73 +439,137 @@ void FourphaseModel::accumulate_errors()
 #error unknown current sense method
 #endif
 
+    // use I/Q sampling to find the commanded current and measured current amplitude.
+    // skip on devices without bidirectional current sense if commanded current is low,
+    // because of poor accuracy.
     if (context[i].i1_cmd < minimum_current) {
-        magnitude_error1 += context[i].i1_cmd * err1;
-        angle_error1 += dx1 * err1;
+        meas_IQ_1 += Complex(context[i].cosine, context[i].sine) * context[i].i1_meas;
+        cmd_IQ_1 += Complex(context[i].cosine, context[i].sine) * context[i].i1_cmd;
     }
     if (context[i].i2_cmd < minimum_current) {
-        magnitude_error2 += context[i].i2_cmd * err2;
-        angle_error2 += dx2 * err2;
+        meas_IQ_2 += Complex(context[i].cosine, context[i].sine) * context[i].i2_meas;
+        cmd_IQ_2 += Complex(context[i].cosine, context[i].sine) * context[i].i2_cmd;
     }
     if (context[i].i3_cmd < minimum_current) {
-        magnitude_error3 += context[i].i3_cmd * err3;
-        angle_error3 += dx3 * err3;
+        meas_IQ_3 += Complex(context[i].cosine, context[i].sine) * context[i].i3_meas;
+        cmd_IQ_3 += Complex(context[i].cosine, context[i].sine) * context[i].i3_cmd;
     }
     if (context[i].i4_cmd < minimum_current) {
-        magnitude_error4 += context[i].i4_cmd * err4;
-        angle_error4 += dx4 * err4;
+        meas_IQ_4 += Complex(context[i].cosine, context[i].sine) * context[i].i4_meas;
+        cmd_IQ_4 += Complex(context[i].cosine, context[i].sine) * context[i].i4_cmd;
     }
+
+    // use I/Q sampling to find the phase offset between voltage and current
+    phase_IQ_1 += Complex(context[i].v1_cmd, context[i].v1_cmd_quadrature) * context[i].i1_meas;
+    phase_IQ_2 += Complex(context[i].v2_cmd, context[i].v2_cmd_quadrature) * context[i].i2_meas;
+    phase_IQ_3 += Complex(context[i].v3_cmd, context[i].v3_cmd_quadrature) * context[i].i3_meas;
+    phase_IQ_4 += Complex(context[i].v4_cmd, context[i].v4_cmd_quadrature) * context[i].i4_meas;
 }
 
-void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4)
+void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4, Complex v1, Complex v2, Complex v3, Complex v4)
 {
-    // magic numbers, determined experimentally
-    float gamma1 = -0.1f;
-    float gamma2 = -0.1f;
-
-    magnitude_error1 *= gamma1;
-    magnitude_error2 *= gamma1;
-    magnitude_error3 *= gamma1;
-    magnitude_error4 *= gamma1;
-
-    angle_error1 *= gamma2;
-    angle_error2 *= gamma2;
-    angle_error3 *= gamma2;
-    angle_error4 *= gamma2;
-
-    // apply impedance magnitude error
-    // done in special way to avoid drift when the input signal
-    // is not sufficienctly exciting.
-    Complex d1 = p1 * (1 / max(std::abs(p1), 0.01f));
-    Complex d2 = p2 * (1 / max(std::abs(p2), 0.01f));
-    Complex d3 = p3 * (1 / max(std::abs(p3), 0.01f));
-    Complex d4 = p4 * (1 / max(std::abs(p4), 0.01f));
+    // update impedance magnitude
     {
-        float zz1 = abs(dot(d1, p1)) * magnitude_error1 + abs(dot(d2, p1)) * magnitude_error2 + abs(dot(d3, p1)) * magnitude_error3 + abs(dot(d4, p1)) * magnitude_error4;
-        float zz2 = abs(dot(d1, p2)) * magnitude_error1 + abs(dot(d2, p2)) * magnitude_error2 + abs(dot(d3, p2)) * magnitude_error3 + abs(dot(d4, p2)) * magnitude_error4;
-        float zz3 = abs(dot(d1, p3)) * magnitude_error1 + abs(dot(d2, p3)) * magnitude_error2 + abs(dot(d3, p3)) * magnitude_error3 + abs(dot(d4, p3)) * magnitude_error4;
-        float zz4 = abs(dot(d1, p4)) * magnitude_error1 + abs(dot(d2, p4)) * magnitude_error2 + abs(dot(d3, p4)) * magnitude_error3 + abs(dot(d4, p4)) * magnitude_error4;
-        const float step_size =  .005f;
-        zz1 = std::clamp<float>(zz1, -step_size, 1/step_size);
-        zz2 = std::clamp<float>(zz2, -step_size, 1/step_size);
-        zz3 = std::clamp<float>(zz3, -step_size, 1/step_size);
-        zz4 = std::clamp<float>(zz4, -step_size, 1/step_size);
-        z1 = z1 * (1 + zz1);
-        z2 = z2 * (1 + zz2);
-        z3 = z3 * (1 + zz3);
-        z4 = z4 * (1 + zz4);
+        float multiplier = 1.f / pulse_length_samples * 2;
+#if defined(CURRENT_SENSE_SCALE_HALF)
+        multiplier *= 2;
+#endif
+
+        // calculate measured/commanded current, unit amperes.
+        // It is 10-40% below the real value because of rise time.
+        float meas_1 = std::abs(meas_IQ_1) * multiplier;
+        float meas_2 = std::abs(meas_IQ_2) * multiplier;
+        float meas_3 = std::abs(meas_IQ_3) * multiplier;
+        float meas_4 = std::abs(meas_IQ_4) * multiplier;
+        float cmd_1 = std::abs(cmd_IQ_1) * multiplier;
+        float cmd_2 = std::abs(cmd_IQ_2) * multiplier;
+        float cmd_3 = std::abs(cmd_IQ_3) * multiplier;
+        float cmd_4 = std::abs(cmd_IQ_4) * multiplier;
+
+        // integrate measurement and command
+        float decay = .002f;
+        integrated_meas = integrated_meas * (1 - decay) + Vec4f(meas_1, meas_2, meas_3, meas_4) * decay;
+        integrated_cmd = integrated_cmd * (1 - decay) + Vec4f(cmd_1, cmd_2, cmd_3, cmd_4) * decay;
+
+        // select gradient descent step size based on the average error
+        float error_ratio = (integrated_cmd - integrated_meas).abs_sum() / std::max(integrated_cmd.sum(), 0.05f);
+        float step_size = interpolate(error_ratio, 0.01f, 0.3f, .1f, 1.0f); // 1% error = 0.1 step. 30% error = 1.0 step
+
+        // gradient descent update step. Change impedance magnitude only
+        z1 = Complex(std::abs(z1) - step_size * std::abs(v1) * (meas_1 - cmd_1), 0);
+        z2 = Complex(std::abs(z2) - step_size * std::abs(v2) * (meas_2 - cmd_2), 0);
+        z3 = Complex(std::abs(z3) - step_size * std::abs(v3) * (meas_3 - cmd_3), 0);
+        z4 = Complex(std::abs(z4) - step_size * std::abs(v4) * (meas_4 - cmd_4), 0);
+
+        // // debug SLOW
+        // static int i = 0;
+        // if (++i >= 5) {
+        //     i = 0;
+        //     g_protobuf->transmit_notification_debug_teleplot("meas 1", meas_1);
+        //     g_protobuf->transmit_notification_debug_teleplot("cmd 1", cmd_1);
+        //     g_protobuf->transmit_notification_debug_teleplot("meas 2", meas_2);
+        //     g_protobuf->transmit_notification_debug_teleplot("cmd 2", cmd_2);
+        //     g_protobuf->transmit_notification_debug_teleplot("meas 3", meas_3);
+        //     g_protobuf->transmit_notification_debug_teleplot("cmd 3", cmd_3);
+        //     g_protobuf->transmit_notification_debug_teleplot("meas 4", meas_4);
+        //     g_protobuf->transmit_notification_debug_teleplot("cmd 4", cmd_4);
+        //     g_protobuf->transmit_notification_debug_teleplot("err ratio", error_ratio);
+        //     g_protobuf->transmit_notification_debug_teleplot("update rate", step_size);
+        // }
     }
 
-    // apply impedance angle error
+    // update impedance phase angle
     {
-        float zz1 = abs(dot(d1, p1)) * angle_error1 + abs(dot(d2, p1)) * angle_error2 + abs(dot(d3, p1)) * angle_error3 + abs(dot(d4, p1)) * angle_error4;
-        float zz2 = abs(dot(d1, p2)) * angle_error1 + abs(dot(d2, p2)) * angle_error2 + abs(dot(d3, p2)) * angle_error3 + abs(dot(d4, p2)) * angle_error4;
-        float zz3 = abs(dot(d1, p3)) * angle_error1 + abs(dot(d2, p3)) * angle_error2 + abs(dot(d3, p3)) * angle_error3 + abs(dot(d4, p3)) * angle_error4;
-        float zz4 = abs(dot(d1, p4)) * angle_error1 + abs(dot(d2, p4)) * angle_error2 + abs(dot(d3, p4)) * angle_error3 + abs(dot(d4, p4)) * angle_error4;
-        z1 = z1 * Complex(cosf(zz1), sinf(zz1));
-        z2 = z2 * Complex(cosf(zz2), sinf(zz2));
-        z3 = z3 * Complex(cosf(zz3), sinf(zz3));
-        z4 = z4 * Complex(cosf(zz4), sinf(zz4));
+        // skip update < 20mA (about 2% power)
+        // because sensor gives poor quality data
+        float minimum_current_for_update = .02f;
+
+        // normalize, so unit is roughtly in watt (voltage * current)
+        phase_IQ_1 /= pulse_length_samples;
+        phase_IQ_2 /= pulse_length_samples;
+        phase_IQ_3 /= pulse_length_samples;
+        phase_IQ_4 /= pulse_length_samples;
+
+        // slowly converge to new parameters
+        float learning_rate = .01f;
+        if (std::abs(p1) > minimum_current_for_update) {
+            phase_IQ_sum_1 = phase_IQ_sum_1 * (1 - learning_rate) + phase_IQ_1 * learning_rate;
+        }
+        if (std::abs(p2) > minimum_current_for_update) {
+            phase_IQ_sum_2 = phase_IQ_sum_2 * (1 - learning_rate) + phase_IQ_2 * learning_rate;
+        }
+        if (std::abs(p3) > minimum_current_for_update) {
+            phase_IQ_sum_3 = phase_IQ_sum_3 * (1 - learning_rate) + phase_IQ_3 * learning_rate;
+        }
+        if (std::abs(p4) > minimum_current_for_update) {
+            phase_IQ_sum_4 = phase_IQ_sum_4 * (1 - learning_rate) + phase_IQ_4 * learning_rate;
+        }
+
+        // clamp to avoid problems near zero.
+        float minimum_magnitude = 0.01f; // ~watt, meaning really low power.
+        if (std::abs(phase_IQ_sum_1) <= minimum_magnitude) {
+            phase_IQ_sum_1 *= minimum_magnitude / std::abs(phase_IQ_1);
+        }
+        if (std::abs(phase_IQ_sum_2) <= minimum_magnitude) {
+            phase_IQ_sum_2 *= minimum_magnitude / std::abs(phase_IQ_2);
+        }
+        if (std::abs(phase_IQ_sum_3) <= minimum_magnitude) {
+            phase_IQ_sum_3 *= minimum_magnitude / std::abs(phase_IQ_3);
+        }
+        if (std::abs(phase_IQ_sum_4) <= minimum_magnitude) {
+            phase_IQ_sum_4 *= minimum_magnitude / std::abs(phase_IQ_4);
+        }
+
+        // overwrite impedance with new phase angle
+        // TODO: why is conj needed?
+        float estimated_angle1 = std::arg(std::conj(phase_IQ_sum_1));
+        float estimated_angle2 = std::arg(std::conj(phase_IQ_sum_2));
+        float estimated_angle3 = std::arg(std::conj(phase_IQ_sum_3));
+        float estimated_angle4 = std::arg(std::conj(phase_IQ_sum_4));
+        z1 = std::abs(z1) * Complex(cosf(estimated_angle1), sinf(estimated_angle1));
+        z2 = std::abs(z2) * Complex(cosf(estimated_angle2), sinf(estimated_angle2));
+        z3 = std::abs(z3) * Complex(cosf(estimated_angle3), sinf(estimated_angle3));
+        z4 = std::abs(z4) * Complex(cosf(estimated_angle4), sinf(estimated_angle4));
     }
 
     // constrain impedance magnitude/angle

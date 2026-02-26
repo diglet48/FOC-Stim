@@ -274,8 +274,8 @@ void loop()
     static bool polarity = false;
     static float random_start_angle;
 #ifndef THREEPHASE_PULSE_DEFEAT_RANDOMIZATION
-    polarity = !polarity;
-    random_start_angle = _normalizeAngle(random_start_angle + (_2PI * 19 / 97)); // ~1/5
+    // polarity = !polarity;
+    random_start_angle = _normalizeAngle(random_start_angle + (_2PI * 9 / 557)); // ~1/60
 #endif
 
     // store stats

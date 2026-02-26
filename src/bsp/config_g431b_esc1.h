@@ -41,7 +41,6 @@
 #define MODEL_MAXIMUM_VOLT_SECONDS  3600e-6f    // Xicon 42TU200
 
 // enable for nicer looking waveforms on the scope. Not safe for humans!
-// TODO: implement
 // #define THREEPHASE_PULSE_DEFEAT_RANDOMIZATION
 
 #define CURRENT_SENSE_SCALE_FULL

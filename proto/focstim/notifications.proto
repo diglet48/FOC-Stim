@@ -103,3 +103,8 @@ message NotificationDebugEdging {
     float reduced_power_threshold = 2;
     float reduction = 3;
 }
+
+message NotificationDebugTeleplot {
+    string id = 1;
+    float value = 2;
+}

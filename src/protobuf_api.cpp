@@ -235,6 +235,17 @@ void ProtobufAPI::transmit_notification_debug_as5311(int raw, int tracked, int f
     transmit_message(message);
 }
 
+void ProtobufAPI::transmit_notification_debug_teleplot(const char *id, float value)
+{
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_notification_tag;
+    message.message.notification.which_notification = focstim_rpc_Notification_notification_debug_teleplot_tag;
+    message.message.notification.notification.notification_debug_teleplot.id.arg = (char* )id;
+    message.message.notification.notification.notification_debug_teleplot.id.funcs.encode = encode_string;
+    message.message.notification.notification.notification_debug_teleplot.value = value;
+    transmit_message(message);
+}
+
 void ProtobufAPI::handle_request_firmware_version(focstim_rpc_RequestFirmwareVersion &request, uint32_t id)
 {
     const char* branch = focstim_api_branch_name;

@@ -47,6 +47,12 @@ enum PlayStatus{
 };
 static PlayStatus play_status = PlayStatus::NotPlaying;
 
+static bool volume_locked = false;
+static float locked_potmeter_value = 0.0f;
+static bool last_button_state = true; // active low (pullup)
+static float safety_pot_snapshot = 0.0f;
+static uint32_t safety_pot_snapshot_time = 0;
+
 
 class FocstimV4ProtobufAPI : public ProtobufAPI {
 public:
@@ -132,6 +138,20 @@ public:
     virtual bool capability_potmeter() {return true;};
     virtual bool capability_battery() {return power_manager.is_battery_present;};
     virtual bool capability_lsm6dsox() {return imu.is_sensor_detected;};
+
+    void device_state_set(bool locked) override {
+        volume_locked = locked;
+        user_interface.setLocked(volume_locked);
+        if (volume_locked) {
+            locked_potmeter_value = powf(BSP_ReadPotentiometerPercentage(), 1.f/2);
+            safety_pot_snapshot = BSP_ReadPotentiometerPercentage();
+            safety_pot_snapshot_time = millis();
+        } else {
+            safety_pot_snapshot_time = 0;
+        }
+        BSP_PrintDebugMsg("Volume %s", volume_locked ? "LOCKED" : "UNLOCKED");
+        transmit_notification_device_state(volume_locked);
+    }
 
     void transmit_notification_system_stats(float v_boost_min, float v_boost_max) {
         focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
@@ -539,6 +559,39 @@ void loop()
     // do comms
     protobuf.process_incoming_messages();
 
+    // button events
+    bool current_button_state = BSP_ReadEncoderButton();
+    if (current_button_state != last_button_state) {
+        last_button_state = current_button_state;
+        focstim_rpc_ButtonState state = current_button_state
+            ? focstim_rpc_ButtonState_BUTTON_UP
+            : focstim_rpc_ButtonState_BUTTON_DOWN;
+        protobuf.transmit_notification_button_press(state);
+    }
+
+    // safety: rapid turn-down while locked
+    if (volume_locked) {
+        float raw_pot = BSP_ReadPotentiometerPercentage();
+        uint32_t now = millis();
+        // Peak-track upward immediately; only follow downward via 500 ms timer.
+        if (raw_pot > safety_pot_snapshot) {
+            safety_pot_snapshot = raw_pot;
+            safety_pot_snapshot_time = now;
+        } else if ((now - safety_pot_snapshot_time) >= 500) {
+            safety_pot_snapshot = raw_pot;
+            safety_pot_snapshot_time = now;
+        }
+        float safety_threshold = fminf(0.25f, safety_pot_snapshot / 2.0f);
+        if (safety_pot_snapshot - raw_pot > safety_threshold) {
+            locked_potmeter_value = 0.0f;
+            safety_pot_snapshot = raw_pot;
+            safety_pot_snapshot_time = now;
+            user_interface.setPowerLevel(0);
+            protobuf.transmit_notification_potentiometer(0.0f);
+            BSP_PrintDebugMsg("Safety: rapid turn-down detected, power zeroed");
+        }
+    }
+
     // safety: temperature
     float temperature = BSP_ReadTemperatureSTM();
     if (temperature >= MAXIMUM_TEMPERATURE) {
@@ -600,17 +653,20 @@ void loop()
 
     // transmit potmeter notification
     potentiometer_notification_nospam.step();
-    bool do_transmit_potmeter = false;
-    do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 1);
-    do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 0.1f
-        && abs(BSP_ReadPotentiometerPercentage() - potentiometer_notification_lastvalue) >= 0.001f);
-    if (do_transmit_potmeter) {
+    {
         float pot = BSP_ReadPotentiometerPercentage();
-        protobuf.transmit_notification_potentiometer(powf(pot, 1.f/2));
-        potentiometer_notification_nospam.reset();
-        potentiometer_notification_lastvalue = pot;
-
-        user_interface.setPowerLevel(powf(pot, 1.f/2) * 100);
+        bool do_transmit_potmeter = false;
+        do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 1);
+        do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 0.1f
+            && !volume_locked
+            && abs(pot - potentiometer_notification_lastvalue) >= 0.001f);
+        if (do_transmit_potmeter) {
+            float effective = volume_locked ? locked_potmeter_value : powf(pot, 1.f/2);
+            protobuf.transmit_notification_potentiometer(effective);
+            potentiometer_notification_nospam.reset();
+            potentiometer_notification_lastvalue = pot;
+            user_interface.setPowerLevel(effective * 100);
+        }
     }
 
     // every few seconds, print system stats
@@ -618,6 +674,7 @@ void loop()
     if (print_system_stats_clock.time_seconds > .5) {
         print_system_stats_clock.reset();
         protobuf.transmit_notification_system_stats(v_boost_min, v_boost_max);
+        protobuf.transmit_notification_device_state(volume_locked);
         v_boost_min = 99;
         v_boost_max = 0;
 
@@ -727,8 +784,13 @@ void loop()
     traceline->dt_next = pulse_total_duration * 1e6f;
 
     // mix in potmeter
-    float potmeter_value = BSP_ReadPotentiometerPercentage();
-    potmeter_value = powf(potmeter_value, 1.f/2);
+    float potmeter_value;
+    if (volume_locked) {
+        potmeter_value = locked_potmeter_value;
+    } else {
+        potmeter_value = BSP_ReadPotentiometerPercentage();
+        potmeter_value = powf(potmeter_value, 1.f/2);
+    }
     body_current_amps *= potmeter_value;
 
     // calculate amplitude in amperes (driving current)

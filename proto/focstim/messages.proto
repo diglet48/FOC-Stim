@@ -117,6 +117,17 @@ message RequestLSM6DSOXStop {
 message ResponseLSM6DSOXStop {
 }
 
+// device state
+message DeviceState {
+    bool pot_locked = 1;
+}
+
+message RequestSetDeviceState {
+    DeviceState state = 1;
+}
+message ResponseSetDeviceState {
+}
+
 // debug commands
 message RequestDebugStm32DeepSleep {
 }

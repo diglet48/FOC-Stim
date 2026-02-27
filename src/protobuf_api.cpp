@@ -193,6 +193,27 @@ void ProtobufAPI::transmit_notification_pressure(float pressure)
     transmit_message(message);
 }
 
+#if defined(BOARD_FOCSTIM_V4)
+void ProtobufAPI::transmit_notification_button_press(focstim_rpc_ButtonState state)
+{
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_notification_tag;
+    message.message.notification.which_notification = focstim_rpc_Notification_notification_button_press_tag;
+    message.message.notification.notification.notification_button_press.state = state;
+    transmit_message(message);
+}
+
+void ProtobufAPI::transmit_notification_device_state(bool pot_locked)
+{
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_notification_tag;
+    message.message.notification.which_notification = focstim_rpc_Notification_notification_device_state_tag;
+    message.message.notification.notification.notification_device_state.has_state = true;
+    message.message.notification.notification.notification_device_state.state.pot_locked = pot_locked;
+    transmit_message(message);
+}
+#endif
+
 void ProtobufAPI::transmit_error_response(focstim_rpc_Errors errorcode, uint32_t id)
 {
     focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
@@ -466,6 +487,16 @@ void ProtobufAPI::handle_request_lsm6dsox_stop(focstim_rpc_RequestLSM6DSOXStop &
     transmit_message(message);
 }
 
+void ProtobufAPI::handle_request_set_device_state(focstim_rpc_RequestSetDeviceState &request, uint32_t id)
+{
+    device_state_set(request.state.pot_locked);
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_response_tag;
+    message.message.response.id = id;
+    message.message.response.which_result = focstim_rpc_Response_response_set_device_state_tag;
+    transmit_message(message);
+}
+
 void ProtobufAPI::handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebugStm32DeepSleep &request, uint32_t id)
 {
     while (1) {
@@ -530,6 +561,10 @@ void ProtobufAPI::handle_request(focstim_rpc_Request &request)
 
         case focstim_rpc_Request_request_lsm6dsox_stop_tag:
             handle_request_lsm6dsox_stop(request.params.request_lsm6dsox_stop, id);
+        break;
+
+        case focstim_rpc_Request_request_set_device_state_tag:
+            handle_request_set_device_state(request.params.request_set_device_state, id);
         break;
 
         case focstim_rpc_Request_request_debug_stm32_deep_sleep_tag:

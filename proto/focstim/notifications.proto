@@ -1,12 +1,27 @@
 syntax = "proto3";
 package focstim_rpc;
 
+import "messages.proto";
+
 
 message NotificationBoot {
 }
 
 message NotificationPotentiometer {
     float value = 1;
+}
+
+enum ButtonState {
+    BUTTON_UP = 0;
+    BUTTON_DOWN = 1;
+}
+
+message NotificationButtonPress {
+    ButtonState state = 1;
+}
+
+message NotificationDeviceState {
+    DeviceState state = 1;
 }
 
 message NotificationCurrents {

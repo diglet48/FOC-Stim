@@ -57,6 +57,10 @@ public:
 		dirty |= ip != this->ip;
 		this->ip = ip;
 	}
+	void setLocked(bool locked) {
+		dirty |= locked != this->locked;
+		this->locked = locked;
+	}
 
 	void setSelfTestErrorString(const char* error_string) {
 		strncpy(this->error_string, error_string, sizeof(this->error_string) - 1);
@@ -72,6 +76,7 @@ private:
 	bool battery_is_present;
 	float battery_soc;
 	uint32_t ip;
+	bool locked;
 
 	bool dirty;
 	int partial_update_index;

@@ -17,6 +17,8 @@ message Notification{
         NotificationBattery notification_battery = 7;
         NotificationLSM6DSOX notification_lsm6dsox = 8;
         NotificationPressure notification_pressure = 9;
+        NotificationButtonPress notification_button_press = 10;
+        NotificationDeviceState notification_device_state = 11;
 
         NotificationDebugString notification_debug_string = 1000;
         NotificationDebugAS5311 notification_debug_as5311 = 1001;
@@ -47,6 +49,9 @@ message Request {
         // network
         RequestWifiParametersSet request_wifi_parameters_set = 507;
         RequestWifiIPGet request_wifi_ip_get = 508;
+
+        // device state
+        RequestSetDeviceState request_set_device_state = 509;
 
         // sensors
         RequestLSM6DSOXStart request_lsm6dsox_start = 600;
@@ -79,6 +84,9 @@ message Response {
         // network
         ResponseWifiParametersSet response_wifi_parameters_set = 507;
         ResponseWifiIPGet response_wifi_ip_get = 508;
+
+        // device state
+        ResponseSetDeviceState response_set_device_state = 509;
 
         // sensors
         ResponseLSM6DSOXStart response_lsm6dsox_start = 600;

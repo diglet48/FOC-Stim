@@ -42,6 +42,10 @@ public:
         float temperature, bool usb5v_present);
     void transmit_notification_lsm6dsox(int acc_x, int acc_y, int acc_z, int gyr_x, int gyr_y, int gyr_z);
     void transmit_notification_pressure(float pressure);
+#if defined(BOARD_FOCSTIM_V4)
+    void transmit_notification_button_press(focstim_rpc_ButtonState state);
+    void transmit_notification_device_state(bool pot_locked);
+#endif
 
     void transmit_error_response(focstim_rpc_Errors errorcode, uint32_t id);
 
@@ -62,6 +66,7 @@ public:
     void handle_request_wifi_ip_get(focstim_rpc_RequestWifiIPGet &request, uint32_t id);
     void handle_request_lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart &request, uint32_t id);
     void handle_request_lsm6dsox_stop(focstim_rpc_RequestLSM6DSOXStop &request, uint32_t id);
+    void handle_request_set_device_state(focstim_rpc_RequestSetDeviceState &request, uint32_t id);
 
     void handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebugStm32DeepSleep &request, uint32_t id);
     void handle_request_debug_enter_bootloader(focstim_rpc_RequestDebugEnterBootloader &request, uint32_t id);
@@ -75,6 +80,7 @@ public:
 
     virtual focstim_rpc_Errors lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart& params, float *acc_sensitivity_out, float *gyr_sensitivity_out) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
     virtual focstim_rpc_Errors lsm6dsox_stop() {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
+    virtual void device_state_set(bool pot_locked) {}
 
     virtual focstim_rpc_Errors signal_start_threephase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual focstim_rpc_Errors signal_start_fourphase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}

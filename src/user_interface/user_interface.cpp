@@ -21,6 +21,7 @@
 UserInterface::UserInterface()
     : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, I2C_CLOCK_DISPLAY, I2C_CLOCK_NORMAL)
     , state(UIState::InitBSP)
+    , locked(false)
 {
 }
 
@@ -76,6 +77,16 @@ void UserInterface::repaint()
             display.setTextSize(1);
             display.setCursor(0, -2);
             display.print("power:");
+
+            if (locked) {
+                // draw padlock next to "power:"
+                int lockX = 40;
+                int lockY = 0;
+                display.drawRect(lockX, lockY + 3, 7, 5, SSD1306_WHITE); // body
+                display.drawCircle(lockX + 3, lockY + 3, 2, SSD1306_WHITE); // shackle top
+                display.drawLine(lockX + 1, lockY + 2, lockX + 1, lockY + 3, SSD1306_WHITE); // shackle left
+                display.drawLine(lockX + 5, lockY + 2, lockX + 5, lockY + 3, SSD1306_WHITE); // shackle right
+            }
 
             int a = int(power);
             display.setTextSize(3);

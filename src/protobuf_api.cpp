@@ -200,6 +200,7 @@ void ProtobufAPI::transmit_notification_button_press(focstim_rpc_ButtonState sta
     message.which_message = focstim_rpc_RpcMessage_notification_tag;
     message.message.notification.which_notification = focstim_rpc_Notification_notification_button_press_tag;
     message.message.notification.notification.notification_button_press.state = state;
+    message.message.notification.notification.notification_button_press.timestamp_ms = millis();
     transmit_message(message);
 }
 

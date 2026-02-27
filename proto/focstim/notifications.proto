@@ -18,6 +18,7 @@ enum ButtonState {
 
 message NotificationButtonPress {
     ButtonState state = 1;
+    uint32 timestamp_ms = 2;  // millis() on STM32 (uint32_t, wraps ~49.7 days)
 }
 
 message NotificationDeviceState {

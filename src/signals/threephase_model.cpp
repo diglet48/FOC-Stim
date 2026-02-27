@@ -161,7 +161,6 @@ void ThreephaseModel::play_pulse(
         }
 
         Complex q = proj * envelope.real();
-        Complex q_quadrature = Complex(-q.imag(), q.real());
         proj = proj * rotator;
         context[i % CONTEXT_SIZE].cosine = proj.real();
         context[i % CONTEXT_SIZE].sine = proj.imag();
@@ -171,23 +170,9 @@ void ThreephaseModel::play_pulse(
         context[i % CONTEXT_SIZE].v1_cmd = (v1 * q).real();  // cmd voltage.
         context[i % CONTEXT_SIZE].v2_cmd = (v2 * q).real();
         context[i % CONTEXT_SIZE].v3_cmd = (v3 * q).real();
-        context[i % CONTEXT_SIZE].v1_cmd_quadrature = (v1 * q_quadrature).real();  // cmd voltage.
-        context[i % CONTEXT_SIZE].v2_cmd_quadrature = (v2 * q_quadrature).real();
-        context[i % CONTEXT_SIZE].v3_cmd_quadrature = (v3 * q_quadrature).real();
-
-#if defined(DEADTIME_COMPENSATION_ENABLE)
-        // note1: This does not result in current flow if all voltages are zero or very close to zero.
-        // note2: Assumes current is not discontinuous. (requires R <= 220µh * max(on_time, off_time)).
-        // note3: Assumes current does not change sign during pwm operation.
-#if defined(STIM_DYNAMIC_VOLTAGE)
-        float dtcomp = DEADTIME_COMPENSATION_PERCENTAGE * BSP_ReadVBus();
-#elif defined(STIM_STATIC_VOLTAGE)
-        float dtcomp = DEADTIME_COMPENSATION_PERCENTAGE * STIM_PSU_VOLTAGE;
-#endif
-        context[i % CONTEXT_SIZE].v1_cmd += (context[i % CONTEXT_SIZE].i1_cmd > 0 ? 1 : -1) * dtcomp;
-        context[i % CONTEXT_SIZE].v2_cmd += (context[i % CONTEXT_SIZE].i2_cmd > 0 ? 1 : -1) * dtcomp;
-        context[i % CONTEXT_SIZE].v3_cmd += (context[i % CONTEXT_SIZE].i3_cmd > 0 ? 1 : -1) * dtcomp;
-#endif
+        context[i % CONTEXT_SIZE].v1_cmd_quadrature = (v1 * q).imag();  // cmd voltage shifted 90 deg.
+        context[i % CONTEXT_SIZE].v2_cmd_quadrature = (v2 * q).imag();
+        context[i % CONTEXT_SIZE].v3_cmd_quadrature = (v3 * q).imag();
 
         atomic_signal_fence(std::memory_order_release);
         producer_index = i;
@@ -315,17 +300,6 @@ void ThreephaseModel::interrupt_fn()
         }
     }
 
-    // compute duty cycle center
-    float v_min = min({
-        context[read_index].v1_cmd,
-        context[read_index].v2_cmd,
-        context[read_index].v3_cmd,
-    });
-    float v_max = max({
-        context[read_index].v1_cmd,
-        context[read_index].v2_cmd,
-        context[read_index].v3_cmd,
-    });
 #ifdef STIM_DYNAMIC_VOLTAGE
     float vbus = BSP_ReadVBus();
     pulse_stats.v_bus_max = max(pulse_stats.v_bus_max, vbus);
@@ -334,6 +308,33 @@ void ThreephaseModel::interrupt_fn()
 #else
     float vbus = STIM_PSU_VOLTAGE;
 #endif
+
+#if defined(DEADTIME_COMPENSATION_ENABLE)
+    auto dtcomp = [&](float voltage, float current) {
+        float comp_percent = 0;
+        if (current >= DEADTIME_COMPENSATION_CURRENT_THRESHOLD) {
+            comp_percent = DEADTIME_COMPENSATION_PERCENTAGE;
+        }
+        else if (current <= -DEADTIME_COMPENSATION_CURRENT_THRESHOLD) {
+            comp_percent = -DEADTIME_COMPENSATION_PERCENTAGE;
+        } else {
+            comp_percent = DEADTIME_COMPENSATION_PERCENTAGE * current / DEADTIME_COMPENSATION_CURRENT_THRESHOLD;
+        }
+        return voltage + comp_percent * vbus;
+    };
+#else
+    auto dtcomp = [&](float voltage, float current) {
+        return voltage;
+    };
+#endif
+    float v1 = dtcomp(context[read_index].v1_cmd, context[read_index].i1_cmd);
+    float v2 = dtcomp(context[read_index].v2_cmd, context[read_index].i2_cmd);
+    float v3 = dtcomp(context[read_index].v3_cmd, context[read_index].i3_cmd);
+
+    // compute duty cycle center
+    float v_min = min({v1, v2, v3});
+    float v_max = max({v1, v2, v3});
+
     float center = vbus / 2;
     if (center + v_max > (vbus * STIM_PWM_MAX_DUTY_CYCLE)) {
         center = (vbus * STIM_PWM_MAX_DUTY_CYCLE) - v_max;
@@ -341,9 +342,9 @@ void ThreephaseModel::interrupt_fn()
 
     // write pwm
     BSP_SetPWM3(
-        (context[read_index].v1_cmd + center) / vbus, // TODO: precompute?
-        (context[read_index].v2_cmd + center) / vbus,
-        (context[read_index].v3_cmd + center) / vbus
+        (v1 + center) / vbus,
+        (v2 + center) / vbus,
+        (v3 + center) / vbus
     );
 
     // read currents

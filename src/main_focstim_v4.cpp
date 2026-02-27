@@ -13,7 +13,6 @@
 #include "signals/fourphase_model.h"
 #include "battery/power_manager.h"
 #include <Wire.h>
-#include "axis/buffered_axis.h"
 #include "axis/simple_axis.h"
 #include "timestamp_sync.h"
 #include "sensors/as5311.h"

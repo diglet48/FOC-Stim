@@ -49,6 +49,7 @@ static PlayStatus play_status = PlayStatus::NotPlaying;
 
 static bool volume_locked = false;
 static float locked_potmeter_value = 0.0f;
+static bool pot_unlock_catchup = false; // true while pot > locked value after unlock
 static bool last_button_state = true; // active low (pullup)
 static float safety_pot_snapshot = 0.0f;
 static uint32_t safety_pot_snapshot_time = 0;
@@ -146,8 +147,13 @@ public:
             locked_potmeter_value = powf(BSP_ReadPotentiometerPercentage(), 1.f/2);
             safety_pot_snapshot = BSP_ReadPotentiometerPercentage();
             safety_pot_snapshot_time = millis();
+            pot_unlock_catchup = false;
         } else {
             safety_pot_snapshot_time = 0;
+            // If the pot is currently above the locked value, enter pickup mode
+            // so the volume doesn't jump on unlock.
+            float cur = powf(BSP_ReadPotentiometerPercentage(), 1.f/2);
+            pot_unlock_catchup = (cur > locked_potmeter_value);
         }
         BSP_PrintDebugMsg("Volume %s", volume_locked ? "LOCKED" : "UNLOCKED");
         transmit_notification_device_state(volume_locked);
@@ -661,7 +667,14 @@ void loop()
             && !volume_locked
             && abs(pot - potentiometer_notification_lastvalue) >= 0.001f);
         if (do_transmit_potmeter) {
-            float effective = volume_locked ? locked_potmeter_value : powf(pot, 1.f/2);
+            float effective;
+            if (volume_locked) {
+                effective = locked_potmeter_value;
+            } else {
+                float p = powf(pot, 1.f/2);
+                if (pot_unlock_catchup && p <= locked_potmeter_value) pot_unlock_catchup = false;
+                effective = pot_unlock_catchup ? locked_potmeter_value : p;
+            }
             protobuf.transmit_notification_potentiometer(effective);
             potentiometer_notification_nospam.reset();
             potentiometer_notification_lastvalue = pot;
@@ -788,8 +801,9 @@ void loop()
     if (volume_locked) {
         potmeter_value = locked_potmeter_value;
     } else {
-        potmeter_value = BSP_ReadPotentiometerPercentage();
-        potmeter_value = powf(potmeter_value, 1.f/2);
+        potmeter_value = powf(BSP_ReadPotentiometerPercentage(), 1.f/2);
+        if (pot_unlock_catchup && potmeter_value <= locked_potmeter_value) pot_unlock_catchup = false;
+        if (pot_unlock_catchup) potmeter_value = locked_potmeter_value;
     }
     body_current_amps *= potmeter_value;
 

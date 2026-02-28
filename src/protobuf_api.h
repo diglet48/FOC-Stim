@@ -77,7 +77,7 @@ public:
 
     virtual focstim_rpc_Errors lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart& params, float *acc_sensitivity_out, float *gyr_sensitivity_out) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
     virtual focstim_rpc_Errors lsm6dsox_stop() {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
-    virtual focstim_rpc_Errors lock_device_volume(bool locked) {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
+    virtual focstim_rpc_Errors lock_device_volume(bool locked) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
 
     virtual focstim_rpc_Errors signal_start_threephase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual focstim_rpc_Errors signal_start_fourphase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}

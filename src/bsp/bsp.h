@@ -6,6 +6,7 @@
 #include "bsp/config_g473re_focstim_v4.h"
 #include "vec.h"
 #include <functional>
+#include <cstdint>
 
 
 void BSP_Init();
@@ -44,12 +45,12 @@ Vec4f BSP_ReadPhaseCurrents4();
 
 #ifdef ARDUINO_B_G431B_ESC1
 float BSP_ReadTemperatureOnboardNTC();  // onboard temperature sensor (ESC1)
+float BSP_ReadPotentiometerPercentage();
 #endif
 
 // various sensors
 float BSP_ReadTemperatureSTM();         // stm32 internal temperature sensor.
 float BSP_ReadChipAnalogVoltage();      // stm32 vdda
-float BSP_ReadPotentiometerPercentage();
 float BSP_ReadVBus();
 
 // LED
@@ -82,6 +83,7 @@ Vec2f BSP_ReadVSYSRange();
 float BSP_BoostDutyCycle(); // debug, remove
 bool BSP_ReadPGood();       // low = usb5v present. high = not present.
 bool BSP_ReadEncoderButton();
+uint16_t BSP_ReadEncoderPosition();
 #endif
 
 

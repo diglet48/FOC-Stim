@@ -1,12 +1,20 @@
 syntax = "proto3";
 package focstim_rpc;
 
+import "constants.proto";
+
 
 message NotificationBoot {
 }
 
-message NotificationPotentiometer {
-    float value = 1;
+message NotificationDeviceVolume {
+    float volume = 1;   // (0, 1)
+    bool locked = 2;
+}
+
+message NotificationButtonPress {
+    ButtonState state = 1;
+    uint32 timestamp_ms = 2;  // millis() on STM32 (uint32_t, wraps ~49.7 days)
 }
 
 message NotificationCurrents {

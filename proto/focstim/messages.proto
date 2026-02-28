@@ -28,7 +28,7 @@ message ResponseCapabilitiesGet {
     bool threephase = 1;
     bool fourphase = 2;
     bool battery = 3;       // true if device has a battery installed
-    bool potentiometer = 4;
+    bool device_volume = 4;
     float maximum_waveform_amplitude_amps = 5;
     bool lsm6dsox = 6;
 }
@@ -99,6 +99,12 @@ message RequestWifiIPGet {
 }
 message ResponseWifiIPGet {
     uint32 ip = 1;
+}
+
+message RequestLockDeviceVolume {
+    bool lock = 1;
+}
+message ResponseLockDeviceVolume {
 }
 
 // sensors

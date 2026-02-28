@@ -14,8 +14,6 @@
 #define ADC_VOLTAGE 2.9f
 #define ADC_SCALE   4095
 #define DAC_MAX_VALUE 4095
-#define ENCODER_100_PERCENT_VALUE   (24 * 4 * 2)    // 2 Rotations
-#define ENCODER_INIT_CNT            0
 
 #define LED_TIMER_FREQ_Hz       1'000'000UL
 #define LED_TIMER_PWM_FREQ_Hz   1000UL
@@ -874,7 +872,7 @@ void initEncoderTimer()
 {
     __HAL_RCC_TIM3_CLK_ENABLE();
 
-    encoder_timer->CNT = ENCODER_INIT_CNT;
+    encoder_timer->CNT = 0;
     encoder_timer->TISEL = 0;					// TIMx_CH1 = tim_ti1_in0 and TIMx_CH2 = tim_ti2_in0
     encoder_timer->CCMR1 |= TIM_CCMR1_CC1S_0;	// tim_ti1fp1 mapped on tim_ti1
     encoder_timer->CCMR1 |= TIM_CCMR1_CC2S_0;	// tim_ti2fp2 mapped on tim_ti2
@@ -882,8 +880,6 @@ void initEncoderTimer()
     encoder_timer->CCER |= TIM_CCER_CC1P;       // invert polarity so clockwise = increase
 
     encoder_timer->CR1 |= TIM_CR1_CEN;
-
-    uint32_t cnt = encoder_timer->CNT;
 }
 
 void initVRef()
@@ -1158,22 +1154,6 @@ float BSP_ReadTemperatureSTM()
     return temp;
 }
 
-float BSP_ReadPotentiometerPercentage()
-{
-    // FIXME
-    // return 1;
-
-    int16_t cnt = encoder_timer->CNT & 0xFFFF;
-    if (cnt < 0) {
-        cnt = 0;
-        CLEAR_BIT(encoder_timer->CNT, 0xFFFF);
-    } else if (cnt >= ENCODER_100_PERCENT_VALUE) {
-        cnt = ENCODER_100_PERCENT_VALUE;
-        MODIFY_REG(encoder_timer->CNT, 0xFFFF, cnt);
-    }
-    return std::clamp<float>(cnt / float(ENCODER_100_PERCENT_VALUE), 0.f, 1.f);
-}
-
 float BSP_ReadTemperatureOnboardNTC()
 {
     return 0;   // not supported
@@ -1286,7 +1266,12 @@ bool BSP_ReadPGood()
 
 bool BSP_ReadEncoderButton()
 {
-    return LL_GPIO_IsInputPinSet(ENCODER_GPIO_PORT, ENCODER_BUTTON_PIN);
+    return ! LL_GPIO_IsInputPinSet(ENCODER_GPIO_PORT, ENCODER_BUTTON_PIN);
+}
+
+uint16_t BSP_ReadEncoderPosition()
+{
+    return (uint16_t)encoder_timer->CNT;
 }
 
 void BSP_PrintDebugMsg(const char *fmt, ...)

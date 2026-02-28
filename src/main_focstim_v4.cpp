@@ -19,6 +19,8 @@
 #include "sensors/imu.h"
 #include "sensors/pressure.h"
 #include "user_interface/user_interface.h"
+#include "user_interface/encoder.h"
+#include "user_interface/button.h"
 #include "esp32.h"
 #include "foc_error.h"
 
@@ -37,6 +39,8 @@ ESP32 esp32;
 IMU imu;
 AS5311 as5311{};
 PressureSensor pressureSensor{};
+Encoder encoder{};
+Button button{};
 
 
 enum PlayStatus{
@@ -126,9 +130,14 @@ public:
         return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
+    virtual focstim_rpc_Errors lock_device_volume(bool locked) {
+        encoder.setLocked(locked);
+        return focstim_rpc_Errors_ERROR_UNKNOWN;
+    }
+
     virtual bool capability_threephase() {return true;};
     virtual bool capability_fourphase() {return true;};
-    virtual bool capability_potmeter() {return true;};
+    virtual bool capability_device_volume() {return true;};
     virtual bool capability_battery() {return power_manager.is_battery_present;};
     virtual bool capability_lsm6dsox() {return imu.is_sensor_detected;};
 
@@ -532,8 +541,8 @@ void loop()
     static float v_boost_max = 0;
     static Clock ip_refresh_clock;
 
-    static Clock potentiometer_notification_nospam;
-    static float potentiometer_notification_lastvalue = 0;
+    static Clock device_volume_nospam;
+    static float device_volume_last_value = 0;
 
     // do comms
     protobuf.process_incoming_messages();
@@ -597,20 +606,42 @@ void loop()
         }
     }
 
-    // transmit potmeter notification
-    potentiometer_notification_nospam.step();
-    bool do_transmit_potmeter = false;
-    do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 1);
-    do_transmit_potmeter |= (potentiometer_notification_nospam.time_seconds > 0.1f
-        && abs(BSP_ReadPotentiometerPercentage() - potentiometer_notification_lastvalue) >= 0.001f);
-    if (do_transmit_potmeter) {
-        float pot = BSP_ReadPotentiometerPercentage();
-        protobuf.transmit_notification_potentiometer(powf(pot, 1.f/2));
-        potentiometer_notification_nospam.reset();
-        potentiometer_notification_lastvalue = pot;
-
-        user_interface.setPowerLevel(powf(pot, 1.f/2) * 100);
+    // encoder stuff
+    encoder.update();
+    device_volume_nospam.step();
+    bool do_transmit_device_volume = false;
+    do_transmit_device_volume |= (device_volume_nospam.time_seconds > 1);
+    do_transmit_device_volume |= (device_volume_nospam.time_seconds > 0.1f
+        && (encoder.volume() != device_volume_last_value));
+    if (do_transmit_device_volume) {
+        device_volume_nospam.reset();
+        device_volume_last_value = encoder.volume();
+        protobuf.transmit_notification_device_volume(encoder.volume(), encoder.isLocked());
     }
+
+    // process button events
+    switch (button.getEvent()) {
+        case ButtonEvent::Press:
+            protobuf.transmit_notification_button_press(true, millis());
+            break;
+        case ButtonEvent::Release:
+            protobuf.transmit_notification_button_press(false, millis());
+        break;
+        default:
+        break;
+    };
+
+    // process encoder quick-turns
+    if (encoder.isLocked()) {
+        if (encoder.isQuickTurned()) {
+            encoder.setLocked(false);
+            encoder.resetVolume();
+            protobuf.transmit_notification_device_volume(encoder.volume(), encoder.isLocked());
+        }
+    }
+    user_interface.setLockState(encoder.isLocked());
+    user_interface.setUnlockProgress(encoder.unlockProgress());
+    user_interface.setPowerLevel(encoder.volume());
 
     // every few seconds, print system stats
     print_system_stats_clock.step();
@@ -725,10 +756,8 @@ void loop()
     pulse_total_duration = pulse_active_duration + pulse_pause_duration;
     traceline->dt_next = pulse_total_duration * 1e6f;
 
-    // mix in potmeter
-    float potmeter_value = BSP_ReadPotentiometerPercentage();
-    potmeter_value = powf(potmeter_value, 1.f/2);
-    body_current_amps *= potmeter_value;
+    // mix in encoder
+    body_current_amps *= encoder.volume();
 
     // calculate amplitude in amperes (driving current)
     float driving_current_amps = body_current_amps * STIM_WINDING_RATIO;

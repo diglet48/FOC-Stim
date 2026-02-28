@@ -25,7 +25,7 @@ public:
     void transmit_notification(focstim_rpc_Notification &notification);
 
     void transmit_notification_boot();
-    void transmit_notification_potentiometer(float value);
+    void transmit_notification_device_volume(float value, bool locked);
     void transmit_notification_currents(
         float rms_a, float rms_b, float rms_c, float rms_d,
         float peak_a, float peak_b, float peak_c, float peak_d,
@@ -42,6 +42,7 @@ public:
         float temperature, bool usb5v_present);
     void transmit_notification_lsm6dsox(int acc_x, int acc_y, int acc_z, int gyr_x, int gyr_y, int gyr_z);
     void transmit_notification_pressure(float pressure);
+    void transmit_notification_button_press(bool press, uint32_t timestamp_ms);
 
     void transmit_error_response(focstim_rpc_Errors errorcode, uint32_t id);
 
@@ -60,6 +61,7 @@ public:
     void handle_request_capabilities_get(focstim_rpc_RequestCapabilitiesGet &request, uint32_t id);
     void handle_request_wifi_parameters_set(focstim_rpc_RequestWifiParametersSet &request, uint32_t id);
     void handle_request_wifi_ip_get(focstim_rpc_RequestWifiIPGet &request, uint32_t id);
+    void handle_request_lock_device_volume(focstim_rpc_RequestLockDeviceVolume &request, uint32_t id);
     void handle_request_lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart &request, uint32_t id);
     void handle_request_lsm6dsox_stop(focstim_rpc_RequestLSM6DSOXStop &request, uint32_t id);
 
@@ -75,6 +77,7 @@ public:
 
     virtual focstim_rpc_Errors lsm6dsox_start(focstim_rpc_RequestLSM6DSOXStart& params, float *acc_sensitivity_out, float *gyr_sensitivity_out) {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
     virtual focstim_rpc_Errors lsm6dsox_stop() {return focstim_rpc_Errors_ERROR_UNKNOWN_REQUEST;}
+    virtual focstim_rpc_Errors lock_device_volume(bool locked) {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
 
     virtual focstim_rpc_Errors signal_start_threephase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual focstim_rpc_Errors signal_start_fourphase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
@@ -83,7 +86,7 @@ public:
 
     virtual bool capability_threephase() = 0;
     virtual bool capability_fourphase() = 0;
-    virtual bool capability_potmeter() = 0;
+    virtual bool capability_device_volume() = 0;
     virtual bool capability_battery() = 0;
     virtual bool capability_lsm6dsox() = 0;
 

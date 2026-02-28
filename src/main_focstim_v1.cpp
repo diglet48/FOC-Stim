@@ -55,7 +55,7 @@ public:
 
     virtual bool capability_threephase() {return true;};
     virtual bool capability_fourphase() {return false;};
-    virtual bool capability_potmeter() {return true;};
+    virtual bool capability_device_volume() {return true;};
     virtual bool capability_battery() {return false;};
     virtual bool capability_lsm6dsox() {return false;};
 
@@ -192,7 +192,7 @@ void loop()
         && abs(BSP_ReadPotentiometerPercentage() - potentiometer_notification_lastvalue) >= 0.001f);
     if (do_transmit_potmeter) {
         float pot = BSP_ReadPotentiometerPercentage();
-        protobuf.transmit_notification_potentiometer(powf(pot, 1.f/2));
+        protobuf.transmit_notification_device_volume(powf(pot, 1.f/2), false);
         potentiometer_notification_nospam.reset();
         potentiometer_notification_lastvalue = pot;
     }

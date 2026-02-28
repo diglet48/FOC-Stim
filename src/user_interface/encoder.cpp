@@ -1,6 +1,8 @@
 #include "encoder.h"
 #include "bsp/bsp.h"
 
+#ifdef BOARD_FOCSTIM_V4
+
 #include <Arduino.h>
 
 #define ENCODER_TOTAL_TICKS         200 // 1 rotation = 96 ticks
@@ -68,3 +70,5 @@ bool Encoder::isQuickTurned() const
 {
     return negative_velocity >= QUICK_TURN_THRESHOLD;
 }
+
+#endif

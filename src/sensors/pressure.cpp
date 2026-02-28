@@ -119,7 +119,7 @@ float PressureSensor::read_sample()
     float pressure;
     pressure = (reading - OUTPUT_MIN) * (MAXIMUM_PSI - MINIMUM_PSI);
     pressure = (pressure / (OUTPUT_MAX - OUTPUT_MIN)) + MINIMUM_PSI;
-    pressure = pressure * 6894.7573;  // PSI to Pa
+    pressure = pressure * 6894.7573f;  // PSI to Pa
 
     Wire.setClock(I2C_CLOCK_NORMAL);
 

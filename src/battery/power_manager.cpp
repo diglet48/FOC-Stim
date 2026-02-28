@@ -159,7 +159,7 @@ void PowerManager::read_voltage()
 
 void PowerManager::read_soh()
 {
-    cached_soh = lipo.soh() * 0.01;
+    cached_soh = lipo.soh() * 0.01f;
 }
 
 void PowerManager::read_remaining_capacity_uf()

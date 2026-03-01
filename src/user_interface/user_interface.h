@@ -21,6 +21,7 @@ public:
 		Playing,
 		Error,
 		SelfTestError,
+		FirmwareUpdate,
 	};
 
 	UserInterface();

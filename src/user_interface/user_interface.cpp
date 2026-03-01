@@ -134,6 +134,7 @@ void UserInterface::repaint()
         }
 
         case UIState::SelfTestError:
+        case UIState::FirmwareUpdate:
         break;
     }
 
@@ -182,6 +183,15 @@ void UserInterface::repaint()
 
             display.setCursor(0, 0);
             display.print(error_string);
+            break;
+        case UIState::FirmwareUpdate:
+            // display.setCursor(128 - 6*15, 31-7);
+            display.setCursor(0, 0);
+            display.print("Firmware update");
+            display.setCursor(0, 8);
+            display.print("Remove electrodes!");
+            display.setCursor(0, 24);
+            display.printf("stm32 v%i.%i.%i", focstim_api_version_major, focstim_api_version_minor, focstim_api_version_revision);
             break;
     }
 }

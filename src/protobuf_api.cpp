@@ -506,6 +506,7 @@ void ProtobufAPI::handle_request_debug_stm32_deep_sleep(focstim_rpc_RequestDebug
 
 void ProtobufAPI::handle_request_debug_enter_bootloader(focstim_rpc_RequestDebugEnterBootloader &request, uint32_t id)
 {
+    before_bootloader();
     BSP_ResetAndJumpToBootloader();
 }
 

@@ -82,6 +82,7 @@ public:
     virtual focstim_rpc_Errors signal_start_threephase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual focstim_rpc_Errors signal_start_fourphase() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
     virtual focstim_rpc_Errors signal_start_fourphase_individual_electrodes() {return focstim_rpc_Errors_ERROR_OUTPUT_NOT_SUPPORTED;}
+    virtual void before_bootloader() {}
     virtual void signal_stop() {}
 
     virtual bool capability_threephase() = 0;

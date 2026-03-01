@@ -135,6 +135,31 @@ public:
         return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
+    virtual void before_bootloader() {
+        // hardware bug: when in bootloader mode, the driver pins are configured
+        // in such a way that one driver is enabled. This causes current flow
+        // that saturates the transformer and repeatedly hits the current limit
+        // of the driver.
+        // mitigation: drain the boost circuit caps before entering bootloader.
+        BSP_SetBoostVoltage(0);         // disable boost circuit
+        BSP_SetBoostEnable(false);
+        BSP_SetPWM4Atomic(0, 0, 0, 0);
+        BSP_OutputEnable(1, 1, 1, 1);   // enable all drivers to drain all the energy in the boost caps
+        Clock k;
+        while (BSP_ReadVBus() > 6) {    // drain to 6v
+            k.step();
+            if (k.time_seconds > 1) {
+                // give up after 1 second
+                break;
+            }
+        }
+        BSP_DisableOutputs();
+
+        user_interface.setState(UserInterface::FirmwareUpdate);
+        user_interface.repaint();
+        user_interface.full_update();
+    }
+
     virtual bool capability_threephase() {return true;};
     virtual bool capability_fourphase() {return true;};
     virtual bool capability_device_volume() {return true;};

@@ -113,10 +113,10 @@ public:
     Complex phase_IQ_3 = {};
     Complex phase_IQ_4 = {};
 
-    Complex phase_IQ_sum_1 = {};
-    Complex phase_IQ_sum_2 = {};
-    Complex phase_IQ_sum_3 = {};
-    Complex phase_IQ_sum_4 = {};
+    Complex phase_IQ_avg_1 = {};
+    Complex phase_IQ_avg_2 = {};
+    Complex phase_IQ_avg_3 = {};
+    Complex phase_IQ_avg_4 = {};
 
     Vec4f integrated_cmd = {};
     Vec4f integrated_meas = {};

@@ -28,9 +28,9 @@ static float find_v_drive(Complex p1, Complex p2, Complex p3) {
 void ThreephaseModel::init(std::function<void(FOCError)> emergency_stop_fn) {
     this->emergency_stop_fn = emergency_stop_fn;
 
-    phase_IQ_sum_1 = Complex(.1, 0);
-    phase_IQ_sum_2 = Complex(.1, 0);
-    phase_IQ_sum_3 = Complex(.1, 0);
+    phase_IQ_avg_1 = Complex(.1, 0);
+    phase_IQ_avg_2 = Complex(.1, 0);
+    phase_IQ_avg_3 = Complex(.1, 0);
 
     z1 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of first output
     z2 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of second output
@@ -494,31 +494,31 @@ void ThreephaseModel::model_update(Complex p1, Complex p2, Complex p3)
         // slowly converge to new parameters
         float learning_rate = .01f;
         if (std::abs(p1) > minimum_current_for_update) {
-            phase_IQ_sum_1 = phase_IQ_sum_1 * (1 - learning_rate) + phase_IQ_1 * learning_rate;
+            phase_IQ_avg_1 = phase_IQ_avg_1 * (1 - learning_rate) + phase_IQ_1 * learning_rate;
         }
         if (std::abs(p2) > minimum_current_for_update) {
-            phase_IQ_sum_2 = phase_IQ_sum_2 * (1 - learning_rate) + phase_IQ_2 * learning_rate;
+            phase_IQ_avg_2 = phase_IQ_avg_2 * (1 - learning_rate) + phase_IQ_2 * learning_rate;
         }
         if (std::abs(p3) > minimum_current_for_update) {
-            phase_IQ_sum_3 = phase_IQ_sum_3 * (1 - learning_rate) + phase_IQ_3 * learning_rate;
+            phase_IQ_avg_3 = phase_IQ_avg_3 * (1 - learning_rate) + phase_IQ_3 * learning_rate;
         }
 
         // clamp to avoid problems near zero.
         float minimum_magnitude = 0.01f; // ~watt, meaning really low power.
-        if (std::abs(phase_IQ_sum_1) <= minimum_magnitude) {
-            phase_IQ_sum_1 *= minimum_magnitude / std::abs(phase_IQ_sum_1);
+        if (std::abs(phase_IQ_avg_1) <= minimum_magnitude) {
+            phase_IQ_avg_1 *= minimum_magnitude / std::abs(phase_IQ_avg_1);
         }
-        if (std::abs(phase_IQ_sum_2) <= minimum_magnitude) {
-            phase_IQ_sum_2 *= minimum_magnitude / std::abs(phase_IQ_sum_2);
+        if (std::abs(phase_IQ_avg_2) <= minimum_magnitude) {
+            phase_IQ_avg_2 *= minimum_magnitude / std::abs(phase_IQ_avg_2);
         }
-        if (std::abs(phase_IQ_sum_3) <= minimum_magnitude) {
-            phase_IQ_sum_3 *= minimum_magnitude / std::abs(phase_IQ_sum_3);
+        if (std::abs(phase_IQ_avg_3) <= minimum_magnitude) {
+            phase_IQ_avg_3 *= minimum_magnitude / std::abs(phase_IQ_avg_3);
         }
 
         // overwrite impedance with new phase angle
-        z1 = std::polar(std::abs(z1), std::arg(phase_IQ_sum_1));
-        z2 = std::polar(std::abs(z2), std::arg(phase_IQ_sum_2));
-        z3 = std::polar(std::abs(z3), std::arg(phase_IQ_sum_3));
+        z1 = std::polar(std::abs(z1), std::arg(phase_IQ_avg_1));
+        z2 = std::polar(std::abs(z2), std::arg(phase_IQ_avg_2));
+        z3 = std::polar(std::abs(z3), std::arg(phase_IQ_avg_3));
     }
 
     // constrain impedance magnitude/angle

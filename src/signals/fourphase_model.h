@@ -29,7 +29,7 @@ public:
 
     void interrupt_fn();
     void accumulate_errors();
-    void model_update(Complex p1, Complex p2, Complex p3, Complex p4, Complex v1, Complex v2, Complex v3, Complex v4);
+    void model_update(Complex p1, Complex p2, Complex p3, Complex p4);
 
     // electrode impedance
     Complex z1 = Complex(0, 0);

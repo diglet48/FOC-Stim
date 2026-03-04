@@ -33,7 +33,7 @@ message NotificationCurrents {
 
 message NotificationModelEstimation {
     float resistance_a = 1;     // estimated output resistance, including output stage
-    float reluctance_a = 2;     // at 1000hz (?)
+    float reluctance_a = 2;     // at the current carrier frequency
     float resistance_b = 3;
     float reluctance_b = 4;
     float resistance_c = 5;

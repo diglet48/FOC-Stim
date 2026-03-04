@@ -26,7 +26,7 @@ public:
 
     void interrupt_fn();
     void accumulate_errors();
-    void model_update(Complex p1, Complex p2, Complex p3, Complex v1, Complex v2, Complex v4);
+    void model_update(Complex p1, Complex p2, Complex p3);
 
     Complex z1 = Complex(0, 0); // impedance of first output
     Complex z2 = Complex(0, 0); // impedance of second output

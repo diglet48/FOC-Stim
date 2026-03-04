@@ -246,8 +246,7 @@ void FourphaseModel::play_pulse(
         accumulate_errors();
     }
 
-    // TODO: if v_boost dropped too much during the pulse, do not perform update step.
-    model_update(p1, p2, p3, p4, v1, v2, v3, v4);
+    model_update(p1, p2, p3, p4);
 
     // update stats
     total_stats.current_max = {
@@ -468,7 +467,7 @@ void FourphaseModel::accumulate_errors()
     phase_IQ_4 += Complex(context[i].v4_cmd, context[i].v4_cmd_quadrature) * context[i].i4_meas;
 }
 
-void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4, Complex v1, Complex v2, Complex v3, Complex v4)
+void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4)
 {
     // update impedance magnitude
     {
@@ -498,10 +497,10 @@ void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4
         float step_size = interpolate(error_ratio, 0.01f, 0.3f, .1f, 1.0f); // 1% error = 0.1 step. 30% error = 1.0 step
 
         // gradient descent update step. Change impedance magnitude only
-        z1 = Complex(std::abs(z1) - step_size * std::abs(v1) * (meas_1 - cmd_1), 0);
-        z2 = Complex(std::abs(z2) - step_size * std::abs(v2) * (meas_2 - cmd_2), 0);
-        z3 = Complex(std::abs(z3) - step_size * std::abs(v3) * (meas_3 - cmd_3), 0);
-        z4 = Complex(std::abs(z4) - step_size * std::abs(v4) * (meas_4 - cmd_4), 0);
+        z1 = Complex(std::abs(z1) - step_size * std::abs(p1 * z1) * (meas_1 - cmd_1), 0);
+        z2 = Complex(std::abs(z2) - step_size * std::abs(p2 * z2) * (meas_2 - cmd_2), 0);
+        z3 = Complex(std::abs(z3) - step_size * std::abs(p3 * z3) * (meas_3 - cmd_3), 0);
+        z4 = Complex(std::abs(z4) - step_size * std::abs(p4 * z4) * (meas_4 - cmd_4), 0);
 
         // // debug SLOW
         // static int i = 0;
@@ -550,28 +549,23 @@ void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4
         // clamp to avoid problems near zero.
         float minimum_magnitude = 0.01f; // ~watt, meaning really low power.
         if (std::abs(phase_IQ_sum_1) <= minimum_magnitude) {
-            phase_IQ_sum_1 *= minimum_magnitude / std::abs(phase_IQ_1);
+            phase_IQ_sum_1 *= minimum_magnitude / std::abs(phase_IQ_sum_1);
         }
         if (std::abs(phase_IQ_sum_2) <= minimum_magnitude) {
-            phase_IQ_sum_2 *= minimum_magnitude / std::abs(phase_IQ_2);
+            phase_IQ_sum_2 *= minimum_magnitude / std::abs(phase_IQ_sum_2);
         }
         if (std::abs(phase_IQ_sum_3) <= minimum_magnitude) {
-            phase_IQ_sum_3 *= minimum_magnitude / std::abs(phase_IQ_3);
+            phase_IQ_sum_3 *= minimum_magnitude / std::abs(phase_IQ_sum_3);
         }
         if (std::abs(phase_IQ_sum_4) <= minimum_magnitude) {
-            phase_IQ_sum_4 *= minimum_magnitude / std::abs(phase_IQ_4);
+            phase_IQ_sum_4 *= minimum_magnitude / std::abs(phase_IQ_sum_4);
         }
 
         // overwrite impedance with new phase angle
-        // TODO: why is conj needed?
-        float estimated_angle1 = std::arg(std::conj(phase_IQ_sum_1));
-        float estimated_angle2 = std::arg(std::conj(phase_IQ_sum_2));
-        float estimated_angle3 = std::arg(std::conj(phase_IQ_sum_3));
-        float estimated_angle4 = std::arg(std::conj(phase_IQ_sum_4));
-        z1 = std::abs(z1) * Complex(cosf(estimated_angle1), sinf(estimated_angle1));
-        z2 = std::abs(z2) * Complex(cosf(estimated_angle2), sinf(estimated_angle2));
-        z3 = std::abs(z3) * Complex(cosf(estimated_angle3), sinf(estimated_angle3));
-        z4 = std::abs(z4) * Complex(cosf(estimated_angle4), sinf(estimated_angle4));
+        z1 = std::polar(std::abs(z1), std::arg(phase_IQ_sum_1));
+        z2 = std::polar(std::abs(z2), std::arg(phase_IQ_sum_2));
+        z3 = std::polar(std::abs(z3), std::arg(phase_IQ_sum_3));
+        z4 = std::polar(std::abs(z4), std::arg(phase_IQ_sum_4));
     }
 
     // constrain impedance magnitude/angle

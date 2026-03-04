@@ -16,27 +16,11 @@
 // board temperature limits
 #define MAXIMUM_TEMPERATURE 60.f    // degrees celsius.
 
-// boost voltage
+// boost voltage control
 #define STIM_DYNAMIC_VOLTAGE
-#define STIM_BOOST_VOLTAGE 22.f                     // the configured boost voltage
-#define STIM_BOOST_VOLTAGE_OK_THRESHOLD 21.5f       // the minimum boost voltage required before starting a pulse
-#define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 19.f       // the lowest the boost voltage is allowed to drop during a pulse
-#define STIM_BOOST_OVERVOLTAGE_THRESHOLD 23.f       // overvoltage threshold, estop if exceeded
-#define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 12.f      // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
-
-// #define STIM_DYNAMIC_VOLTAGE
-// #define STIM_BOOST_VOLTAGE 15.f                     // the configured boost voltage
-// #define STIM_BOOST_VOLTAGE_OK_THRESHOLD 14.5f       // the minimum boost voltage required before starting a pulse
-// #define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 13.f       // the lowest the boost voltage is allowed to drop during a pulse
-// #define STIM_BOOST_OVERVOLTAGE_THRESHOLD 16.f       // overvoltage threshold, estop if exceeded
-// #define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 10.f      // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
-
-// #define STIM_DYNAMIC_VOLTAGE
-// #define STIM_BOOST_VOLTAGE 12.f                     // the configured boost voltage
-// #define STIM_BOOST_VOLTAGE_OK_THRESHOLD 11.5f       // the minimum boost voltage required before starting a pulse
-// #define STIM_BOOST_VOLTAGE_LOW_THRESHOLD 10.f       // the lowest the boost voltage is allowed to drop during a pulse
-// #define STIM_BOOST_OVERVOLTAGE_THRESHOLD 14.f       // overvoltage threshold, estop if exceeded
-// #define STIM_BOOST_UNDERVOLTAGE_THRESHOLD 6.f       // the lowest the boost voltage is allowed to drop during a pulse, before triggering estop.
+#define BOOST_MINIMUM_VOLTAGE       10.f            // boost voltage setpoint (min)
+#define BOOST_MAXIMUM_VOLTAGE       29.5f           // boost voltage setpoint (max)
+#define BOOST_OVERVOLTAGE_THRESHOLD 31.f            // e-stop when exceeded
 
 // pwm
 #define STIM_PWM_FREQ 50000 // switching frequency is twice this frequency

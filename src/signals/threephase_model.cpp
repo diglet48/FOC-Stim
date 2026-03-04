@@ -41,7 +41,7 @@ void ThreephaseModel::play_pulse(
     Complex p1, Complex p2, Complex p3,
     float carrier_frequency,
     float pulse_width, float rise_time,
-    float estop_current_limit)
+    float estop_current_limit, float max_allowed_vdrive)
 {
     if (std::abs(p1 + p2 + p3) > .001f) {
         BSP_PrintDebugMsg("Invalid pulse coordinates");
@@ -74,7 +74,8 @@ void ThreephaseModel::play_pulse(
     pulse_stats.current_max = {0, 0, 0};
     pulse_stats.v_bus_min = 99;
     pulse_stats.v_bus_max = 0;
-    pulse_stats.v_drive = 0;
+    pulse_stats.v_drive_requested = 0;
+    pulse_stats.v_drive_actual = 0;
 
     // make debug easier by clearing out stale data.
     for (int i = 0; i < CONTEXT_SIZE; i++) {
@@ -91,7 +92,6 @@ void ThreephaseModel::play_pulse(
         float v3 = (std::abs(z3) - MODEL_FIXED_RESISTANCE) * std::abs(p3);
         float max_v = std::max(v1, std::max(v2, v3));
         float volt_seconds = max_v / (2 * float(M_PI) * carrier_frequency);
-        pulse_stats.volt_seconds = volt_seconds;
 
         // reduce the pulse intensity if needed
         if (volt_seconds >= MODEL_MAXIMUM_VOLT_SECONDS) {
@@ -100,7 +100,9 @@ void ThreephaseModel::play_pulse(
             p2 *= factor;
             p3 *= factor;
         }
-        // TODO: more stats
+
+        pulse_stats.volt_seconds = volt_seconds;
+        total_stats.volt_seconds = std::max(total_stats.volt_seconds, volt_seconds);
     }
 
     // compute voltage with these equations:
@@ -115,9 +117,10 @@ void ThreephaseModel::play_pulse(
 
     // check for max vdrive
     float v_drive = find_v_drive(v1, v2, v3);
-    if (v_drive > STIM_PWM_MAX_VDRIVE) {
+    pulse_stats.v_drive_requested = v_drive;
+    if (v_drive > max_allowed_vdrive) {
         // if vdrive is too high, reduce current/voltage
-        float factor = STIM_PWM_MAX_VDRIVE / v_drive;
+        float factor = max_allowed_vdrive / v_drive;
         p1 = p1 * factor;
         p2 = p2 * factor;
         p3 = p3 * factor;
@@ -127,7 +130,7 @@ void ThreephaseModel::play_pulse(
         v3 = v3 * factor;
         v_drive = v_drive * factor;
     }
-    pulse_stats.v_drive = v_drive;
+    pulse_stats.v_drive_actual = v_drive;
 
     // compute pulse length etc.
     int samples = int(STIM_PWM_FREQ * pulse_width / carrier_frequency);
@@ -304,7 +307,6 @@ void ThreephaseModel::interrupt_fn()
     float vbus = BSP_ReadVBus();
     pulse_stats.v_bus_max = max(pulse_stats.v_bus_max, vbus);
     pulse_stats.v_bus_min = min(pulse_stats.v_bus_min, vbus);
-    vbus = max(vbus, STIM_BOOST_VOLTAGE_LOW_THRESHOLD);
 #else
     float vbus = STIM_PSU_VOLTAGE;
 #endif

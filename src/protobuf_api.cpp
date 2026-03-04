@@ -147,12 +147,14 @@ void ProtobufAPI::transmit_notification_model_estimation(
     transmit_message(message);
 }
 
-void ProtobufAPI::transmit_notification_signal_stats(float actual_pulse_frequency, float v_drive) {
+void ProtobufAPI::transmit_notification_signal_stats(float actual_pulse_frequency, float v_drive, float transformer_utilization, float voltage_utilization) {
     focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
     message.which_message = focstim_rpc_RpcMessage_notification_tag;
     message.message.notification.which_notification = focstim_rpc_Notification_notification_signal_stats_tag;
     message.message.notification.notification.notification_signal_stats.actual_pulse_frequency = actual_pulse_frequency;
     message.message.notification.notification.notification_signal_stats.v_drive = v_drive;
+    message.message.notification.notification.notification_signal_stats.transformer_utilization= transformer_utilization;
+    message.message.notification.notification.notification_signal_stats.voltage_utilization = voltage_utilization;
     transmit_message(message);
 }
 

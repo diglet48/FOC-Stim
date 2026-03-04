@@ -36,7 +36,7 @@ public:
         float resistance_b, float reluctance_b,
         float resistance_c, float reluctance_c,
         float resistance_d, float reluctance_d);
-    void transmit_notification_signal_stats(float actual_pulse_frequency, float v_drive);
+    void transmit_notification_signal_stats(float actual_pulse_frequency, float v_drive, float transformer_utilization, float voltage_utilization);
     void transmit_notification_battery(
         float voltage, float soc, float charge_rate,
         float temperature, bool usb5v_present);

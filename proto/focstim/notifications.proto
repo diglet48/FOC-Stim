@@ -70,7 +70,9 @@ message NotificationSystemStats {
 
 message NotificationSignalStats {
     float actual_pulse_frequency = 1;
-    float v_drive = 2; // TODO: replace v_drive with some sort of "percent of max power"
+    float v_drive = 2;                  // maximum peak-to-peak voltage (low side)
+    float transformer_utilization = 3;  // 0-1 precentage of transformer saturation
+    float voltage_utilization = 4;      // 0-1 percentage of maximum usable voltage
 }
 
 message NotificationBattery {
@@ -79,7 +81,6 @@ message NotificationBattery {
     float battery_soc = 3;  // int?
     bool wall_power_present = 4;
     float chip_temperature = 5;
-    // todo: usb connected?
 }
 
 message NotificationLSM6DSOX {

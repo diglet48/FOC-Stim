@@ -13,6 +13,8 @@
 #if defined(BOARD_FOCSTIM_V4)
 #include "pins_arduino.h"
 
+void pre_setup();
+
 // Digital PinName array
 const PinName digitalPin[] = {
     PA_0,  // D0/A0
@@ -113,6 +115,9 @@ extern "C"
   */
 WEAK void SystemClock_Config(void)
 {
+    // run any code that must run before clock init.
+    pre_setup();
+
     RCC_OscInitTypeDef RCC_OscInitStruct = {};
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {};
     RCC_PeriphCLKInitTypeDef PeriphClkInit = {};

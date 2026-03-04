@@ -492,10 +492,14 @@ void self_test() {
     BSP_PrintDebugMsg("self test completed");
 }
 
+// called before clock initialization
+void pre_setup()
+{
+    BSP_CheckJumpToBootloader();
+}
 
 void setup()
 {
-    BSP_CheckJumpToBootloader();
     Serial.begin(115200, SERIAL_8E1);   // match STM32 bootloader setting
     Wire.setSCL(PA15);
     Wire.setSDA(PB9);

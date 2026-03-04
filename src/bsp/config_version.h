@@ -3,7 +3,7 @@
 
 constexpr int focstim_api_version_major = 1;
 constexpr int focstim_api_version_minor = 2;
-constexpr int focstim_api_version_revision = 2;
+constexpr int focstim_api_version_revision = 3;
 static constexpr char focstim_api_branch_name[] = "main";   // mainline restim requires this to be "main".
 static constexpr char focstim_api_comment[] = "";           // can be whatever.
 

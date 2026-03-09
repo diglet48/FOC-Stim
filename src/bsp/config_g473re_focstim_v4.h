@@ -30,7 +30,7 @@
 
 // deadtime compensation
 #define DEADTIME_COMPENSATION_ENABLE
-#define DEADTIME_COMPENSATION_MAGIC_VALUE  160e-9f   // experimentally determined. Close to driver deadtime (200ns).
+#define DEADTIME_COMPENSATION_MAGIC_VALUE  185e-9f   // experimentally determined. Close to driver deadtime (200ns).
 #define DEADTIME_COMPENSATION_PERCENTAGE (DEADTIME_COMPENSATION_MAGIC_VALUE * STIM_PWM_FREQ)
 #define DEADTIME_COMPENSATION_CURRENT_THRESHOLD .025f // experimentally determined (at 22v)
 

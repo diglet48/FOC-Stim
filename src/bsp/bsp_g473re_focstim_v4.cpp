@@ -32,6 +32,10 @@
 #define ADC_SAMPLETIME_VM               ADC_SAMPLETIME_247CYCLES_5  // [247.5 + 12.5] clocks = 6.11µs
 #define ADC_SAMPLETIME_VSYS             ADC_SAMPLETIME_247CYCLES_5  // [247.5 + 12.5] clocks = 6.11µs
 
+// experimentally determined to be right in the middle of the triangular current waveform.
+// Not sure why this isn't equal to driver propagation delay minus half the sampletime.
+#define ADC_TRIGGER_DELAY               290e-9f     // seconds
+
 
 // Drivers EN1 (enable) pins. Output
 #define DRIVER_ENABLE_GPIO_PORT GPIOC
@@ -99,11 +103,15 @@
 #define STM32_SLEEP_GPIO_PORT GPIOB
 #define STM32_SLEEP_PIN LL_GPIO_PIN_7    // PB7
 
-
+enum Priority {
+    PRIO_COMP = 0,
+    PRIO_DMA = 1,
+    PRIO_TIM1_BOOKKEEPING = 2,
+    PRIO_LED = 3,
+};
 
 
 static TIM_TypeDef *const pwm_timer = TIM1;
-static TIM_TypeDef *const adc_trigger_timer = TIM2;
 static TIM_TypeDef *const encoder_timer = TIM3;
 static TIM_TypeDef *const app_and_led_timer = TIM20;
 
@@ -319,42 +327,17 @@ void initPwm()
     // force outputs low after break event.
     pwm_timer->BDTR |= TIM_BDTR_OSSI;
 
-    // select update event as trigger output
-    pwm_timer->CR2 |= LL_TIM_TRGO_UPDATE;
+    // use update event to trigger TIM1_TRGO
+    pwm_timer->CR2 |= LL_TIM_TRGO_UPDATE;   // tim1 update (= pwm peak) triggers TIM1_TRGO
 
-    enableInterruptWithPrio(TIM1_UP_TIM16_IRQn, 0);
-    // TIM1_BRK_TIM15_IRQn --> TIM1_BRK_TIM15_IRQHandler
-}
+    enableInterruptWithPrio(TIM1_UP_TIM16_IRQn, PRIO_TIM1_BOOKKEEPING); // TIM1_UP_TIM16_IRQHandler
 
-void initADCTriggerTimer()
-{
-    __HAL_RCC_TIM2_CLK_ENABLE();
-
-    // uint32_t clk = HAL_RCC_GetPCLK1Freq();
-    // BSP_PrintDebugMsg("clock: %u\r\n", clk);
-
-    adc_trigger_timer->PSC = 0;
-    adc_trigger_timer->ARR = uint32_t(HAL_RCC_GetPCLK1Freq() * 700e-9f) - 1; // 700ns, driver input to output propagation delay
-    adc_trigger_timer->EGR |= TIM_EGR_UG;  // force update of shadow registers
-    adc_trigger_timer->CR1 |= TIM_CR1_OPM; // set one-pulse-mode
-    adc_trigger_timer->CR1 |= TIM_CR1_URS; // only update event on timer overflow, not EGR
-    adc_trigger_timer->CR2 |= LL_TIM_TRGO_UPDATE;   // select update event as trigger output
-
-    MODIFY_REG(adc_trigger_timer->SMCR, TIM_SMCR_TS_Msk, TIM_TS_ITR0);                  // internal triger tim_itr0 = TIM1
-    MODIFY_REG(adc_trigger_timer->SMCR, TIM_SMCR_SMS_Msk, TIM_SMCR_SMS_3);              // Combined reset + trigger mode
-    MODIFY_REG(adc_trigger_timer->CCMR1, TIM_CCMR1_OC1M_Msk, TIM_CCMR1_OC1M_3);         // Retrigerrable OPM mode 1
-
-
-    // DEBUG: output timer to PA0
-    // adc_trigger_timer->CCR1 = 1;
-    // adc_trigger_timer->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_0;     // pwm mode 2
-    // adc_trigger_timer->CCER |= TIM_CCER_CC1E;
-    // adc_trigger_timer->BDTR |= TIM_BDTR_MOE;    // main output enable
-
-    // LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_0, LL_GPIO_MODE_ALTERNATE);
-    // LL_GPIO_SetAFPin_0_7(GPIOA, LL_GPIO_PIN_0, LL_GPIO_AF_1);   // AF1 = TIM2_CH1
-    // LL_GPIO_SetPinSpeed(GPIOA, LL_GPIO_PIN_0, LL_GPIO_SPEED_FREQ_VERY_HIGH);
-    // LL_GPIO_SetPinOutputType(GPIOA, LL_GPIO_PIN_0, LL_GPIO_OUTPUT_PUSHPULL);
+    // Setup OC5 to trigger TIM1_TRGO2 a specific time after pwm peak.
+    // pwm mode 1 and preload enable
+    pwm_timer->CCMR3 |= TIM_CCMR3_OC5PE | TIM_CCMR3_OC5M_2 | TIM_CCMR3_OC5M_1;
+    uint32_t delay_ticks = static_cast<uint32_t>((ADC_TRIGGER_DELAY * STIM_PWM_FREQ) * (overflow * 2) + 0.5f);
+    pwm_timer->CCR5 = pwm_timer->ARR - delay_ticks; // note: fails if 0 or equal to ARR
+    pwm_timer->CR2 |= LL_TIM_TRGO2_OC5; // OC5 triggers TIM1_TRGO2
 }
 
 void initLedTimer()
@@ -373,7 +356,7 @@ void initLedTimer()
     app_and_led_timer->CR1 |= TIM_CR1_CEN;              // Enable the counter.
     app_and_led_timer->BDTR |= TIM_BDTR_MOE;            // main output enable
 
-    enableInterruptWithPrio(TIM20_UP_IRQn, 1);
+    enableInterruptWithPrio(TIM20_UP_IRQn, PRIO_LED);
 }
 
 void configureOpamp(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def)
@@ -443,7 +426,7 @@ void configureADC1(ADC_HandleTypeDef *hadc)
     hadc->Init.ContinuousConvMode = DISABLE;
     hadc->Init.NbrOfConversion = 2;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -495,7 +478,7 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     hadc->Init.ContinuousConvMode = DISABLE;
     hadc->Init.NbrOfConversion = 2;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -546,7 +529,7 @@ void configureADC3(ADC_HandleTypeDef *hadc)
     hadc->Init.ContinuousConvMode = DISABLE;
     hadc->Init.NbrOfConversion = 1;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -588,7 +571,7 @@ void configureADC4(ADC_HandleTypeDef *hadc)
     hadc->Init.ContinuousConvMode = DISABLE;
     hadc->Init.NbrOfConversion = 2;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -639,7 +622,7 @@ void configureADC5(ADC_HandleTypeDef *hadc)
     hadc->Init.ContinuousConvMode = DISABLE;
     hadc->Init.NbrOfConversion = 1;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -786,12 +769,8 @@ void initDMA()
     }
 
     /* DMA interrupt init */
-    // enableInterruptWithPrio(DMA1_Channel1_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel2_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel3_IRQn, 0);
-    // enableInterruptWithPrio(DMA1_Channel4_IRQn, 0);
-    enableInterruptWithPrio(DMA1_Channel5_IRQn, 0);
-    DMA1_Channel5->CCR &= ~DMA_CCR_HTIE;    // enable only transfer complete interrupt.
+    SET_BIT(DMA1_Channel5->CCR, DMA_CCR_TCIE);  // enable only DMA5 transfer complete interrupt.
+    enableInterruptWithPrio(DMA1_Channel5_IRQn, PRIO_DMA);
 }
 
 void initDAC()
@@ -865,7 +844,7 @@ void initEXTI()
     };
     LL_EXTI_Init(&EXTI_InitStruct);
 
-    enableInterruptWithPrio(COMP1_2_3_IRQn, 0);
+    enableInterruptWithPrio(COMP1_2_3_IRQn, PRIO_COMP);
 }
 
 void initEncoderTimer()
@@ -901,7 +880,6 @@ void BSP_Init()
 {
     initGPIO();
     initPwm();
-    initADCTriggerTimer();
     initVRef();
     initADC();
     initOpamp();
@@ -1073,9 +1051,9 @@ void BSP_AttachPWMInterrupt(std::function<void()> fn)
 void BSP_SetPWM3(float a, float b, float c)
 {
     uint32_t arr = pwm_timer->ARR;
-    uint32_t ccr_a = constrain(a, 0, 1) * arr;
-    uint32_t ccr_b = constrain(b, 0, 1) * arr;
-    uint32_t ccr_c = constrain(c, 0, 1) * arr;
+    uint32_t ccr_a = std::clamp<int32_t>((int32_t)(a * arr + 0.5f), 0, arr);
+    uint32_t ccr_b = std::clamp<int32_t>((int32_t)(b * arr + 0.5f), 0, arr);
+    uint32_t ccr_c = std::clamp<int32_t>((int32_t)(c * arr + 0.5f), 0, arr);
     uint32_t ccr_d = 0;
 
     pwm_timer->CCR1 = ccr_c;
@@ -1094,10 +1072,10 @@ void BSP_SetPWM3Atomic(float a, float b, float c)
 void BSP_SetPWM4(float a, float b, float c, float d)
 {
     uint32_t arr = pwm_timer->ARR;
-    uint32_t ccr_a = constrain(a, 0, 1) * arr;
-    uint32_t ccr_b = constrain(b, 0, 1) * arr;
-    uint32_t ccr_c = constrain(c, 0, 1) * arr;
-    uint32_t ccr_d = constrain(d, 0, 1) * arr;
+    uint32_t ccr_a = std::clamp<int32_t>((int32_t)(a * arr + 0.5f), 0, arr);
+    uint32_t ccr_b = std::clamp<int32_t>((int32_t)(b * arr + 0.5f), 0, arr);
+    uint32_t ccr_c = std::clamp<int32_t>((int32_t)(c * arr + 0.5f), 0, arr);
+    uint32_t ccr_d = std::clamp<int32_t>((int32_t)(d * arr + 0.5f), 0, arr);
 
     pwm_timer->CCR1 = ccr_c;
     pwm_timer->CCR2 = ccr_d;

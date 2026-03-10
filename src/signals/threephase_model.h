@@ -5,6 +5,7 @@
 #include "vec.h"
 #include "foc_error.h"
 #include "bsp/bsp.h"
+#include "signals/output_limits.h"
 
 #include <atomic>
 
@@ -18,7 +19,7 @@ public:
         Complex p1, Complex p2, Complex p3,
         float carrier_frequency,
         float pulse_width, float rise_time,
-        float estop_current_limit, float max_allowed_vdrive);
+        float estop_current_limit, OutputLimits limits);
 
     Vec3f estimate_rms_current(float dt);
 

@@ -808,6 +808,7 @@ void loop()
     traceline->i_max_cmd = driving_current_amps;
 
     // play the pulse
+    OutputLimits output_limits(boostControl.max_allowed_vdrive(), MODEL_MAXIMUM_VOLT_SECONDS, MODEL_FIXED_RESISTANCE);
     if (play_status == PlayStatus::PlayingThreephase) {
         ComplexThreephasePoints points3 = project_threephase(
             driving_current_amps,
@@ -827,7 +828,8 @@ void loop()
                           pulse_carrier_frequency,
                           pulse_width, pulse_rise,
                           driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN,
-                          boostControl.max_allowed_vdrive());
+                          output_limits);
+
 
         BSP_DisableOutputs();
 
@@ -849,7 +851,7 @@ void loop()
                           pulse_carrier_frequency,
                           pulse_width, pulse_rise,
                           driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN,
-                          boostControl.max_allowed_vdrive());
+                          output_limits);
 
         BSP_DisableOutputs();
         boostControl.update(model4.pulse_stats.v_drive_requested, model4.pulse_stats.v_bus_min);

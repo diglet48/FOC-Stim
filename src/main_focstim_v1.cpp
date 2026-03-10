@@ -290,11 +290,12 @@ void loop()
         polarity,
         random_start_angle);
 
+    OutputLimits output_limits(STIM_PWM_MAX_VDRIVE, MODEL_MAXIMUM_VOLT_SECONDS, MODEL_FIXED_RESISTANCE);
     model3.play_pulse(points3.p1, points3.p2, points3.p3,
         pulse_carrier_frequency,
         pulse_width, pulse_rise,
         driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN,
-        STIM_PWM_MAX_VDRIVE);
+        output_limits);
 
     // store stats
     total_pulse_length_timer.step();

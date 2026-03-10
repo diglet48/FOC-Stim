@@ -7,23 +7,6 @@
 
 #include "stim_clock.h"
 
-static float find_v_drive(Complex p1, Complex p2, Complex p3) {
-    // TODO: exact method exists.
-    int steps = 500;
-    Complex proj(1, 0);
-    Complex rotator(cosf(_2PI / float(steps)), sinf(_2PI / float(steps)));
-    float v_drive = 0;
-    for (int i = 0; i < steps; i++) {
-        float a = (p1 * proj).real();
-        float b = (p2 * proj).real();
-        float c = (p3 * proj).real();
-        float range = max({a, b, c}) - min({a, b, c});
-        v_drive = max(range, v_drive);
-        proj = proj * rotator;
-    }
-
-    return v_drive;
-}
 
 void ThreephaseModel::init(std::function<void(FOCError)> emergency_stop_fn) {
     this->emergency_stop_fn = emergency_stop_fn;
@@ -41,7 +24,8 @@ void ThreephaseModel::play_pulse(
     Complex p1, Complex p2, Complex p3,
     float carrier_frequency,
     float pulse_width, float rise_time,
-    float estop_current_limit, float max_allowed_vdrive)
+    float estop_current_limit,
+    OutputLimits limits)
 {
     if (std::abs(p1 + p2 + p3) > .001f) {
         BSP_PrintDebugMsg("Invalid pulse coordinates");
@@ -83,27 +67,16 @@ void ThreephaseModel::play_pulse(
     }
 
     // reduce amplitude if this pulse would result in transformer saturation (volt*seconds)
-    {
-        // simplified equation, assumes impedance angle of low pass filter
-        // is close to impedance angle of transformer. This generally is
-        // the case for high-resistance electrodes.
-        float v1 = (std::abs(z1) - MODEL_FIXED_RESISTANCE) * std::abs(p1);
-        float v2 = (std::abs(z2) - MODEL_FIXED_RESISTANCE) * std::abs(p2);
-        float v3 = (std::abs(z3) - MODEL_FIXED_RESISTANCE) * std::abs(p3);
-        float max_v = std::max(v1, std::max(v2, v3));
-        float volt_seconds = max_v / (2 * float(M_PI) * carrier_frequency);
-
-        // reduce the pulse intensity if needed
-        if (volt_seconds >= MODEL_MAXIMUM_VOLT_SECONDS) {
-            float factor = MODEL_MAXIMUM_VOLT_SECONDS / volt_seconds;
-            p1 *= factor;
-            p2 *= factor;
-            p3 *= factor;
-        }
-
-        pulse_stats.volt_seconds = volt_seconds;
-        total_stats.volt_seconds = std::max(total_stats.volt_seconds, volt_seconds);
+    float volt_seconds = limits.find_v_seconds(p1, p2, p3, z1, z2, z3, carrier_frequency);
+    if (volt_seconds >= limits.max_allowed_v_sec) {
+        float factor = limits.max_allowed_v_sec / volt_seconds;
+        p1 *= factor;
+        p2 *= factor;
+        p3 *= factor;
     }
+
+    pulse_stats.volt_seconds = volt_seconds;
+    total_stats.volt_seconds = std::max(total_stats.volt_seconds, volt_seconds);
 
     // compute voltage with these equations:
     // p1 * z1 = v1 - N
@@ -116,11 +89,11 @@ void ThreephaseModel::play_pulse(
     Complex v3 = p3 * z3 + N;
 
     // check for max vdrive
-    float v_drive = find_v_drive(v1, v2, v3);
+    float v_drive = limits.find_v_drive(v1, v2, v3);
     pulse_stats.v_drive_requested = v_drive;
-    if (v_drive > max_allowed_vdrive) {
+    if (v_drive > limits.max_allowed_v_drive) {
         // if vdrive is too high, reduce current/voltage
-        float factor = max_allowed_vdrive / v_drive;
+        float factor = limits.max_allowed_v_drive / v_drive;
         p1 = p1 * factor;
         p2 = p2 * factor;
         p3 = p3 * factor;

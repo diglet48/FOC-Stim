@@ -127,7 +127,7 @@ void ProtobufAPI::transmit_notification_currents(
     transmit_message(message);
 }
 
-void ProtobufAPI::transmit_notification_model_estimation(
+void ProtobufAPI::transmit_notification_output_resistance(
     float resistance_a, float reluctance_a,
     float resistance_b, float reluctance_b,
     float resistance_c, float reluctance_c,
@@ -135,15 +135,35 @@ void ProtobufAPI::transmit_notification_model_estimation(
 {
     focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
     message.which_message = focstim_rpc_RpcMessage_notification_tag;
-    message.message.notification.which_notification = focstim_rpc_Notification_notification_model_estimation_tag;
-    message.message.notification.notification.notification_model_estimation.resistance_a = resistance_a;
-    message.message.notification.notification.notification_model_estimation.reluctance_a = reluctance_a;
-    message.message.notification.notification.notification_model_estimation.resistance_b = resistance_b;
-    message.message.notification.notification.notification_model_estimation.reluctance_b = reluctance_b;
-    message.message.notification.notification.notification_model_estimation.resistance_c = resistance_c;
-    message.message.notification.notification.notification_model_estimation.reluctance_c = reluctance_c;
-    message.message.notification.notification.notification_model_estimation.resistance_d = resistance_d;
-    message.message.notification.notification.notification_model_estimation.reluctance_d = reluctance_d;
+    message.message.notification.which_notification = focstim_rpc_Notification_notification_output_resistance_tag;
+    message.message.notification.notification.notification_output_resistance.resistance_a = resistance_a;
+    message.message.notification.notification.notification_output_resistance.reluctance_a = reluctance_a;
+    message.message.notification.notification.notification_output_resistance.resistance_b = resistance_b;
+    message.message.notification.notification.notification_output_resistance.reluctance_b = reluctance_b;
+    message.message.notification.notification.notification_output_resistance.resistance_c = resistance_c;
+    message.message.notification.notification.notification_output_resistance.reluctance_c = reluctance_c;
+    message.message.notification.notification.notification_output_resistance.resistance_d = resistance_d;
+    message.message.notification.notification.notification_output_resistance.reluctance_d = reluctance_d;
+    transmit_message(message);
+}
+
+void ProtobufAPI::transmit_notification_skin_resistance(
+    float resistance_a, float reluctance_a,
+    float resistance_b, float reluctance_b,
+    float resistance_c, float reluctance_c,
+    float resistance_d, float reluctance_d)
+{
+    focstim_rpc_RpcMessage message = focstim_rpc_RpcMessage_init_zero;
+    message.which_message = focstim_rpc_RpcMessage_notification_tag;
+    message.message.notification.which_notification = focstim_rpc_Notification_notification_skin_resistance_tag;
+    message.message.notification.notification.notification_skin_resistance.resistance_a = resistance_a;
+    message.message.notification.notification.notification_skin_resistance.reluctance_a = reluctance_a;
+    message.message.notification.notification.notification_skin_resistance.resistance_b = resistance_b;
+    message.message.notification.notification.notification_skin_resistance.reluctance_b = reluctance_b;
+    message.message.notification.notification.notification_skin_resistance.resistance_c = resistance_c;
+    message.message.notification.notification.notification_skin_resistance.reluctance_c = reluctance_c;
+    message.message.notification.notification.notification_skin_resistance.resistance_d = resistance_d;
+    message.message.notification.notification.notification_skin_resistance.reluctance_d = reluctance_d;
     transmit_message(message);
 }
 

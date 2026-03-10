@@ -11,13 +11,12 @@
 void ThreephaseModel::init(std::function<void(FOCError)> emergency_stop_fn) {
     this->emergency_stop_fn = emergency_stop_fn;
 
-    phase_IQ_avg_1 = Complex(.1, 0);
-    phase_IQ_avg_2 = Complex(.1, 0);
-    phase_IQ_avg_3 = Complex(.1, 0);
-
-    z1 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of first output
-    z2 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of second output
-    z3 = Complex(MODEL_RESISTANCE_INIT, 0); // impedance of third output
+    z1 = MODEL_IMPEDANCE_INIT;
+    z2 = MODEL_IMPEDANCE_INIT;
+    z3 = MODEL_IMPEDANCE_INIT;
+    phase_IQ_avg_1 = z1 / std::abs(z1) * 0.1f;
+    phase_IQ_avg_2 = z2 / std::abs(z2) * 0.1f;
+    phase_IQ_avg_3 = z3 / std::abs(z3) * 0.1f;
 }
 
 void ThreephaseModel::play_pulse(

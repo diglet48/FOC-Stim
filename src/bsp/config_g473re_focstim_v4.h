@@ -2,12 +2,16 @@
 #ifndef FOCSTIM_CONFIG_G473RE_FOCSTIM_V4_H
 #define FOCSTIM_CONFIG_G473RE_FOCSTIM_V4_H
 
-// transformer winding ratio
-#define STIM_WINDING_RATIO 6.66f    // xicon 42TL004
-#define STIM_WINDING_RATIO_SQ (STIM_WINDING_RATIO * STIM_WINDING_RATIO)
-// The true winding ratio actually is 5.5, but due to core losses not all
-// current makes it to the output. Over-estimating the winding ratio
-// accounts for this in the general case (1000hz / 200ohm)
+#include "../signals/transformers.h"
+#include "../signals/output_stage.h"
+
+// transformer and output stage specs
+static constexpr OutputStage OUTPUT_STAGE = {
+    .resistance = 0.68f,    // driver Rdson (0.28) + inductor DC resistance (0.3) + traces (0.1 ohm)
+    .inductance = 220e-6f,  // µH
+    .capacitance = 2.2e-6f, // µF
+    .transformer = XICON_42TL004,
+};
 
 // current limits
 #define BODY_CURRENT_MAX  0.15f  // in amps

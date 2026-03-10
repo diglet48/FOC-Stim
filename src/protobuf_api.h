@@ -31,7 +31,12 @@ public:
         float peak_a, float peak_b, float peak_c, float peak_d,
         float output_power, float output_power_skin,
         float peak_cmd);
-    void transmit_notification_model_estimation(
+    void transmit_notification_output_resistance(
+        float resistance_a, float reluctance_a,
+        float resistance_b, float reluctance_b,
+        float resistance_c, float reluctance_c,
+        float resistance_d, float reluctance_d);
+    void transmit_notification_skin_resistance(
         float resistance_a, float reluctance_a,
         float resistance_b, float reluctance_b,
         float resistance_c, float reluctance_c,

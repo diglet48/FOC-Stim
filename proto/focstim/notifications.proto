@@ -31,16 +31,33 @@ message NotificationCurrents {
     float peak_cmd = 11;
 }
 
-message NotificationModelEstimation {
-    float resistance_a = 1;     // estimated output resistance, including output stage
-    float reluctance_a = 2;     // at the current carrier frequency
+message NotificationOutputResistance {
+    // estimated resistance of the entire system, including driver Rdson,
+    // low-pass filters, and the skin resistance. Generally useful for
+    // debugging purposes.
+    // At the current carrier frequency
+    float resistance_a = 1;
+    float reluctance_a = 2;
     float resistance_b = 3;
     float reluctance_b = 4;
     float resistance_c = 5;
     float reluctance_c = 6;
     float resistance_d = 7;
     float reluctance_d = 8;
-    float constant = 20;        // fixed resistance of the output stage
+}
+
+message NotificationSkinResistance {
+    // best-guess estimate of the skin resistance for display to user.
+    // At the current carrier frequency.
+    // Quite inaccurate on V1 due to nonstandard components.
+    float resistance_a = 1;
+    float reluctance_a = 2;
+    float resistance_b = 3;
+    float reluctance_b = 4;
+    float resistance_c = 5;
+    float reluctance_c = 6;
+    float resistance_d = 7;
+    float reluctance_d = 8;
 }
 
 message SystemStatsESC1 {

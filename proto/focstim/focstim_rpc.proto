@@ -11,7 +11,8 @@ message Notification{
         NotificationBoot notification_boot = 1;
         NotificationDeviceVolume notification_device_volume = 2;
         NotificationCurrents notification_currents = 3;
-        NotificationModelEstimation notification_model_estimation = 4;
+        NotificationOutputResistance notification_output_resistance = 4;
+        NotificationSkinResistance notification_skin_resistance = 11;
         NotificationSystemStats notification_system_stats = 5;
         NotificationSignalStats notification_signal_stats = 6;
         NotificationBattery notification_battery = 7;

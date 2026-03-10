@@ -265,7 +265,7 @@ void loop()
     body_current_amps *= potmeter_value;
 
     // calculate amplitude in amperes (driving current)
-    float driving_current_amps = body_current_amps * STIM_WINDING_RATIO;
+    float driving_current_amps = body_current_amps * OUTPUT_STAGE.transformer.current_ratio;
 
     // random polarity
     static bool polarity = false;
@@ -317,43 +317,53 @@ void loop()
         traceline->saturation_v_s = model3.pulse_stats.volt_seconds;
     }
 
-     // send notification: pulse current
+     // send notification: pulse current and watts
     if (pulse_counter % 50 == 0) {
-    // if (pulse_counter % 1 == 0) {
         rms_current_clock.step();
         auto rms = model3.estimate_rms_current(rms_current_clock.dt_seconds);
-        auto r_a = model3.z1.real();
-        auto r_b = model3.z2.real();
-        auto r_c = model3.z3.real();
-        float p =
-            (rms.a * rms.a) * r_a +
-            (rms.b * rms.b) * r_b +
-            (rms.c * rms.c) * r_c;
+        float power_total =
+            OUTPUT_STAGE.power_total(rms.a, model3.z1, pulse_carrier_frequency) +
+            OUTPUT_STAGE.power_total(rms.b, model3.z2, pulse_carrier_frequency) +
+            OUTPUT_STAGE.power_total(rms.c, model3.z3, pulse_carrier_frequency);
+        float power_skin =
+            OUTPUT_STAGE.power_skin(rms.a, model3.z1, pulse_carrier_frequency) +
+            OUTPUT_STAGE.power_skin(rms.b, model3.z2, pulse_carrier_frequency) +
+            OUTPUT_STAGE.power_skin(rms.c, model3.z3, pulse_carrier_frequency);
 
         protobuf.transmit_notification_currents(
-            rms.a / STIM_WINDING_RATIO,
-            rms.b / STIM_WINDING_RATIO,
-            rms.c / STIM_WINDING_RATIO,
+            rms.a / OUTPUT_STAGE.transformer.current_ratio,
+            rms.b / OUTPUT_STAGE.transformer.current_ratio,
+            rms.c / OUTPUT_STAGE.transformer.current_ratio,
             0,
-            abs(model3.total_stats.current_max.a) / STIM_WINDING_RATIO,
-            abs(model3.total_stats.current_max.b) / STIM_WINDING_RATIO,
-            abs(model3.total_stats.current_max.c) / STIM_WINDING_RATIO,
+            abs(model3.total_stats.current_max.a) / OUTPUT_STAGE.transformer.current_ratio,
+            abs(model3.total_stats.current_max.b) / OUTPUT_STAGE.transformer.current_ratio,
+            abs(model3.total_stats.current_max.c) / OUTPUT_STAGE.transformer.current_ratio,
             0,
-            p, 0,
-            abs(driving_current_amps) / STIM_WINDING_RATIO
+            power_total, power_skin,
+            abs(driving_current_amps) / OUTPUT_STAGE.transformer.current_ratio
         );
         model3.total_stats.current_max = {};
         model3.total_stats.current_squared = {};
     }
 
-    // send notification: skin resistance estimation
-    if (pulse_counter % 50 == 20) {
-    // if (pulse_counter % 1 == 0) {
-        float m = STIM_WINDING_RATIO_SQ;
-        protobuf.transmit_notification_model_estimation(
-            model3.z1.real() * m, model3.z1.imag() * m,
-            model3.z2.real() * m, model3.z2.imag() * m,
-            model3.z3.real() * m, model3.z3.imag() * m,
+    // send notification: model resistance estimation (low-side)
+    if (pulse_counter % 50 == 10) {
+        protobuf.transmit_notification_output_resistance(
+            model3.z1.real(), model3.z1.imag(),
+            model3.z2.real(), model3.z2.imag(),
+            model3.z3.real(), model3.z3.imag(),
+            0, 0);
+    }
+
+    // send notification: skin resistance estimation (high-side)
+    if ((pulse_counter % 50) == 20) {
+        Complex s1 = OUTPUT_STAGE.body_impedance(model3.z1, pulse_carrier_frequency);
+        Complex s2 = OUTPUT_STAGE.body_impedance(model3.z2, pulse_carrier_frequency);
+        Complex s3 = OUTPUT_STAGE.body_impedance(model3.z3, pulse_carrier_frequency);
+        g_protobuf->transmit_notification_skin_resistance(
+            s1.real(), s1.imag(),
+            s2.real(), s2.imag(),
+            s3.real(), s3.imag(),
             0, 0);
     }
 

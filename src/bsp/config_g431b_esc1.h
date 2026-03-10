@@ -2,9 +2,16 @@
 #ifndef FOCSTIM_CONFIG_G431B_ESC1_H
 #define FOCSTIM_CONFIG_G431B_ESC1_H
 
-// transformer winding ratio
-#define STIM_WINDING_RATIO 10.0f    // xicon 42TU200, middle pin on driving side
-#define STIM_WINDING_RATIO_SQ (STIM_WINDING_RATIO * STIM_WINDING_RATIO)
+#include "../signals/transformers.h"
+#include "../signals/output_stage.h"
+
+// transformer and output stage specs
+static constexpr OutputStage OUTPUT_STAGE = {
+    .resistance = 0.5f,    // driver Rdson (0.03) + inductor DC resistance (0.2) + fudge factor.
+    .inductance = 220e-6f, // µH
+    .capacitance = 10e-6f, // µF
+    .transformer = XICON_42TU200_MIDDLE_PIN,
+};
 
 // current limits
 #define BODY_CURRENT_MAX  0.15f             // in amps, body current
@@ -31,8 +38,9 @@
 
 // initial conditions and limits for the model
 #define MODEL_RESISTANCE_INIT (200.f / STIM_WINDING_RATIO_SQ)
-#define MODEL_RESISTANCE_MIN (70.f / STIM_WINDING_RATIO_SQ)
-#define MODEL_RESISTANCE_MAX (1500.f / STIM_WINDING_RATIO_SQ)
+#define MODEL_IMPEDANCE_INIT {1, 1}
+#define MODEL_RESISTANCE_MIN .7f
+#define MODEL_RESISTANCE_MAX 15.f
 #define MODEL_PHASE_ANGLE_MIN -1.5f
 #define MODEL_PHASE_ANGLE_MAX 1.5f
 

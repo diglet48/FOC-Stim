@@ -26,7 +26,11 @@ struct Impedances {
     void fill_from_total(Complex Z_tot) {
         Z_parallel = Z_tot - Z_output;
         Z_windings = 1.f/(1.f / Z_parallel - 1.f / Z_cap - 1.f / Z_leak);
-        Z_body = (Z_windings - stage->transformer.resistance_lv) * powf(stage->transformer.winding_ratio, 2) - stage->transformer.winding_ratio;
+        Z_body = (Z_windings - stage->transformer.resistance_lv) * powf(stage->transformer.winding_ratio, 2) - stage->transformer.resistance_hv;
+    }
+
+    Complex Z_total() {
+        return Z_parallel + Z_output;
     }
 
     OutputStage const *stage ;

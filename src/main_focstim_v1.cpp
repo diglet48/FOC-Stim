@@ -295,7 +295,7 @@ void loop()
         pulse_carrier_frequency,
         pulse_width, pulse_rise,
         driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN,
-        output_limits);
+        output_limits, OUTPUT_STAGE);
 
     // store stats
     total_pulse_length_timer.step();

@@ -71,6 +71,15 @@ float OutputStage::power_skin(float rms_current, Complex total_impedance, float 
     return powf(rms_current * ratio / transformer.winding_ratio, 2) * imp.Z_body.real();
 }
 
+Complex OutputStage::convert_impedance(Complex z, float original_frequency, float end_frequency)
+{
+    Impedances imp_orig(this, original_frequency);
+    Impedances imp_target(this, end_frequency);
+    imp_orig.fill_from_total(z);
+    imp_target.fill_from_body(imp_orig.Z_body);
+    return imp_target.Z_total();
+}
+
 float OutputStage::apparent_winding_ratio() const
 {
     Impedances imp(this, 1000);

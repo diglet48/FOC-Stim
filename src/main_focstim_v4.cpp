@@ -830,7 +830,7 @@ void loop()
                           pulse_carrier_frequency,
                           pulse_width, pulse_rise,
                           driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN,
-                          output_limits);
+                          output_limits, OUTPUT_STAGE);
 
 
         BSP_DisableOutputs();
@@ -853,7 +853,7 @@ void loop()
                           pulse_carrier_frequency,
                           pulse_width, pulse_rise,
                           driving_current_amps + ESTOP_CURRENT_LIMIT_MARGIN,
-                          output_limits);
+                          output_limits, OUTPUT_STAGE);
 
         BSP_DisableOutputs();
         boostControl.update(model4.pulse_stats.v_drive_requested, model4.pulse_stats.v_bus_min);

@@ -19,7 +19,7 @@ public:
         Complex p1, Complex p2, Complex p3,
         float carrier_frequency,
         float pulse_width, float rise_time,
-        float estop_current_limit, OutputLimits limits);
+        float estop_current_limit, OutputLimits limits, OutputStage stage);
 
     Vec3f estimate_rms_current(float dt);
 
@@ -109,6 +109,8 @@ public:
     Vec3f integrated_meas = {};
 
     std::function<void(FOCError)> emergency_stop_fn;
+
+    float previous_frequency;
 };
 
 #endif

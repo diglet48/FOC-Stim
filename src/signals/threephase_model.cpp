@@ -17,6 +17,7 @@ void ThreephaseModel::init(std::function<void(FOCError)> emergency_stop_fn) {
     phase_IQ_avg_1 = z1 / std::abs(z1) * 0.1f;
     phase_IQ_avg_2 = z2 / std::abs(z2) * 0.1f;
     phase_IQ_avg_3 = z3 / std::abs(z3) * 0.1f;
+    previous_frequency = 1000;
 }
 
 void ThreephaseModel::play_pulse(
@@ -24,7 +25,8 @@ void ThreephaseModel::play_pulse(
     float carrier_frequency,
     float pulse_width, float rise_time,
     float estop_current_limit,
-    OutputLimits limits)
+    OutputLimits limits,
+    OutputStage stage)
 {
     if (std::abs(p1 + p2 + p3) > .001f) {
         BSP_PrintDebugMsg("Invalid pulse coordinates");
@@ -63,6 +65,17 @@ void ThreephaseModel::play_pulse(
     // make debug easier by clearing out stale data.
     for (int i = 0; i < CONTEXT_SIZE; i++) {
         context[i] = {};
+    }
+
+    // adjust impedance for new carrier frequency (if needed)
+    if (carrier_frequency != previous_frequency) {
+        z1 = stage.convert_impedance(z1, previous_frequency, carrier_frequency);
+        z2 = stage.convert_impedance(z2, previous_frequency, carrier_frequency);
+        z3 = stage.convert_impedance(z3, previous_frequency, carrier_frequency);
+        phase_IQ_avg_1 = std::polar(std::abs(phase_IQ_avg_1), std::arg(z1));
+        phase_IQ_avg_2 = std::polar(std::abs(phase_IQ_avg_2), std::arg(z2));
+        phase_IQ_avg_3 = std::polar(std::abs(phase_IQ_avg_3), std::arg(z3));
+        previous_frequency = carrier_frequency;
     }
 
     // reduce amplitude if this pulse would result in transformer saturation (volt*seconds)
@@ -407,7 +420,7 @@ void ThreephaseModel::accumulate_errors()
 
 void ThreephaseModel::model_update(Complex p1, Complex p2, Complex p3)
 {
-// update impedance magnitude
+    // update impedance magnitude
     {
         float multiplier = 1.f / pulse_length_samples * 2;
 #if defined(CURRENT_SENSE_SCALE_HALF)

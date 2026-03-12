@@ -22,7 +22,7 @@ public:
         Complex p1, Complex p2, Complex p3, Complex p4,
         float carrier_frequency,
         float pulse_width, float rise_time,
-        float estop_current_limit, OutputLimits limits);
+        float estop_current_limit, OutputLimits limits, OutputStage stage);
 
     Vec4f estimate_rms_current(float dt);
 
@@ -123,6 +123,8 @@ public:
     Vec4f integrated_meas = {};
 
     std::function<void(FOCError)> emergency_stop_fn;
+
+    float previous_frequency;
 };
 
 #endif

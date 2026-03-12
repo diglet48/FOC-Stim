@@ -19,6 +19,8 @@ struct OutputStage {
     float power_total(float rms_current, Complex total_impedance, float frequency) const;
     float power_skin(float rms_current, Complex total_impedance, float frequency) const;
 
+    Complex convert_impedance(Complex z, float original_frequency, float end_frequency);
+
     // not all current that enters the transformer makes it to the secondary,
     // some of it is lost inside the magnetizing impedance branch.
     // the ratio of (output current / input current) therefore is slightly higher

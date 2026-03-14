@@ -29,13 +29,14 @@
 #define ADC_SAMPLETIME_VREFINT          ADC_SAMPLETIME_247CYCLES_5  // [247.5 + 12.5] clocks = 6.11µs   (datasheet: min 4µs)
 #define ADC_SAMPLETIME_V_TS             ADC_SAMPLETIME_247CYCLES_5  // [247.5 + 12.5] clocks = 6.11µs   (datasheet: min 5µs)
 #define ADC_SAMPLETIME_VBAT             ADC_SAMPLETIME_640CYCLES_5  // [640.5 + 12.5] clocks = 15.4µs   (datasheet: min 12µs)
-#define ADC_SAMPLETIME_VM               ADC_SAMPLETIME_247CYCLES_5  // [247.5 + 12.5] clocks = 6.11µs
-#define ADC_SAMPLETIME_VSYS             ADC_SAMPLETIME_247CYCLES_5  // [247.5 + 12.5] clocks = 6.11µs
+#define ADC_SAMPLETIME_VM               ADC_SAMPLETIME_640CYCLES_5  // [640.5 + 12.5] clocks = 15.4µs
+#define ADC_SAMPLETIME_VSYS             ADC_SAMPLETIME_640CYCLES_5  // [640.5 + 12.5] clocks = 15.4µs
 
 // experimentally determined to be right in the middle of the triangular current waveform.
 // Not sure why this isn't equal to driver propagation delay minus half the sampletime.
-#define ADC_TRIGGER_DELAY               290e-9f     // seconds
-
+#define ADC_CURRENT_SENSE_DELAY         290e-9f     // seconds
+#define ADC_TRIGGER_FREQ                10000
+#define ADC_TRIGGER_DELAY               (ADC_CURRENT_SENSE_DELAY + 1e-6f)
 
 // Drivers EN1 (enable) pins. Output
 #define DRIVER_ENABLE_GPIO_PORT GPIOC
@@ -112,6 +113,7 @@ enum Priority {
 
 
 static TIM_TypeDef *const pwm_timer = TIM1;
+static TIM_TypeDef *const adc_trigger_timer = TIM2;
 static TIM_TypeDef *const encoder_timer = TIM3;
 static TIM_TypeDef *const app_and_led_timer = TIM20;
 
@@ -119,7 +121,6 @@ static COMP_TypeDef *const vsys_comp = COMP1;
 static DAC_TypeDef *const vsys_comp_dac = DAC3;
 static DAC_TypeDef *const boost_control_dac = DAC1;
 static USART_TypeDef *const usart2 = USART2;
-
 
 struct BSP {
     BSP() {
@@ -131,51 +132,41 @@ struct BSP {
     OPAMP_HandleTypeDef opamp4; // current a
     OPAMP_HandleTypeDef opamp6; // current d
 
-    ADC_HandleTypeDef adc1;
-    ADC_HandleTypeDef adc2;
-    ADC_HandleTypeDef adc3;
-    ADC_HandleTypeDef adc4;
-    ADC_HandleTypeDef adc5;
+    ADC_HandleTypeDef adc1; // regular: vrefint
+    ADC_HandleTypeDef adc2; // regular: vm_sense        injected: b
+    ADC_HandleTypeDef adc3; //                          injected: c     // TODO: add vbat?
+    ADC_HandleTypeDef adc4; // regular: vsys_sense      injected: a
+    ADC_HandleTypeDef adc5; // regular: ts              injected: d
 
     DMA_HandleTypeDef dma1;
     DMA_HandleTypeDef dma2;
-    DMA_HandleTypeDef dma3;
+    // DMA_HandleTypeDef dma3;
     DMA_HandleTypeDef dma4;
     DMA_HandleTypeDef dma5;
 
 
     union {
-        uint16_t adc1_buffer[2];
+        uint16_t adc1_buffer[1];
         struct {
             volatile uint16_t vrefint;
-            volatile uint16_t v_ts;
-            // TODO: vbat?
         };
     };
     union {
-        uint16_t adc2_buffer[2];
+        uint16_t adc2_buffer[1];
         struct {
-            volatile uint16_t current_b;
             volatile uint16_t vm_sense;
         };
     };
     union {
-        uint16_t adc3_buffer[1];
+        uint16_t adc4_buffer[1];
         struct {
-            volatile uint16_t current_c;
-        };
-    };
-    union {
-        uint16_t adc4_buffer[2];
-        struct {
-            volatile uint16_t current_a;
             volatile uint16_t vsys_sense;
         };
     };
     union {
         uint16_t adc5_buffer[1];
         struct {
-            volatile uint16_t current_d;
+            volatile uint16_t v_ts;
         };
     };
 
@@ -196,6 +187,19 @@ struct BSP {
 
     LedPattern led_pattern;
     uint32_t led_pattern_progress;
+
+    static uint16_t current_a() {
+        return ADC4->JDR1;
+    }
+    static uint16_t current_b() {
+        return ADC2->JDR1;
+    }
+    static uint16_t current_c() {
+        return ADC3->JDR1;
+    }
+    static uint16_t current_d() {
+        return ADC5->JDR1;
+    }
 };
 
 BSP bsp = {};
@@ -205,6 +209,23 @@ static void enableInterruptWithPrio(IRQn_Type intr, int prio)
     NVIC_ClearPendingIRQ(intr);
     NVIC_SetPriority(intr, prio);
     NVIC_EnableIRQ(intr);
+}
+
+static uint32_t tim1_clk() {
+    return HAL_RCC_GetPCLK2Freq();
+};
+
+static uint32_t tim2_clk()
+{
+    RCC_ClkInitTypeDef clkconfig;
+    uint32_t flash_latency;
+
+    HAL_RCC_GetClockConfig(&clkconfig, &flash_latency);
+
+    if (clkconfig.APB1CLKDivider == RCC_HCLK_DIV1)
+        return HAL_RCC_GetPCLK1Freq();
+    else
+        return HAL_RCC_GetPCLK1Freq() * 2;
 }
 
 void initGPIO()
@@ -295,7 +316,7 @@ void initPwm()
     __HAL_RCC_TIM1_CLK_ENABLE();
 
     // configure timer frequency
-    uint32_t overflow = HAL_RCC_GetPCLK2Freq() / (STIM_PWM_FREQ * 2);
+    uint32_t overflow = tim1_clk() / (STIM_PWM_FREQ * 2);
     uint32_t period = overflow / 0x10000 + 1;
     pwm_timer->PSC = period - 1;
     pwm_timer->ARR = overflow / period - 1;
@@ -335,16 +356,43 @@ void initPwm()
     // Setup OC5 to trigger TIM1_TRGO2 a specific time after pwm peak.
     // pwm mode 1 and preload enable
     pwm_timer->CCMR3 |= TIM_CCMR3_OC5PE | TIM_CCMR3_OC5M_2 | TIM_CCMR3_OC5M_1;
-    uint32_t delay_ticks = static_cast<uint32_t>((ADC_TRIGGER_DELAY * STIM_PWM_FREQ) * (overflow * 2) + 0.5f);
+    uint32_t delay_ticks = static_cast<uint32_t>((ADC_CURRENT_SENSE_DELAY * STIM_PWM_FREQ) * (overflow * 2) + 0.5f);
     pwm_timer->CCR5 = pwm_timer->ARR - delay_ticks; // note: fails if 0 or equal to ARR
     pwm_timer->CR2 |= LL_TIM_TRGO2_OC5; // OC5 triggers TIM1_TRGO2
+}
+
+void initADCTriggerTimer()
+{
+    __HAL_RCC_TIM2_CLK_ENABLE();
+
+    uint32_t clk = tim2_clk();
+    adc_trigger_timer->PSC = 0;
+    adc_trigger_timer->ARR = (clk / ADC_TRIGGER_FREQ) - 1;
+    adc_trigger_timer->CCR1 = uint32_t(ADC_TRIGGER_DELAY * float(clk));
+
+    adc_trigger_timer->EGR |= TIM_EGR_UG;  // force update of shadow registers
+    adc_trigger_timer->CR1 |= TIM_CR1_OPM; // set one-pulse-mode
+    adc_trigger_timer->CR2 |= LL_TIM_TRGO_OC1REF;   // select OC1 event as trigger output
+
+    MODIFY_REG(adc_trigger_timer->SMCR, TIM_SMCR_TS_Msk, TIM_TS_ITR0);                      // internal triger tim_itr0 = TIM1
+    MODIFY_REG(adc_trigger_timer->SMCR, TIM_SMCR_SMS_Msk, TIM_SMCR_SMS_2 | TIM_SMCR_SMS_1); // trigger mode (start, no reset)
+    MODIFY_REG(adc_trigger_timer->CCMR1, TIM_CCMR1_OC1M_Msk, TIM_CCMR1_OC1M_3 | TIM_CCMR1_OC1M_0);             // Retrigerrable OPM mode 2
+
+    // DEBUG: output timer to PA0
+    // adc_trigger_timer->CCER |= TIM_CCER_CC1E;
+    // adc_trigger_timer->BDTR |= TIM_BDTR_MOE;    // main output enable
+
+    // LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_0, LL_GPIO_MODE_ALTERNATE);
+    // LL_GPIO_SetAFPin_0_7(GPIOA, LL_GPIO_PIN_0, LL_GPIO_AF_1);   // AF1 = TIM2_CH1
+    // LL_GPIO_SetPinSpeed(GPIOA, LL_GPIO_PIN_0, LL_GPIO_SPEED_FREQ_VERY_HIGH);
+    // LL_GPIO_SetPinOutputType(GPIOA, LL_GPIO_PIN_0, LL_GPIO_OUTPUT_PUSHPULL);
 }
 
 void initLedTimer()
 {
     __HAL_RCC_TIM20_CLK_ENABLE();
 
-    app_and_led_timer->PSC = HAL_RCC_GetPCLK2Freq() / LED_TIMER_FREQ_Hz - 1;
+    app_and_led_timer->PSC = tim1_clk() / LED_TIMER_FREQ_Hz - 1;
     app_and_led_timer->ARR = uint16_t(LED_TIMER_PEAK) - 1;
     app_and_led_timer->DIER |= TIM_DIER_UIE;            // Interrupt on timer update
     app_and_led_timer->EGR |= TIM_EGR_UG;               // Force update of the shadow registers.
@@ -424,9 +472,9 @@ void configureADC1(ADC_HandleTypeDef *hadc)
     hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc->Init.LowPowerAutoWait = DISABLE;
     hadc->Init.ContinuousConvMode = DISABLE;
-    hadc->Init.NbrOfConversion = 2;
+    hadc->Init.NbrOfConversion = 1;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -450,15 +498,6 @@ void configureADC1(ADC_HandleTypeDef *hadc)
         BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-    // internal stm32 temp sensor
-    sConfig.Channel = ADC_CHANNEL_TEMPSENSOR_ADC1;
-    sConfig.Rank = ADC_REGULAR_RANK_2;
-    sConfig.SamplingTime = ADC_SAMPLETIME_V_TS;
-    if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
-    {
-        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
-        Error_Handler();
-    }
 }
 
 void configureADC2(ADC_HandleTypeDef *hadc)
@@ -476,9 +515,9 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc->Init.LowPowerAutoWait = DISABLE;
     hadc->Init.ContinuousConvMode = DISABLE;
-    hadc->Init.NbrOfConversion = 2;
+    hadc->Init.NbrOfConversion = 1;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -492,22 +531,32 @@ void configureADC2(ADC_HandleTypeDef *hadc)
     sConfig.OffsetNumber = ADC_OFFSET_NONE;
     sConfig.Offset = 0;
 
-    // SEN_B
-    sConfig.Channel = ADC_CHANNEL_VOPAMP2;
+    // VM_SENSE
+    sConfig.Channel = ADC2_CHANNEL_VM_SENSE;
     sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_CURRENT_SENSE;
+    sConfig.SamplingTime = ADC_SAMPLETIME_VM;
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
         BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-    // VM_SENSE
-    sConfig.Channel = ADC2_CHANNEL_VM_SENSE;
-    sConfig.Rank = ADC_REGULAR_RANK_2;
-    sConfig.SamplingTime = ADC_SAMPLETIME_VM;
-    if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
+
+    // current b
+    ADC_InjectionConfTypeDef sInjectedConfig = {0};
+    sInjectedConfig.InjectedChannel = ADC_CHANNEL_VOPAMP2;
+    sInjectedConfig.InjectedRank = ADC_INJECTED_RANK_1;
+    sInjectedConfig.InjectedNbrOfConversion = 1;
+    sInjectedConfig.InjectedSamplingTime = ADC_SAMPLETIME_CURRENT_SENSE;
+    sInjectedConfig.InjectedSingleDiff = ADC_SINGLE_ENDED;
+    sInjectedConfig.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_T1_TRGO2;
+    sInjectedConfig.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
+    sInjectedConfig.AutoInjectedConv = DISABLE;
+    sInjectedConfig.InjectedDiscontinuousConvMode = DISABLE;
+    sInjectedConfig.InjectedOffsetNumber = ADC_OFFSET_NONE;
+
+    if (HAL_ADCEx_InjectedConfigChannel(hadc, &sInjectedConfig) != HAL_OK)
     {
-        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADCEx_InjectedConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -527,10 +576,10 @@ void configureADC3(ADC_HandleTypeDef *hadc)
     hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc->Init.LowPowerAutoWait = DISABLE;
     hadc->Init.ContinuousConvMode = DISABLE;
-    hadc->Init.NbrOfConversion = 1;
+    hadc->Init.NbrOfConversion = 0;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
-    hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
+    // hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
+    // hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
 
@@ -543,13 +592,22 @@ void configureADC3(ADC_HandleTypeDef *hadc)
     sConfig.OffsetNumber = ADC_OFFSET_NONE;
     sConfig.Offset = 0;
 
-    // SEN_C
-    sConfig.Channel = ADC_CHANNEL_VOPAMP3_ADC3;
-    sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_CURRENT_SENSE;
-    if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
+    // current c
+    ADC_InjectionConfTypeDef sInjectedConfig = {0};
+    sInjectedConfig.InjectedChannel = ADC_CHANNEL_VOPAMP3_ADC3;
+    sInjectedConfig.InjectedRank = ADC_INJECTED_RANK_1;
+    sInjectedConfig.InjectedNbrOfConversion = 1;
+    sInjectedConfig.InjectedSamplingTime = ADC_SAMPLETIME_CURRENT_SENSE;
+    sInjectedConfig.InjectedSingleDiff = ADC_SINGLE_ENDED;
+    sInjectedConfig.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_T1_TRGO2;
+    sInjectedConfig.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
+    sInjectedConfig.AutoInjectedConv = DISABLE;
+    sInjectedConfig.InjectedDiscontinuousConvMode = DISABLE;
+    sInjectedConfig.InjectedOffsetNumber = ADC_OFFSET_NONE;
+
+    if (HAL_ADCEx_InjectedConfigChannel(hadc, &sInjectedConfig) != HAL_OK)
     {
-        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADCEx_InjectedConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -569,9 +627,9 @@ void configureADC4(ADC_HandleTypeDef *hadc)
     hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc->Init.LowPowerAutoWait = DISABLE;
     hadc->Init.ContinuousConvMode = DISABLE;
-    hadc->Init.NbrOfConversion = 2;
+    hadc->Init.NbrOfConversion = 1;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -585,22 +643,32 @@ void configureADC4(ADC_HandleTypeDef *hadc)
     sConfig.OffsetNumber = ADC_OFFSET_NONE;
     sConfig.Offset = 0;
 
-    // SEN_A
-    sConfig.Channel = ADC_CHANNEL_VOPAMP6;
+    // VSYS_sense
+    sConfig.Channel = ADC4_CHANNEL_VSYS_SENSE;
     sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_CURRENT_SENSE;
+    sConfig.SamplingTime = ADC_SAMPLETIME_VSYS;
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
         BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
         Error_Handler();
     }
-    // VSYS_sense
-    sConfig.Channel = ADC4_CHANNEL_VSYS_SENSE;
-    sConfig.Rank = ADC_REGULAR_RANK_2;
-    sConfig.SamplingTime = ADC_SAMPLETIME_VSYS;
-    if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
+
+    // current a
+    ADC_InjectionConfTypeDef sInjectedConfig = {0};
+    sInjectedConfig.InjectedChannel = ADC_CHANNEL_VOPAMP6;
+    sInjectedConfig.InjectedRank = ADC_INJECTED_RANK_1;
+    sInjectedConfig.InjectedNbrOfConversion = 1;
+    sInjectedConfig.InjectedSamplingTime = ADC_SAMPLETIME_CURRENT_SENSE;
+    sInjectedConfig.InjectedSingleDiff = ADC_SINGLE_ENDED;
+    sInjectedConfig.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_T1_TRGO2;
+    sInjectedConfig.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
+    sInjectedConfig.AutoInjectedConv = DISABLE;
+    sInjectedConfig.InjectedDiscontinuousConvMode = DISABLE;
+    sInjectedConfig.InjectedOffsetNumber = ADC_OFFSET_NONE;
+
+    if (HAL_ADCEx_InjectedConfigChannel(hadc, &sInjectedConfig) != HAL_OK)
     {
-        BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
+        BSP_PrintDebugMsg("HAL_ADCEx_InjectedConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -622,7 +690,7 @@ void configureADC5(ADC_HandleTypeDef *hadc)
     hadc->Init.ContinuousConvMode = DISABLE;
     hadc->Init.NbrOfConversion = 1;
     hadc->Init.DiscontinuousConvMode = DISABLE;
-    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO2;
+    hadc->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T2_TRGO;
     hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc->Init.DMAContinuousRequests = ENABLE;
     hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
@@ -636,13 +704,32 @@ void configureADC5(ADC_HandleTypeDef *hadc)
     sConfig.OffsetNumber = ADC_OFFSET_NONE;
     sConfig.Offset = 0;
 
-    // SEN_D
-    sConfig.Channel = ADC_CHANNEL_VOPAMP4; // ISEN3
+    // internal stm32 temp sensor
+    sConfig.Channel = ADC_CHANNEL_TEMPSENSOR_ADC5;
     sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5; // ~0.54µs
+    sConfig.SamplingTime = ADC_SAMPLETIME_V_TS;
     if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
     {
         BSP_PrintDebugMsg("HAL_ADC_ConfigChannel failed!");
+        Error_Handler();
+    }
+
+    // current d
+    ADC_InjectionConfTypeDef sInjectedConfig = {0};
+    sInjectedConfig.InjectedChannel = ADC_CHANNEL_VOPAMP4;
+    sInjectedConfig.InjectedRank = ADC_INJECTED_RANK_1;
+    sInjectedConfig.InjectedNbrOfConversion = 1;
+    sInjectedConfig.InjectedSamplingTime = ADC_SAMPLETIME_CURRENT_SENSE;
+    sInjectedConfig.InjectedSingleDiff = ADC_SINGLE_ENDED;
+    sInjectedConfig.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_T1_TRGO2;
+    sInjectedConfig.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
+    sInjectedConfig.AutoInjectedConv = DISABLE;
+    sInjectedConfig.InjectedDiscontinuousConvMode = DISABLE;
+    sInjectedConfig.InjectedOffsetNumber = ADC_OFFSET_NONE;
+
+    if (HAL_ADCEx_InjectedConfigChannel(hadc, &sInjectedConfig) != HAL_OK)
+    {
+        BSP_PrintDebugMsg("HAL_ADCEx_InjectedConfigChannel failed!");
         Error_Handler();
     }
 }
@@ -727,10 +814,9 @@ void initDMA()
 
     configureDMA(&bsp.adc1, &bsp.dma1, DMA1_Channel1, DMA_REQUEST_ADC1);
     configureDMA(&bsp.adc2, &bsp.dma2, DMA1_Channel2, DMA_REQUEST_ADC2);
-    configureDMA(&bsp.adc3, &bsp.dma3, DMA1_Channel3, DMA_REQUEST_ADC3);
+    // configureDMA(&bsp.adc3, &bsp.dma3, DMA1_Channel3, DMA_REQUEST_ADC3);
     configureDMA(&bsp.adc4, &bsp.dma4, DMA1_Channel4, DMA_REQUEST_ADC4);
     configureDMA(&bsp.adc5, &bsp.dma5, DMA1_Channel5, DMA_REQUEST_ADC5);
-
 
     HAL_StatusTypeDef status;
     status = HAL_ADC_Start_DMA(&bsp.adc1, (uint32_t *)bsp.adc1_buffer, sizeof(bsp.adc1_buffer) / 2);
@@ -747,7 +833,7 @@ void initDMA()
         Error_Handler();
     }
 
-    status = HAL_ADC_Start_DMA(&bsp.adc3, (uint32_t *)bsp.adc3_buffer, sizeof(bsp.adc3_buffer) / 2);
+    status = HAL_ADC_Start(&bsp.adc3);
     if (status != HAL_OK)
     {
         BSP_PrintDebugMsg("DMA start adc3 failed, %i\n", status);
@@ -768,9 +854,19 @@ void initDMA()
         Error_Handler();
     }
 
-    /* DMA interrupt init */
-    SET_BIT(DMA1_Channel5->CCR, DMA_CCR_TCIE);  // enable only DMA5 transfer complete interrupt.
-    enableInterruptWithPrio(DMA1_Channel5_IRQn, PRIO_DMA);
+    LL_ADC_INJ_StartConversion(bsp.adc2.Instance);
+    LL_ADC_INJ_StartConversion(bsp.adc3.Instance);
+    LL_ADC_INJ_StartConversion(bsp.adc4.Instance);
+    LL_ADC_INJ_StartConversion(bsp.adc5.Instance);
+
+    // DMA interrupt
+    SET_BIT(DMA1_Channel4->CCR, DMA_CCR_TCIE);  // DMA4 transfer complete interrupt.
+    enableInterruptWithPrio(DMA1_Channel4_IRQn, PRIO_DMA);
+
+    // ADC current sense done interrupt
+    enableInterruptWithPrio(ADC3_IRQn, PRIO_DMA);
+    ADC3->IER |= ADC_IER_JEOSIE;            // enable ADC group injected end of sequence conversions interrupt
+    CLEAR_BIT(ADC3->IER, ADC_IER_OVRIE);    // disable ADC group regular overrun interrupt
 }
 
 void initDAC()
@@ -880,6 +976,7 @@ void BSP_Init()
 {
     initGPIO();
     initPwm();
+    initADCTriggerTimer();
     initVRef();
     initADC();
     initOpamp();
@@ -892,25 +989,34 @@ void BSP_Init()
 
     // enable timer. DIR bit aligns timer update event with either peak or through.
     pwm_timer->CR1 |= TIM_CR1_CEN;
+    delay(1);   // run all ADC triggers
 }
 
 extern "C"
 {
-    // DMA interrupt, triggers right after all current sense reads
-    // are finished.
-    void DMA1_Channel5_IRQHandler(void)
+    // ADC injected channel complete interrupt.
+    // triggers when new current samples from the ADC are available.
+    void ADC3_IRQHandler(void)
     {
-        if (DMA1->ISR | DMA_ISR_TCIF5) {
+        if (ADC3->ISR & ADC_ISR_JEOS) {
+            ADC3->ISR = ADC_ISR_JEOS;   // clear interrupt bit
+
             if (bsp.pwm_callback) {
                 bsp.pwm_callback();
             }
+        };
+    }
 
+    // DMA4 interrupt, triggers when vsys_sense is available.
+    void DMA1_Channel4_IRQHandler(void)
+    {
+        if (DMA1->ISR | DMA_ISR_TCIF4) {
             bsp.vsys_min = min(bsp.vsys_min, (uint16_t)bsp.vsys_sense);
             bsp.vsys_max = max(bsp.vsys_max, (uint16_t)bsp.vsys_sense);
 
-            DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CTCIF5 | DMA_IFCR_CHTIF5;
+            DMA1->IFCR = DMA_IFCR_CGIF4 | DMA_IFCR_CTCIF4 | DMA_IFCR_CHTIF4;
         } else {
-            DMA1->IFCR = DMA_IFCR_CGIF5 | DMA_IFCR_CHTIF5;
+            DMA1->IFCR = DMA_IFCR_CGIF4 | DMA_IFCR_CHTIF4;
         }
     }
 
@@ -1016,7 +1122,6 @@ void BSP_OutputEnable(bool a, bool b, bool c, bool d)
         CLEAR_BIT(pwm_timer->CCER, TIM_CCER_CC2E);
     }
 
-
     if (a || b || c || d) {
         pwm_timer->BDTR |= TIM_BDTR_MOE;
     } else {
@@ -1096,9 +1201,9 @@ Vec3f BSP_ReadPhaseCurrents3()
     float factor = ADC_VOLTAGE / ADC_SCALE / DRIVER_RISEN * DRIVER_SENSE_CURENT_TO_COIL_CURRENT / -gain;
 
     return Vec3f(
-        (bsp.current_a - bsp.current_a_offset) * factor,
-        (bsp.current_b - bsp.current_b_offset) * factor,
-        (bsp.current_c - bsp.current_c_offset) * factor);
+        (bsp.current_a() - bsp.current_a_offset) * factor,
+        (bsp.current_b() - bsp.current_b_offset) * factor,
+        (bsp.current_c() - bsp.current_c_offset) * factor);
 }
 
 Vec4f BSP_ReadPhaseCurrents4()
@@ -1107,10 +1212,10 @@ Vec4f BSP_ReadPhaseCurrents4()
     float factor = ADC_VOLTAGE / ADC_SCALE / DRIVER_RISEN * DRIVER_SENSE_CURENT_TO_COIL_CURRENT / -gain;
 
     return Vec4f(
-        (bsp.current_a - bsp.current_a_offset) * factor,
-        (bsp.current_b - bsp.current_b_offset) * factor,
-        (bsp.current_c - bsp.current_c_offset) * factor,
-        (bsp.current_d - bsp.current_d_offset) * factor);
+        (bsp.current_a() - bsp.current_a_offset) * factor,
+        (bsp.current_b() - bsp.current_b_offset) * factor,
+        (bsp.current_c() - bsp.current_c_offset) * factor,
+        (bsp.current_d() - bsp.current_d_offset) * factor);
 }
 
 void BSP_WriteStatusLED(bool on)
@@ -1140,23 +1245,21 @@ float BSP_ReadTemperatureOnboardNTC()
 void BSP_AdjustCurrentSenseOffsets()
 {
     // The DRV8231A has some offset error, on my board between 0v and 0.008v (~5mA drive current)
-    bsp.current_a_offset += (bsp.current_a - bsp.current_a_offset) * 0.01f;
-    bsp.current_b_offset += (bsp.current_b - bsp.current_b_offset) * 0.01f;
-    bsp.current_c_offset += (bsp.current_c - bsp.current_c_offset) * 0.01f;
-    bsp.current_d_offset += (bsp.current_d - bsp.current_d_offset) * 0.01f;
+    bsp.current_a_offset += (bsp.current_a() - bsp.current_a_offset) * 0.01f;
+    bsp.current_b_offset += (bsp.current_b() - bsp.current_b_offset) * 0.01f;
+    bsp.current_c_offset += (bsp.current_c() - bsp.current_c_offset) * 0.01f;
+    bsp.current_d_offset += (bsp.current_d() - bsp.current_d_offset) * 0.01f;
 }
 
 float BSP_ReadVBus()
 {
     float adc_voltage = bsp.vm_sense * (ADC_VOLTAGE / ADC_SCALE);
     const float multiplier = (20 + 200) / 20.f;
-    const float correction_factor = (1.9996 / 1.9848);  // correct for the voltage drop from ADC sampling. Measured with multimeter at boost voltage divider at 22v and 50khz pwm.
-    return adc_voltage * (multiplier * correction_factor);
+    return adc_voltage * multiplier;
 }
 
 float BSP_ReadVSYS()
 {
-    // VSYS reads slightly low (about 2.5%) because of the high sampling frequency and high resistors used in the divider.
     float adc_voltage = bsp.vsys_sense * (ADC_VOLTAGE / ADC_SCALE);
     const float multiplier = (100 + 100) / 100.f;
     return adc_voltage * multiplier;
@@ -1164,7 +1267,6 @@ float BSP_ReadVSYS()
 
 Vec2f BSP_ReadVSYSRange()
 {
-    // VSYS reads slightly low (about 2.5%) because of the high sampling frequency and high resistors used in the divider.
     float adc_voltage_min = bsp.vsys_min * (ADC_VOLTAGE / ADC_SCALE);
     bsp.vsys_min = ADC_SCALE;
     float adc_voltage_max = bsp.vsys_max * (ADC_VOLTAGE / ADC_SCALE);

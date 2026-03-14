@@ -23,7 +23,7 @@ MEMORY
 {
   RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 131072
   FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 131072
-  /* FLASH_BANK2 (rx)    : ORIGIN = 0x8040000,   LENGTH = 131072 */
+  FLASH_BANK2 (rx) : ORIGIN = 0x8040000,   LENGTH = 131072
 }
 
 /* Sections */
@@ -45,6 +45,8 @@ SECTIONS
     *HAL*(.text*)          /* .text sections in files containing HAL */
     *model*(.text*)        /* .text sections in files containing model */
     *bsp*(.text*)          /* .text sections in files containing bsp */
+    *Adafruit*(.text*)     /* .text sections in files containing adafruit */
+    *LSM6*(.text*)         /* .text sections in files containing Nanopb */
     . = ALIGN(4);
 
     _etext = .;        /* define a global symbols at end of code */
@@ -64,7 +66,7 @@ SECTIONS
     KEEP (*(.fini))
 
     . = ALIGN(4);
-  } >FLASH /* >FLASH_BANK2 */
+  } >FLASH_BANK2
 
   /* Constant data into "FLASH" Rom type memory */
   .rodata :

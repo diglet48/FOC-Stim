@@ -27,6 +27,10 @@ Software by Diglet.
 
 # Changelog
 
+## V4.3
+Replace C6 (SYSSense) and C20 (VMSense) from 100nF to 10nF.  
+Improve thermal relief on some hard-to-solder ground pads on mainboard and frontpanel.
+
 ## V4.2
 Added LSM6DSOX 6-DOF IMU.  
 Added cutout for ESP32 antenna.  

@@ -48,7 +48,7 @@ jobs:
 
       - name: Rename firmware binary (V4, 42TL001 variant)
         run: |
-          cd .pio/build/focstim_v4
+          cd .pio/build/focstim_v4_42tl001
           cp firmware.bin focstim_v4_42tl001_firmware.bin
           cp firmware.hex focstim_v4_42tl001_firmware.hex
 

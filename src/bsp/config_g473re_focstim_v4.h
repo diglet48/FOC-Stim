@@ -10,7 +10,13 @@ static constexpr OutputStage OUTPUT_STAGE = {
     .resistance = 0.68f,    // driver Rdson (0.28) + inductor DC resistance (0.3) + traces (0.1 ohm)
     .inductance = 220e-6f,  // µH
     .capacitance = 2.2e-6f, // µF
+#ifdef TRANSFORMER_42TL004
     .transformer = XICON_42TL004,
+#elifdef TRANSFORMER_42TL001
+    .transformer = XICON_42TL001,
+#else
+#error no transformer type declared
+#endif
 };
 
 // current limits

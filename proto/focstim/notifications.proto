@@ -123,7 +123,7 @@ message NotificationDebugAS5311 {
     int32 flags = 3;
 }
 
-// only abused for debug within logging in restim
+// only used for debug logging in restim
 message NotificationDebugEdging {
     float full_power_threshold = 1;
     float reduced_power_threshold = 2;

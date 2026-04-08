@@ -32,6 +32,9 @@ jobs:
       - name: Build PlatformIO Project (V4)
         run: pio run --environment focstim_v4
 
+      - name: Build PlatformIO Project (V4, 42TL001 variant)
+        run: pio run --environment focstim_v4_42tl001
+
       - name: Rename firmware binary (ESC1)
         run: |
           cd .pio/build/disco_b_g431b_esc1
@@ -43,6 +46,12 @@ jobs:
           cp firmware.bin focstim_v4_firmware.bin
           cp firmware.hex focstim_v4_firmware.hex
 
+      - name: Rename firmware binary (V4, 42TL001 variant)
+        run: |
+          cd .pio/build/focstim_v4
+          cp firmware.bin focstim_v4_42tl001_firmware.bin
+          cp firmware.hex focstim_v4_42tl001_firmware.hex
+
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -50,6 +59,7 @@ jobs:
           path: |
             .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
             .pio/build/focstim_v4/focstim_v4_firmware.hex
+            .pio/build/focstim_v4/focstim_v4_42tl001_firmware.hex
 
       - name: Release nightly
         uses: softprops/action-gh-release@v1
@@ -60,4 +70,5 @@ jobs:
           files: |
             .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
             .pio/build/focstim_v4/focstim_v4_firmware.hex
+            .pio/build/focstim_v4/focstim_v4_42tl001_firmware.hex
           fail_on_unmatched_files: true

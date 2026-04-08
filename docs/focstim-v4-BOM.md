@@ -10,9 +10,10 @@ Frontpanel from JLCPCB, one-sided assembly or bare PCB.
 ### Transformer
 4x Xicon 42TL004-RC. [Mouser](https://mouser.com/ProductDetail/Xicon/42TL004-RC?qs=%252BLh6ltJumVRX87vpOY3zCA%3D%3D)
 
-Alternatives, not tested:  
+Alternatives:
 42TL004-RC on ebay, a knockoff without the xicon brand, but very close to the original.  
-Xicon 42TL001-RC. 5-10% lower battery life with 20% higher output power.
+Xicon 42TL001-RC. 5-10% lower battery life, higher maximum power in some scenarios. Use the 42TL001 firmware.
+
 
 ### Switch
 XKB Connection SS-12D28G5. [LCSC](https://www.lcsc.com/product-detail/C1121878.html)  

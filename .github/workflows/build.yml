@@ -70,5 +70,5 @@ jobs:
           files: |
             .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
             .pio/build/focstim_v4/focstim_v4_firmware.hex
-            .pio/build/focstim_v4/focstim_v4_42tl001_firmware.hex
+            .pio/build/focstim_v4_42tl001/focstim_v4_42tl001_firmware.hex
           fail_on_unmatched_files: true

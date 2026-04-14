@@ -682,6 +682,7 @@ ComplexFourphasePoints project_fourphase_2(
     float pulse_amplitude,
     Vec4f position_vector,
     Vec4f calibration_vector_in_db,
+    float reduction_in_center,
     bool flip_polarity,
     float start_angle)
 {
@@ -701,7 +702,7 @@ ComplexFourphasePoints project_fourphase_2(
     Vec4f output_current = interpolator.interpolate(position_vector);
 
     // normalize intensity to 1
-    float intensity = fourphase_intensity(output_current * current_to_power);
+    float intensity = fourphase_intensity(output_current * current_to_power, reduction_in_center);
     output_current = output_current / intensity;
 
     // project points on complex plane
@@ -716,7 +717,7 @@ Vec4f fourphase_interpolate(Vec4f p, Vec4f max_amplitude)
     return interpolator.interpolate(p);
 }
 
-float fourphase_intensity(Vec4f electrode_power_in_percent)
+float fourphase_intensity(Vec4f electrode_power_in_percent, float reduction_in_center)
 {
     // Desired properties:
     //
@@ -741,8 +742,11 @@ float fourphase_intensity(Vec4f electrode_power_in_percent)
     float rank_2 = order.c;
     rank_2 = std::max(1/3.f * rank_1, rank_2); // not possible.
 
-    float z = 4.5f; // empirically determined
-    float intensity = norm(rank_1, rank_2, z);
-    intensity /= norm(1, 1.f/3, z);
-    return intensity;
+    // clamp to sensible values, and to avoid division by zero.
+    reduction_in_center = std::clamp<float>(reduction_in_center, .001f, .20f);
+    float exponent = logf(2) / logf(1 / (1 - reduction_in_center));
+    // clamp to avoid float over/underflow
+    exponent = std::clamp<float>(exponent, 1, 50);
+
+    return rank_1 * norm(1, rank_2 / rank_1, exponent); // = norm(rank1, rank2, exponent)
 }

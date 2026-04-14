@@ -209,6 +209,7 @@ struct {
     SimpleAxis calib_4b{focstim_rpc_AxisType_AXIS_CALIBRATION_4_B, 0, -10, 10};
     SimpleAxis calib_4c{focstim_rpc_AxisType_AXIS_CALIBRATION_4_C, 0, -10, 10};
     SimpleAxis calib_4d{focstim_rpc_AxisType_AXIS_CALIBRATION_4_D, 0, -10, 10};
+    SimpleAxis calib_4_reduction_in_center{focstim_rpc_AxisType_AXIS_CALIBRATION_4_REDUCTION_IN_CENTER, .14f, 0, .2f};
     SimpleAxis e1{focstim_rpc_AxisType_AXIS_ELECTRODE_1_POWER, 0, 0, 1};
     SimpleAxis e2{focstim_rpc_AxisType_AXIS_ELECTRODE_2_POWER, 0, 0, 1};
     SimpleAxis e3{focstim_rpc_AxisType_AXIS_ELECTRODE_3_POWER, 0, 0, 1};
@@ -765,6 +766,7 @@ void loop()
     float calibration_4b = simple_axes.calib_4b.get(now_ms);
     float calibration_4c = simple_axes.calib_4c.get(now_ms);
     float calibration_4d = simple_axes.calib_4d.get(now_ms);
+    float calibration_4_reduction_in_center = simple_axes.calib_4_reduction_in_center.get(now_ms);
 
     float electrode_a = simple_axes.e1.get(now_ms);
     float electrode_b = simple_axes.e2.get(now_ms);
@@ -841,6 +843,7 @@ void loop()
             driving_current_amps,
             Vec4f{electrode_a, electrode_b, electrode_c, electrode_d},
             Vec4f{calibration_4a, calibration_4b, calibration_4c, calibration_4d},
+            calibration_4_reduction_in_center,
             polarity,
             random_start_angle
         );

@@ -8,6 +8,7 @@ ComplexFourphasePoints project_fourphase_2(
     float pulse_amplitude,
     Vec4f position_vector,
     Vec4f calibration_vector,
+    float reduction_in_center,
     bool flip_polarity,
     float start_angle
 );
@@ -37,6 +38,6 @@ Vec4f fourphase_interpolate(Vec4f p, Vec4f max_amplitude);
  * Unit testing interface
  * Calculate the intensity of the pulse coordinates
  */
-float fourphase_intensity(Vec4f electrode_power_in_percent);
+float fourphase_intensity(Vec4f electrode_power_in_percent, float reduction_in_center);
 
 #endif

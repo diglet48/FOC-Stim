@@ -38,14 +38,6 @@ static void UnityAssertEqualVec4f(Vec4f expected, Vec4f actual, const UNITY_LINE
 
 static Vec4f calibration_none{1, 1, 1, 1};
 
-void setUp(void) {
-    // set stuff up here
-}
-
-void tearDown(void) {
-    // clean stuff up here
-}
-
 void test_constrain(void) {
 
     TEST_ASSERT_EQUAL_VEC4(Vec4f({1, 1/3.f, 1/3.f, 1/3.f}), fourphase_constrain_coordinates({1, 0, 0, 0}));
@@ -161,16 +153,18 @@ void test_continuity() {
 }
 
 void test_intensity() {
+    float default_reduction = 0.14f;
+
     Vec4f vec1 = {1, 1/3.f, 1/3.f, 1/3.f};
-    TEST_ASSERT_EQUAL_FLOAT(1, fourphase_intensity(vec1));
+    TEST_ASSERT_EQUAL_FLOAT(1.001393f, fourphase_intensity(vec1, default_reduction));
 
     // .86 = empirically nice value
     Vec4f vec2 = {.86, .86, .86, .86};
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, 1, fourphase_intensity(vec2));
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, 2, fourphase_intensity(vec2 * 2));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 1, fourphase_intensity(vec2, default_reduction));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 2, fourphase_intensity(vec2 * 2, default_reduction));
 
-    TEST_ASSERT_EQUAL_FLOAT(2, fourphase_intensity(vec1 * 2));
-    TEST_ASSERT_EQUAL_FLOAT(0.5f, fourphase_intensity(vec1 / 2));
+    TEST_ASSERT_EQUAL_FLOAT(2.002785f, fourphase_intensity(vec1 * 2, default_reduction));
+    TEST_ASSERT_EQUAL_FLOAT(0.5006963f, fourphase_intensity(vec1 / 2, default_reduction));
 }
 
 static Vec4f calculate_maximum_amplitudes2(Vec4f calibration_vector_in_db) {
@@ -185,7 +179,7 @@ static Vec4f calculate_maximum_amplitudes2(Vec4f calibration_vector_in_db) {
     };
 }
 
-int main(int argc, char **argv) {
+void tests_4p() {
     UNITY_BEGIN();
     RUN_TEST(test_center);
     RUN_TEST(test_constrain);
@@ -198,6 +192,4 @@ int main(int argc, char **argv) {
     RUN_TEST(test_continuity);
     RUN_TEST(test_intensity);
     UNITY_END();
-
-    return 0;
 }

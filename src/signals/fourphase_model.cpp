@@ -35,6 +35,10 @@ void FourphaseModel::play_pulse(
         return;
     }
 
+    // reduce the current limit if the caller gave us values outside the
+    // measurable range of the hardware
+    estop_current_limit = std::min<float>(estop_current_limit, BSP_MaximumMeasurableCurrent());
+
     // reset variables for pulse playback
     producer_index = 0;
     interrupt_index = 0;

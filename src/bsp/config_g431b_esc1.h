@@ -14,7 +14,7 @@ static constexpr OutputStage OUTPUT_STAGE = {
 };
 
 // current limits
-#define BODY_CURRENT_MAX  0.15f             // in amps, body current
+#define BODY_CURRENT_MAX  0.20f             // in amps, body current
 #define ESTOP_CURRENT_LIMIT_MARGIN 0.3f     // accounts for measurement noise, driving current
 
 // board temperature limits

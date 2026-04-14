@@ -1218,6 +1218,19 @@ Vec4f BSP_ReadPhaseCurrents4()
         (bsp.current_d() - bsp.current_d_offset) * factor);
 }
 
+float BSP_MaximumMeasurableCurrent()
+{
+    // approx 1.93 ampere
+    float gain = 1;
+    float factor = ADC_VOLTAGE / ADC_SCALE / DRIVER_RISEN * DRIVER_SENSE_CURENT_TO_COIL_CURRENT / -gain;
+    uint16_t range = ADC_SCALE - 10;    // small safety margin
+    float a = std::abs((ADC_SCALE - bsp.current_a_offset) * factor);
+    float b = std::abs((ADC_SCALE - bsp.current_b_offset) * factor);
+    float c = std::abs((ADC_SCALE - bsp.current_c_offset) * factor);
+    float d = std::abs((ADC_SCALE - bsp.current_d_offset) * factor);
+    return std::max<float>({a, b, c, d});
+}
+
 void BSP_WriteStatusLED(bool on)
 {
 

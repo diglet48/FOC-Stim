@@ -43,6 +43,8 @@ void BSP_SetPWM4Atomic(float a, float b, float c, float d);
 Vec4f BSP_ReadPhaseCurrents4();
 #endif
 
+float BSP_MaximumMeasurableCurrent();
+
 #ifdef ARDUINO_B_G431B_ESC1
 float BSP_ReadTemperatureOnboardNTC();  // onboard temperature sensor (ESC1)
 float BSP_ReadPotentiometerPercentage();

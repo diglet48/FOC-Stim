@@ -761,6 +761,12 @@ Vec3f BSP_ReadPhaseCurrents3()
         (cc - midpoint));
 }
 
+float BSP_MaximumMeasurableCurrent()
+{
+    // conservative value, hardware supports much higher values
+    return 5.0f;
+}
+
 float BSP_ReadPotentiometerPercentage()
 {
     float value = inverse_lerp(bsp.potentiometer, POTMETER_ZERO_PERCENT_VALUE, POTMETER_HUNDRED_PERCENT_VALUE);

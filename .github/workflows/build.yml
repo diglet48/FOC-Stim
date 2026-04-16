@@ -1,10 +1,12 @@
 name: Build firmware
 
 on:
-  workflow_dispatch:
   push:
+    tags:
+      - 'v*'            # e.g. v1.2.3 → publishes to GitHub Release
     branches:
-      - master
+      - master          # also build on main pushes (artifacts only)
+  workflow_dispatch:    # and on manual trigger from the Actions tab
 
 jobs:
   build:
@@ -72,3 +74,13 @@ jobs:
             .pio/build/focstim_v4/focstim_v4_firmware.hex
             .pio/build/focstim_v4_42tl001/focstim_v4_42tl001_firmware.hex
           fail_on_unmatched_files: true
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            .pio/build/disco_b_g431b_esc1/b_g431b_esc1_firmware.bin
+            .pio/build/focstim_v4/focstim_v4_firmware.hex
+            .pio/build/focstim_v4_42tl001/focstim_v4_42tl001_firmware.hex
+          draft: true

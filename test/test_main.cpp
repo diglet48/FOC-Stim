@@ -1,6 +1,7 @@
 #include <unity.h>
 
 
+extern void tests_3p();
 extern void tests_4p();
 
 
@@ -15,6 +16,7 @@ void tearDown(void) {
 
 int main(int argc, char **argv) {
     UNITY_BEGIN();
+    tests_3p();
     tests_4p();
     UNITY_END();
 

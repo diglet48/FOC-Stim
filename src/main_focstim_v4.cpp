@@ -814,7 +814,7 @@ void loop()
     // play the pulse
     OutputLimits output_limits(boostControl.max_allowed_vdrive(), MODEL_MAXIMUM_VOLT_SECONDS, MODEL_FIXED_RESISTANCE);
     if (play_status == PlayStatus::PlayingThreephase) {
-        ComplexThreephasePoints points3 = project_threephase(
+        ComplexThreephasePoints points3 = project_threephase_2(
             driving_current_amps,
             pulse_alpha,
             pulse_beta,

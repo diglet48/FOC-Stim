@@ -167,22 +167,10 @@ void test_intensity() {
     TEST_ASSERT_EQUAL_FLOAT(0.5006963f, fourphase_intensity(vec1 / 2, default_reduction));
 }
 
-static Vec4f calculate_maximum_amplitudes2(Vec4f calibration_vector_in_db) {
-    // normalize calibration values
-    float calib_max = calibration_vector_in_db.max();
-    calibration_vector_in_db = calibration_vector_in_db - calib_max;
-    return Vec4f{
-        powf(10, calibration_vector_in_db.a / 10),
-        powf(10, calibration_vector_in_db.b / 10),
-        powf(10, calibration_vector_in_db.c / 10),
-        powf(10, calibration_vector_in_db.d / 10)
-    };
-}
-
 void tests_4p() {
     UNITY_BEGIN();
-    RUN_TEST(test_center);
     RUN_TEST(test_constrain);
+    RUN_TEST(test_center);
     RUN_TEST(test_a);
     RUN_TEST(test_b);
     RUN_TEST(test_c);

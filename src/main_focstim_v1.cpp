@@ -280,7 +280,7 @@ void loop()
     total_pulse_length_timer.step();
 
     // play the pulse
-    ComplexThreephasePoints points3 = project_threephase(
+    ComplexThreephasePoints points3 = project_threephase_2(
         driving_current_amps,
         pulse_alpha,
         pulse_beta,

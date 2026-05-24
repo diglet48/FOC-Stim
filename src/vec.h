@@ -13,6 +13,10 @@ struct Vec2f {
         return sqrtf(a*a + b*b);
     }
 
+    friend float dot(Vec2f l, Vec2f r) {
+        return l.a * r.a + l.b * r.b;
+    }
+
     float a;
     float b;
 };
@@ -59,6 +63,10 @@ struct Vec3f {
         return Vec3f(a + other.a, b + other.b, c + other.c);
     }
 
+    Vec3f const operator*(const Vec3f &other) const  {
+        return Vec3f(a * other.a, b * other.b, c * other.c);
+    }
+
     friend float dot(Vec3f l, Vec3f r) {
         return l.a * r.a + l.b * r.b + l.c * r.c;
     }
@@ -70,6 +78,13 @@ struct Vec3f {
             l.a * r.b - l.b * r.a
         };
     }
+
+    Vec3f sorted() {
+        Vec3f copy(*this);
+        std::sort(&copy.a, &copy.a + 3);
+        return copy;
+    }
+
 
     float a;
     float b;

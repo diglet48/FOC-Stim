@@ -349,7 +349,7 @@ private:
             }
             break;
         }
-        // unreachable
+        __builtin_unreachable();
     }
 
     float distance_from_origin(Vec4f p, Vec4f projection) {

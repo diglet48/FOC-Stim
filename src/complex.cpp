@@ -20,3 +20,24 @@ Complex constrain_in_bound(Complex c, float min_magnitude, float max_magnitude, 
     float b = sinf(desired_angle) * desired_magnitude;
     return Complex(a, b);
 }
+
+void split_point(Complex m, float a, float b, Complex *out_1, Complex *out_2) {
+    Complex m_normalized;
+    if (std::abs(m) < .001f) {
+        m_normalized = Complex(1, 0);
+    } else {
+        m_normalized = m * (1 / std::abs(m));
+    }
+
+    float c = std::abs(m);
+    // handle special case c == 0. Note that if c==0 then a==b, therefore solution is trivial.
+    c = std::max(0.0001f, c);
+    float rational = (a*a - b*b + c*c) / (2 * c);
+    float imaginary = sqrtf(std::max(a*a - rational*rational, 0.f));
+
+    Complex p = Complex(rational, imaginary) * m_normalized;
+    Complex q = m - p;
+
+    *out_1 = p;
+    *out_2 = q;
+}

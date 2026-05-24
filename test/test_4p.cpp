@@ -1,4 +1,4 @@
-#include "signals/fourphase_math_2.h"
+#include "signals/fourphase_math.h"
 
 #include <unity.h>
 #include <random>

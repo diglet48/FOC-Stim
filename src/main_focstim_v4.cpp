@@ -9,7 +9,7 @@
 #include "complex.h"
 #include "signals/threephase_math.h"
 #include "signals/threephase_model.h"
-#include "signals/fourphase_math_2.h"
+#include "signals/fourphase_math.h"
 #include "signals/fourphase_model.h"
 #include "battery/power_manager.h"
 #include "battery/boost_control.h"

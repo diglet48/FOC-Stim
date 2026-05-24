@@ -267,7 +267,7 @@ Vec4f FourphaseModel::estimate_rms_current(float dt)
 
 void FourphaseModel::debug_stats_teleplot()
 {
-    BSP_PrintDebugMsg("    i     V1     V2     V3     V4 cmd_i1 i2_cmd i3_cmd i4_cmd     i1     i2     i3     i4");
+    BSP_PrintDebugMsg("    i     V1     V2     V3     V4 i1_cmd i2_cmd i3_cmd i4_cmd     i1     i2     i3     i4");
     int start_index = max(0, producer_index - CONTEXT_SIZE + 1);
     for (int i = start_index; i <= producer_index; i++) {
         const auto &c = context[i % CONTEXT_SIZE];
@@ -320,7 +320,7 @@ void FourphaseModel::interrupt_fn()
 #endif
 
 #if defined(DEADTIME_COMPENSATION_ENABLE)
-    auto dtcomp = [&](float voltage, float current) {
+    const auto dtcomp = [=](float voltage, float current) {
         float comp_percent = 0;
         if (current >= DEADTIME_COMPENSATION_CURRENT_THRESHOLD) {
             comp_percent = DEADTIME_COMPENSATION_PERCENTAGE;

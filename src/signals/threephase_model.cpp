@@ -301,7 +301,7 @@ void ThreephaseModel::interrupt_fn()
 #endif
 
 #if defined(DEADTIME_COMPENSATION_ENABLE)
-    auto dtcomp = [&](float voltage, float current) {
+    const auto dtcomp = [=](float voltage, float current) {
         float comp_percent = 0;
         if (current >= DEADTIME_COMPENSATION_CURRENT_THRESHOLD) {
             comp_percent = DEADTIME_COMPENSATION_PERCENTAGE;

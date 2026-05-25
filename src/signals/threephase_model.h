@@ -68,27 +68,6 @@ public:
     float current_limit;
     bool current_limit_exceeded;
 
-    struct {
-        float sine;     // just sin(theta)
-        float cosine;   // just cos(theta)
-
-        float i1_cmd;   // commanded current
-        float i2_cmd;
-        float i3_cmd;
-
-        float v1_cmd;   // commanded voltage
-        float v2_cmd;
-        float v3_cmd;
-
-        float v1_cmd_quadrature;   // commanded voltage, shifted 90 deg
-        float v2_cmd_quadrature;
-        float v3_cmd_quadrature;
-
-        float i1_meas;  // measured current
-        float i2_meas;
-        float i3_meas;
-    } context[CONTEXT_SIZE];
-
     Complex cmd_IQ_1 = {};
     Complex cmd_IQ_2 = {};
     Complex cmd_IQ_3 = {};
@@ -111,6 +90,27 @@ public:
     std::function<void(FOCError)> emergency_stop_fn;
 
     float previous_frequency;
+
+    struct {
+        float sine;     // just sin(theta)
+        float cosine;   // just cos(theta)
+
+        float i1_cmd;   // commanded current
+        float i2_cmd;
+        float i3_cmd;
+
+        float v1_cmd;   // commanded voltage
+        float v2_cmd;
+        float v3_cmd;
+
+        float v1_cmd_quadrature;   // commanded voltage, shifted 90 deg
+        float v2_cmd_quadrature;
+        float v3_cmd_quadrature;
+
+        float i1_meas;  // measured current
+        float i2_meas;
+        float i3_meas;
+    } context[CONTEXT_SIZE];
 };
 
 #endif

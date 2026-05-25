@@ -33,13 +33,15 @@ void BSP_CheckJumpToBootloader()
         /* Disable all interrupts */
         __disable_irq();
 
-        /* Disable Systick timer */
-        SysTick->CTRL = 0;
-
         /* Set the clock to the default state */
         HAL_RCC_DeInit();
         TIM1->CR1 &= ~TIM_CR1_CEN;
         HAL_DeInit();
+
+        /* Disable Systick timer */
+        SysTick->CTRL = 0;
+        SysTick->LOAD = 0;
+        SysTick->VAL = 0;
 
         /* Clear Interrupt Enable Register & Interrupt Pending Register */
         for (uint8_t i = 0; i < (MCU_IRQS + 31u) / 32; i++)

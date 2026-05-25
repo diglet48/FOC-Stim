@@ -429,27 +429,27 @@ void FourphaseModel::accumulate_errors()
     // skip on devices without bidirectional current sense if commanded current is low,
     // because of poor accuracy.
     if (context[i].i1_cmd < minimum_current) {
-        meas_IQ_1 += Complex(context[i].cosine, context[i].sine) * context[i].i1_meas;
-        cmd_IQ_1 += Complex(context[i].cosine, context[i].sine) * context[i].i1_cmd;
+        meas_IQ_1 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i1_meas, meas_IQ_1);
+        cmd_IQ_1 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i1_cmd, cmd_IQ_1);
     }
     if (context[i].i2_cmd < minimum_current) {
-        meas_IQ_2 += Complex(context[i].cosine, context[i].sine) * context[i].i2_meas;
-        cmd_IQ_2 += Complex(context[i].cosine, context[i].sine) * context[i].i2_cmd;
+        meas_IQ_2 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i2_meas, meas_IQ_2);
+        cmd_IQ_2 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i2_cmd, cmd_IQ_2);
     }
     if (context[i].i3_cmd < minimum_current) {
-        meas_IQ_3 += Complex(context[i].cosine, context[i].sine) * context[i].i3_meas;
-        cmd_IQ_3 += Complex(context[i].cosine, context[i].sine) * context[i].i3_cmd;
+        meas_IQ_3 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i3_meas, meas_IQ_3);
+        cmd_IQ_3 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i3_cmd, cmd_IQ_3);
     }
     if (context[i].i4_cmd < minimum_current) {
-        meas_IQ_4 += Complex(context[i].cosine, context[i].sine) * context[i].i4_meas;
-        cmd_IQ_4 += Complex(context[i].cosine, context[i].sine) * context[i].i4_cmd;
+        meas_IQ_4 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i4_meas, meas_IQ_4);
+        cmd_IQ_4 = complex_fma(Complex(context[i].cosine, context[i].sine), context[i].i4_cmd, cmd_IQ_4);
     }
 
     // use I/Q sampling to find the phase offset between voltage and current
-    phase_IQ_1 += Complex(context[i].v1_cmd, context[i].v1_cmd_quadrature) * context[i].i1_meas;
-    phase_IQ_2 += Complex(context[i].v2_cmd, context[i].v2_cmd_quadrature) * context[i].i2_meas;
-    phase_IQ_3 += Complex(context[i].v3_cmd, context[i].v3_cmd_quadrature) * context[i].i3_meas;
-    phase_IQ_4 += Complex(context[i].v4_cmd, context[i].v4_cmd_quadrature) * context[i].i4_meas;
+    phase_IQ_1 = complex_fma(Complex(context[i].v1_cmd, context[i].v1_cmd_quadrature), context[i].i1_meas, phase_IQ_1);
+    phase_IQ_2 = complex_fma(Complex(context[i].v2_cmd, context[i].v2_cmd_quadrature), context[i].i2_meas, phase_IQ_2);
+    phase_IQ_3 = complex_fma(Complex(context[i].v3_cmd, context[i].v3_cmd_quadrature), context[i].i3_meas, phase_IQ_3);
+    phase_IQ_4 = complex_fma(Complex(context[i].v4_cmd, context[i].v4_cmd_quadrature), context[i].i4_meas, phase_IQ_4);
 }
 
 void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4)

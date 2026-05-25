@@ -24,6 +24,12 @@ Complex constrain_in_bound(Complex c, float min_magnitude, float max_magnitude, 
  */
 void split_point(Complex m, float a, float b, Complex *out_1, Complex *out_2);
 
-
+__attribute__((always_inline)) static __inline Complex complex_fma(Complex x, float y, Complex z) {
+    // x * y + z
+    return Complex(
+        std::fma(std::real(x), y, std::real(z)),
+        std::fma(std::imag(x), y, std::imag(z))
+    );
+}
 
 #endif

@@ -197,14 +197,14 @@ struct {
     // SimpleAxis gamma{focstim_rpc_AxisType_AXIS_POSITION_GAMMA, 0, -1, 1};
     SimpleAxis waveform_amplitude_amps{focstim_rpc_AxisType_AXIS_WAVEFORM_AMPLITUDE_AMPS, 0, 0, BODY_CURRENT_MAX};
     SimpleAxis carrier_frequency{focstim_rpc_AxisType_AXIS_CARRIER_FREQUENCY_HZ, 800, 300, 2000};
-    SimpleAxis pulse_frequency{focstim_rpc_AxisType_AXIS_PULSE_FREQUENCY_HZ, 50, 1, 100};
+    SimpleAxis pulse_frequency{focstim_rpc_AxisType_AXIS_PULSE_FREQUENCY_HZ, 50, 1, 200};   // actual max limited by PULSE_MINIMUM_PAUSE_DURATION_S
     SimpleAxis pulse_width{focstim_rpc_AxisType_AXIS_PULSE_WIDTH_IN_CYCLES, 6, 3, 20};
     SimpleAxis pulse_rise{focstim_rpc_AxisType_AXIS_PULSE_RISE_TIME_CYCLES, 5, 2, 10};
     SimpleAxis pulse_interval_random{focstim_rpc_AxisType_AXIS_PULSE_INTERVAL_RANDOM_PERCENT, 0, 0, 1};
-    SimpleAxis calib_center{focstim_rpc_AxisType_AXIS_CALIBRATION_3_CENTER, 0, -10, 10};
-    SimpleAxis calib_ud{focstim_rpc_AxisType_AXIS_CALIBRATION_3_UP, 0, -10, 10};
-    SimpleAxis calib_lr{focstim_rpc_AxisType_AXIS_CALIBRATION_3_LEFT, 0, -10, 10};
-    SimpleAxis calib_4_center{focstim_rpc_AxisType_AXIS_CALIBRATION_4_CENTER, 0, -10, 10};
+    SimpleAxis calib_3a{focstim_rpc_AxisType_AXIS_CALIBRATION_3_A, 0, -10, 10};
+    SimpleAxis calib_3b{focstim_rpc_AxisType_AXIS_CALIBRATION_3_B, 0, -10, 10};
+    SimpleAxis calib_3c{focstim_rpc_AxisType_AXIS_CALIBRATION_3_C, 0, -10, 10};
+    SimpleAxis calib_3_reduction_in_center{focstim_rpc_AxisType_AXIS_CALIBRATION_3_REDUCTION_IN_CENTER, .14f, 0, .2f};
     SimpleAxis calib_4a{focstim_rpc_AxisType_AXIS_CALIBRATION_4_A, 0, -10, 10};
     SimpleAxis calib_4b{focstim_rpc_AxisType_AXIS_CALIBRATION_4_B, 0, -10, 10};
     SimpleAxis calib_4c{focstim_rpc_AxisType_AXIS_CALIBRATION_4_C, 0, -10, 10};
@@ -758,9 +758,10 @@ void loop()
     float pulse_rise = simple_axes.pulse_rise.get(now_ms);
     float pulse_interval_random = simple_axes.pulse_interval_random.get(now_ms);
 
-    float calibration_center = simple_axes.calib_center.get(now_ms);
-    float calibration_lr = simple_axes.calib_lr.get(now_ms);
-    float calibration_ud = simple_axes.calib_ud.get(now_ms);
+    float calibration_3a = simple_axes.calib_3a.get(now_ms);
+    float calibration_3b = simple_axes.calib_3b.get(now_ms);
+    float calibration_3c = simple_axes.calib_3c.get(now_ms);
+    float calibration_3_reduction_in_center = simple_axes.calib_3_reduction_in_center.get(now_ms);
 
     float calibration_4a = simple_axes.calib_4a.get(now_ms);
     float calibration_4b = simple_axes.calib_4b.get(now_ms);
@@ -773,11 +774,11 @@ void loop()
     float electrode_c = simple_axes.e3.get(now_ms);
     float electrode_d = simple_axes.e4.get(now_ms);
 
-    // clip pulse width to 35ms to avoid uart overflows from super long pulses.
-    pulse_width = std::min<float>(pulse_width, 0.035f * pulse_carrier_frequency);
+    // clip pulse width to avoid uart overflows from super long pulses.
+    pulse_width = std::min<float>(pulse_width, PULSE_MAXIMUM_PULSE_DURATION_S * pulse_carrier_frequency);
 
     float pulse_active_duration = pulse_width / pulse_carrier_frequency;
-    float pulse_pause_duration = max(0.f, 1 / pulse_frequency - pulse_active_duration);
+    float pulse_pause_duration = max(PULSE_MINIMUM_PAUSE_DURATION_S, 1 / pulse_frequency - pulse_active_duration);
     pulse_pause_duration *= float_rand(1 - pulse_interval_random, 1 + pulse_interval_random);
     pulse_total_duration = pulse_active_duration + pulse_pause_duration;
     traceline->dt_next = pulse_total_duration * 1e6f;
@@ -818,9 +819,8 @@ void loop()
             driving_current_amps,
             pulse_alpha,
             pulse_beta,
-            calibration_center,
-            calibration_ud,
-            calibration_lr,
+            Vec3f{calibration_3a, calibration_3b, calibration_3c},
+            calibration_3_reduction_in_center,
             polarity,
             random_start_angle);
 

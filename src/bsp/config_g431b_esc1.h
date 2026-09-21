@@ -17,6 +17,10 @@ static constexpr OutputStage OUTPUT_STAGE = {
 #define BODY_CURRENT_MAX  0.20f             // in amps, body current
 #define ESTOP_CURRENT_LIMIT_MARGIN 0.3f     // accounts for measurement noise, driving current
 
+// pulse limits
+#define PULSE_MAXIMUM_PULSE_DURATION_S   (35.f / 1000)      // limited by uart freq + uart buffer size
+#define PULSE_MINIMUM_PAUSE_DURATION_S   (5.f / 1000)
+
 // board temperature limits
 #define MAXIMUM_TEMPERATURE 100.f    // degrees celsius.
 

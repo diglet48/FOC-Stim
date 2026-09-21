@@ -3,120 +3,17 @@
 #include "utils.h"
 #include "foc_utils.h"
 
-// See ThreePhaseHardwareCalibration in restim
-// calibration coefs are in alpha-beta space
-static void get_calibration_coefs(
-    float left_right, float up_down,
-    float *s11, float *s12,
-    float *s21, float *s22)
-{
-    // generate_transform_in_ab()
-    float theta = atan2f(left_right, up_down) / 2;
-    float r = norm(up_down, left_right);
-    float a = sinf(theta);
-    float b = cosf(theta);
-    float scale = 1.f / powf(10, (r / 10));
-
-    if (r == 0)
-    {
-        // identity matrix
-        *s11 = 1;
-        *s12 = 0;
-        *s21 = 0;
-        *s22 = 1;
-    }
-    else
-    {
-        float s = (scale - 1);
-
-        // normalization parameter to generate matrix with eigenvalues <= 1
-        float normalization = 1;
-        if (scale >= 1) {
-            normalization = 1 / scale; // scale is the largest eigenvalue
-        }
-
-        // scale_in_arbitrary_direction()
-        *s11 = (1 + s * a * a) * normalization;
-        *s12 = (s * a * b) * normalization;
-        *s21 = (s * a * b) * normalization;
-        *s22 = (1 + s * b * b) * normalization;
-    }
-}
-
-ComplexThreephasePoints project_threephase(
-    float pulse_amplitude,
-    float alpha,
-    float beta,
-    float center_calibration,
-    float up_down_calibration,
-    float left_right_calibration,
-    bool flip_polarity,
-    float start_angle)
-{
-    // constrain (alpha, beta) to unit circle
-    float r = sqrtf(alpha * alpha + beta * beta);
-    if (r > 1)
-    {
-        alpha /= r;
-        beta /= r;
-        r = 1;
-    }
-
-    // https://github.com/diglet48/restim/wiki/software-basics
-    // base projection matrix in ab space
-    float a11 = 0.5f * (2 - r + alpha);
-    float a12 = 0.5f * beta;
-    float a21 = 0.5f * beta;
-    float a22 = 0.5f * (2 - r - alpha);
-
-    // calibration matrix
-    float t11, t12, t21, t22;
-    get_calibration_coefs(left_right_calibration, up_down_calibration, &t11, &t12, &t21, &t22);
-
-    // calibration * projection
-    float b11 = t11 * a11 + t12 * a21;
-    float b12 = t11 * a12 + t12 * a22;
-    float b21 = t21 * a11 + t22 * a21;
-    float b22 = t21 * a12 + t22 * a22;
-
-    // ab transform
-    float ab11 = 1;
-    float ab12 = 0;
-    float ab21 = -0.5f;
-    float ab22 = -_SQRT3_2; // left
-    float ab31 = -0.5f;
-    float ab32 = _SQRT3_2;  // right
-
-    // complex points
-    Complex p1(ab11 * b11 + ab12 * b21, ab11 * b12 + ab12 * b22);
-    Complex p2(ab21 * b11 + ab22 * b21, ab21 * b12 + ab22 * b22);
-    Complex p3(ab31 * b11 + ab32 * b21, ab31 * b12 + ab32 * b22);
-
-    // center calibration
-    float ratio = powf(10, (center_calibration / 10));
-    if (ratio <= 1)
-    {
-        pulse_amplitude *= lerp(r, ratio, 1);
-    }
-    else
-    {
-        pulse_amplitude *= lerp(r, 1, 1 / ratio);
-    }
-
-    if (flip_polarity) {
-        p1 = Complex(-p1.real(), p1.imag());
-        p2 = Complex(-p2.real(), p2.imag());
-        p3 = Complex(-p3.real(), p3.imag());
-    }
-
-    Complex rotation(cosf(start_angle), sinf(start_angle));
-
-    return ComplexThreephasePoints{
-        .p1 = p1 * rotation * pulse_amplitude,
-        .p2 = p2 * rotation * pulse_amplitude,
-        .p3 = p3 * rotation * pulse_amplitude
+Vec3f threephase_calibration_to_amplitude(Vec3f calibration_vector_in_db) {
+    // normalize calibration values
+    float calib_max = calibration_vector_in_db.max();
+    calibration_vector_in_db = calibration_vector_in_db - calib_max;
+    return Vec3f{
+        powf(10, calibration_vector_in_db.a / 10),
+        powf(10, calibration_vector_in_db.b / 10),
+        powf(10, calibration_vector_in_db.c / 10),
     };
 }
+
 
 class Interpolator {
 public:
@@ -213,10 +110,11 @@ private:
 ComplexThreephasePoints project_threephase_2(
     float pulse_amplitude,
     float alpha, float beta,
-    float center_calibration, float up_down_calibration, float left_right_calibration,
+    Vec3f calibration_vector_in_db,
+    float reduction_in_center,
     bool flip_polarity, float start_angle)
 {
-    Vec3f max_amplitude = threephase_calibration_to_max_amplitude(up_down_calibration, left_right_calibration);
+    Vec3f max_amplitude = threephase_calibration_to_amplitude(calibration_vector_in_db);
 
     Vec3f current_to_power{
         1 / max_amplitude.a,
@@ -224,67 +122,18 @@ ComplexThreephasePoints project_threephase_2(
         1 / max_amplitude.c
     };
 
-    // BSP_PrintDebugMsg("max amp: %f %f %f", max_amplitude.a, max_amplitude.b, max_amplitude.c);
-
     // transform position to electrode current
     // accounting for calibration
     Interpolator interpolator(max_amplitude);
     Vec3f output_current = interpolator.interpolate(alpha, beta);
 
-    // BSP_PrintDebugMsg("outp: %f %f %f", output_current.a, output_current.b, output_current.c);
-
     // normalize intensity to 1
-    float reduction_in_center = 0;
-    if (center_calibration <= 0) {
-        reduction_in_center = 1 - std::pow(10.0, center_calibration / 10);
-    }
     float intensity = threephase_intensity(output_current * current_to_power, reduction_in_center);
-    // BSP_PrintDebugMsg("intensity: %f", intensity);
     output_current = output_current / intensity;
 
     // project points on complex plane
     ComplexThreephasePoints complex_points = threephase_electrode_amplitude_to_complex_points(output_current);
     return threephase_permute_complex_points(complex_points, flip_polarity, start_angle, pulse_amplitude);
-}
-
-// Vec3f threephase_ab_to_electrode_intensity(float alpha, float beta)
-// {
-//     float r = norm(alpha, beta);
-//     if (r > 1) {
-//         alpha /= r;
-//         beta /= r;
-//         r = 1;
-//     }
-
-//     // halve the angle
-//     float theta = atan2f(beta, alpha) / 2;
-//     Vec2f p{r * cosf(theta), r * sinf(theta)};
-
-//     return Vec3f{
-//         std::abs(dot(p, {1, 0})) + (1 - r),
-//         std::abs(dot(p, {-0.5f, -_SQRT3_2})) + (1 - r),
-//         std::abs(dot(p, {-0.5f, _SQRT3_2})) + (1 - r),
-//     };
-// }
-
-Vec3f threephase_calibration_to_max_amplitude(float up_down_calibration, float left_right_calibration)
-{
-    // calibration matrix
-    float t11, t12, t21, t22;
-    get_calibration_coefs(left_right_calibration, up_down_calibration, &t11, &t12, &t21, &t22);
-
-    Vec2f a{1, 0};
-    Vec2f b{-0.5f, -_SQRT3_2};
-    Vec2f c{-0.5f, _SQRT3_2};
-
-    a = {t11 * a.a + t12 * a.b, t21 * a.a + t22 * a.b};
-    b = {t11 * b.a + t12 * b.b, t21 * b.a + t22 * b.b};
-    c = {t11 * c.a + t12 * c.b, t21 * c.a + t22 * c.b};
-
-    Vec3f calib = Vec3f(a.norm(), b.norm(), c.norm());
-    calib = calib / calib.max();
-
-    return calib;
 }
 
 Vec3f threephase_interpolate(float alpha, float beta, Vec3f max_amplitude)

@@ -47,6 +47,14 @@ struct Vec3f {
         return sqrtf(a*a + b*b + c*c);
     }
 
+    Vec3f const operator+(float f) const {
+        return Vec3f(a + f, b + f, c + f);
+    }
+
+    Vec3f const operator-(float f) const {
+        return Vec3f(a - f, b - f, c - f);
+    }
+
     Vec3f const operator*(float f) const {
         return Vec3f(a * f, b * f, c * f);
     }

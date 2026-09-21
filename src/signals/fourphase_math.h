@@ -14,7 +14,7 @@ struct ComplexFourphasePoints {
 ComplexFourphasePoints project_fourphase_2(
     float pulse_amplitude,
     Vec4f position_vector,
-    Vec4f calibration_vector,
+    Vec4f calibration_vector_in_db,
     float reduction_in_center,
     bool flip_polarity,
     float start_angle

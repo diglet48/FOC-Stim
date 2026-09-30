@@ -32,13 +32,6 @@ Vec3f threephase_calibration_to_amplitude(Vec3f calibration_vector_in_db);
 
 /**
  * Unit testing interface
- * Convert the calibration parameters to maximum amplitude of the waveform
- * at the electrodes.
- */
-Vec3f threephase_calibration_to_max_amplitude(float up_down_calibration, float left_right_calibration);
-
-/**
- * Unit testing interface
  * Transform valid input point to electrode currents,
  * taking into account the calibration values.
  */

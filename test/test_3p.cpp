@@ -100,28 +100,6 @@ void test_3p_c() {
     TEST_ASSERT_EQUAL_VEC3(Vec3f({.75, .75, 1}), threephase_interpolate(-0.25, -sqrtf(3)/4, calibration_none));
 }
 
-void test_3p_calibration() {
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(1, 1, 1), threephase_calibration_to_max_amplitude(0, 0));
-
-    // neutral
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(1, .85, .85), threephase_calibration_to_max_amplitude(1, 0));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(.834, 1, 1), threephase_calibration_to_max_amplitude(-1, 0));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(1, .507, .507), threephase_calibration_to_max_amplitude(10, 0));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(.115, 1, 1), threephase_calibration_to_max_amplitude(-10, 0));
-
-    // left
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(.85, 1, .85), threephase_calibration_to_max_amplitude(-.5,-sqrtf(3)/2));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(1, .834, 1), threephase_calibration_to_max_amplitude(.5, sqrtf(3)/2));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(.507, 1, .507), threephase_calibration_to_max_amplitude(-5, -10 * sqrtf(3)/2));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(1, .115, 1), threephase_calibration_to_max_amplitude(5, 10 * sqrtf(3)/2));
-
-    // right
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(.85, .85, 1), threephase_calibration_to_max_amplitude(-.5, sqrtf(3)/2));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(1, 1, .834), threephase_calibration_to_max_amplitude(.5, -sqrtf(3)/2));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(.507, .507, 1), threephase_calibration_to_max_amplitude(-5, 10 * sqrtf(3)/2));
-    TEST_ASSERT_EQUAL_VEC3(Vec3f(1, 1, .115), threephase_calibration_to_max_amplitude(5, -10 * sqrtf(3)/2));
-}
-
 void test_3p_intensity() {
     float default_reduction = 0.14f;
 
@@ -160,7 +138,6 @@ void tests_3p() {
     RUN_TEST(test_3p_a);
     RUN_TEST(test_3p_b);
     RUN_TEST(test_3p_c);
-    RUN_TEST(test_3p_calibration);
     RUN_TEST(test_3p_intensity);
     RUN_TEST(test_3p_project);
     UNITY_END();

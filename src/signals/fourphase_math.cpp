@@ -264,7 +264,7 @@ private:
         float d = D.d + (A.d - D.d) * powf(1 - s, 2);
         float remainder = std::abs(a - d);
         float b = remainder * max_amplitude.b / (max_amplitude.b + max_amplitude.c);
-        float c = remainder * max_amplitude.b / (max_amplitude.b + max_amplitude.c);
+        float c = remainder * max_amplitude.c / (max_amplitude.b + max_amplitude.c);
         return {a, b, c, d};
     }
 

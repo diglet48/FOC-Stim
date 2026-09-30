@@ -26,7 +26,7 @@ static constexpr Transformer XICON_42TL004{   // default on V4
     .resistance_hv = 12.0,  // range 11.75 - 12.5 on few samples
     .winding_ratio = 5.57,  // variance ~ 0.01
     .current_ratio = 6.66f, // selected for historical reasons, close to 220 ohm load.
-    .saturation_lv = 900e-6f,
+    .saturation_lv = 1100e-6f,
     .magnetizing_impedance = xicon_42TLxxx_magnetizing_impedance,
 };
 
@@ -35,7 +35,7 @@ static constexpr Transformer XICON_42TL001{
     .resistance_hv = 35.0,
     .winding_ratio = 8.6,
     .current_ratio = 9.37f, // with 220 ohm load
-    .saturation_lv = 900e-6f,
+    .saturation_lv = 1100e-6f,
     .magnetizing_impedance = xicon_42TLxxx_magnetizing_impedance,
 };
 
@@ -44,7 +44,7 @@ static constexpr Transformer EBAY_42TL004_KNOCKOFF{
     .resistance_hv = 19.0,
     .winding_ratio = 5.0,
     .current_ratio = 6.3f, // with 220 ohm load
-    .saturation_lv = 900e-6f,
+    .saturation_lv = 1100e-6f,
     .magnetizing_impedance = xicon_42TLxxx_magnetizing_impedance,   // not tested, but probably close
 };
 

@@ -86,3 +86,8 @@ float OutputStage::apparent_winding_ratio() const
     imp.fill_from_body(220);
     return transformer.winding_ratio * std::abs(imp.Z_windings / imp.Z_parallel);
 }
+
+float OutputStage::low_side_resistance() const
+{
+    return resistance + transformer.resistance_lv;
+}

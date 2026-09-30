@@ -55,10 +55,6 @@ static constexpr OutputStage OUTPUT_STAGE = {
 #define MODEL_PHASE_ANGLE_MIN -1.5f
 #define MODEL_PHASE_ANGLE_MAX 1.5f
 
-// transformer saturation
-#define MODEL_FIXED_RESISTANCE      1.7f        // traces (0.1) + driver Rdson (0.3) + low pass filter (0.3) + transformer low-side resistance (1.0)
-#define MODEL_MAXIMUM_VOLT_SECONDS  1100e-6f    // Xicon 42TL004 and 001
-
 // I2C clocks
 #define I2C_CLOCK_NORMAL        400'000ULL
 #define I2C_CLOCK_DISPLAY       1'000'000ULL

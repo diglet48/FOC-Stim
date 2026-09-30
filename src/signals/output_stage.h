@@ -26,6 +26,8 @@ struct OutputStage {
     // the ratio of (output current / input current) therefore is slightly higher
     // than the actual winding ratio.
     float apparent_winding_ratio() const;
+
+    float low_side_resistance() const;
 };
 
 

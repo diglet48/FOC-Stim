@@ -90,7 +90,7 @@ void FourphaseModel::play_pulse(
     }
 
     // reduce amplitude if this pulse would result in transformer saturation (volt*seconds)
-    float volt_seconds = limits.find_v_seconds(p1, p2, p3, z1, z2, z3, carrier_frequency);
+    float volt_seconds = limits.find_v_seconds(p1, p2, p3, p4, z1, z2, z3, z4, carrier_frequency);
     if (volt_seconds >= limits.max_allowed_v_sec) {
         float factor = limits.max_allowed_v_sec / volt_seconds;
         p1 *= factor;
@@ -477,7 +477,9 @@ void FourphaseModel::model_update(Complex p1, Complex p2, Complex p3, Complex p4
         integrated_meas = integrated_meas * (1 - decay) + Vec4f(meas_1, meas_2, meas_3, meas_4) * decay;
         integrated_cmd = integrated_cmd * (1 - decay) + Vec4f(cmd_1, cmd_2, cmd_3, cmd_4) * decay;
 
-        // select gradient descent step size based on the average error
+        // select gradient descent step size based on the average error.
+        // the purpose of this code is to increase the step size when the error is *persistently* positive or negative.
+        // lower step size is selected when the error oscillates between positive and negative.
         float error_ratio = (integrated_cmd - integrated_meas).abs_sum() / std::max(integrated_cmd.sum(), 0.05f);
         float step_size = interpolate(error_ratio, 0.01f, 0.3f, .1f, 1.0f); // 1% error = 0.1 step. 30% error = 1.0 step
 

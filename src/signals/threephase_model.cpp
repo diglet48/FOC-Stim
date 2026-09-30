@@ -446,6 +446,8 @@ void ThreephaseModel::model_update(Complex p1, Complex p2, Complex p3)
         integrated_cmd = integrated_cmd * (1 - decay) + Vec3f(cmd_1, cmd_2, cmd_3) * decay;
 
         // select gradient descent step size based on the average error
+        // the purpose of this code is to increase the step size when the error is *persistently* positive or negative.
+        // lower step size is selected when the error oscillates between positive and negative.
         float error_ratio = (integrated_cmd - integrated_meas).abs_sum() / std::max(integrated_cmd.sum(), 0.05f);
         float step_size = interpolate(error_ratio, 0.01f, 0.3f, .1f, 1.0f); // 1% error = 0.1 step. 30% error = 1.0 step
 

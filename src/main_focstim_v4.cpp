@@ -813,7 +813,7 @@ void loop()
     traceline->i_max_cmd = driving_current_amps;
 
     // play the pulse
-    OutputLimits output_limits(boostControl.max_allowed_vdrive(), MODEL_MAXIMUM_VOLT_SECONDS, MODEL_FIXED_RESISTANCE);
+    OutputLimits output_limits(boostControl.max_allowed_vdrive(), OUTPUT_STAGE.transformer.saturation_lv, OUTPUT_STAGE.low_side_resistance());
     if (play_status == PlayStatus::PlayingThreephase) {
         ComplexThreephasePoints points3 = project_threephase_2(
             driving_current_amps,
@@ -1029,7 +1029,7 @@ void loop()
         protobuf.transmit_notification_signal_stats(
             actual_pulse_frequency,
             v_drive_max,
-            std::min(1.f, volt_seconds / MODEL_MAXIMUM_VOLT_SECONDS),
+            std::min(1.f, volt_seconds / OUTPUT_STAGE.transformer.saturation_lv),
             std::min(1.f, boostControl.utilizaton_percent(v_drive_max)));
         v_drive_max = 0;
     }

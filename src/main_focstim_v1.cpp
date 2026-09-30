@@ -291,7 +291,7 @@ void loop()
         polarity,
         random_start_angle);
 
-    OutputLimits output_limits(STIM_PWM_MAX_VDRIVE, MODEL_MAXIMUM_VOLT_SECONDS, MODEL_FIXED_RESISTANCE);
+    OutputLimits output_limits(STIM_PWM_MAX_VDRIVE, OUTPUT_STAGE.transformer.saturation_lv, OUTPUT_STAGE.low_side_resistance());
     model3.play_pulse(points3.p1, points3.p2, points3.p3,
         pulse_carrier_frequency,
         pulse_width, pulse_rise,
@@ -373,7 +373,7 @@ void loop()
         // transmit_notification
         protobuf.transmit_notification_signal_stats(
             actual_pulse_frequency, v_drive_max,
-            std::min(1.f, model3.total_stats.volt_seconds / MODEL_MAXIMUM_VOLT_SECONDS),
+            std::min(1.f, model3.total_stats.volt_seconds / OUTPUT_STAGE.transformer.saturation_lv),
             std::min(1.f, v_drive_max / STIM_PWM_MAX_VDRIVE));
         v_drive_max = 0;
         model3.total_stats.volt_seconds = 0;

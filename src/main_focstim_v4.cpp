@@ -137,6 +137,13 @@ public:
         return focstim_rpc_Errors_ERROR_UNKNOWN;
     }
 
+    virtual void esp32_firmware_version(focstim_rpc_FirmwareVersion* out) {
+        ESP32Version version = esp32.version();
+        out->major = version.major;
+        out->minor = version.minor;
+        out->revision = version.revision;
+    }
+
     virtual void before_bootloader() {
         // hardware bug: when in bootloader mode, the driver pins are configured
         // in such a way that one driver is enabled. This causes current flow

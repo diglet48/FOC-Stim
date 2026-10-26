@@ -196,6 +196,7 @@ void FourphaseModel::play_pulse(
     }
     if (!interrupt_finished) {
         // add little tail of zero-voltage commands at the end of the pulse.
+        context[(samples + 0) % CONTEXT_SIZE] = {};
         context[(samples + 1) % CONTEXT_SIZE] = {};
         context[(samples + 2) % CONTEXT_SIZE] = {};
         producer_index = samples + 2;

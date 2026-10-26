@@ -305,7 +305,10 @@ void ProtobufAPI::handle_request_firmware_version(focstim_rpc_RequestFirmwareVer
     stm32.comment.arg = (char*)comment;
     stm32.comment.funcs.encode = encode_string;
 
-    // TODO: esp32 firmware
+#if defined(BOARD_FOCSTIM_V4)
+    message.message.response.result.response_firmware_version.has_esp32_firmware_version = true;
+    esp32_firmware_version(&message.message.response.result.response_firmware_version.esp32_firmware_version);
+#endif
 
     transmit_message(message);
 }

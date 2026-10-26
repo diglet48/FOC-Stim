@@ -20,6 +20,20 @@ uint32_t ESP32::ip()
     return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | (buffer[3] << 0);
 }
 
+ESP32Version ESP32::version()
+{
+    uint8_t buffer[3] = {0, 0, 0};
+    i2cReadBytes(ESP32_COMMAND_FWVERSION, buffer, 3);
+	if (buffer[0] == -1 && buffer[1] == -1 && buffer[2] == -1) {
+		return ESP32Version{0, 0, 0};
+	}
+	return ESP32Version{
+		buffer[0],
+		buffer[1],
+		buffer[2]
+	};
+}
+
 void ESP32::set_wifi_ssid(uint8_t *buf, uint8_t buflen)
 {
     i2cWriteBytes(ESP32_COMMAND_WIFI_SSID, buf, buflen);

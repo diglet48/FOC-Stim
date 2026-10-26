@@ -19,7 +19,7 @@ message ResponseFirmwareVersion {
     // string stm32_firmware_version = 2;  // DEPRECATED
 
     FirmwareVersion stm32_firmware_version_2 = 3;
-    // FirmwareVersion esp32_firmware = ???;  // TODO: implement
+    FirmwareVersion esp32_firmware_version = 4;
 }
 
 message RequestCapabilitiesGet {

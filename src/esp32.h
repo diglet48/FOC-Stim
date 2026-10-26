@@ -12,6 +12,12 @@
 #define ESP32_COMMAND_WIFI_PASSWORD 	0x04
 #define ESP32_COMMAND_WIFI_RECONNECT 	0x05
 
+struct ESP32Version {
+	uint8_t major;
+	uint8_t minor;
+	uint8_t revision;
+};
+
 
 class ESP32 {
 public:
@@ -19,9 +25,9 @@ public:
 
     void init();
 
-    // TODO: get version
 	// TODO: error checking
     uint32_t ip();
+    ESP32Version version();
 
 	// TODO: error checking
     void set_wifi_ssid(uint8_t *buf, uint8_t buflen);

@@ -90,6 +90,8 @@ public:
     virtual void before_bootloader() {}
     virtual void signal_stop() {}
 
+    virtual void esp32_firmware_version(focstim_rpc_FirmwareVersion* out) {};
+
     virtual bool capability_threephase() = 0;
     virtual bool capability_fourphase() = 0;
     virtual bool capability_device_volume() = 0;

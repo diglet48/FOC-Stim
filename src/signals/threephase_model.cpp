@@ -324,8 +324,8 @@ void ThreephaseModel::interrupt_fn()
     float v3 = dtcomp(context[read_index].v3_cmd, context[read_index].i3_cmd);
 
     // compute duty cycle center
-    float v_min = min({v1, v2, v3});
-    float v_max = max({v1, v2, v3});
+    float v_min = std::min({v1, v2, v3});
+    float v_max = std::max({v1, v2, v3});
 
     float center = vbus / 2;
     if (center + v_max > (vbus * STIM_PWM_MAX_DUTY_CYCLE)) {

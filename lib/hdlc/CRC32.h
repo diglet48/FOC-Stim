@@ -18,7 +18,6 @@
 #define CRC32_H_
 
 #include <stdint.h>
-#include <avr/pgmspace.h>
 
 struct CRC32 {
     typedef uint32_t CRC_t;
@@ -27,12 +26,11 @@ struct CRC32 {
     static const CRC_t CRC_FINALXOR = 0xFFFFFFFFUL;
     static const CRC_t CRC_GOOD     = 0xDEBB20E3UL;
 
-    PROGMEM static const CRC_t CRC_TAB[256U];
+    static const CRC_t CRC_TAB[256U];
 
     void init() { crc = CRC_INIT; }
     void update(uint8_t data) {
-        /* crc = (crc >> 8U) ^ CRC_TAB[(crc ^ data) & 0xFFU]; */
-        crc = (crc >> 8U) ^ pgm_read_dword(&CRC_TAB[(crc ^ data) & 0xFFU]);
+        crc = (crc >> 8U) ^ CRC_TAB[(crc ^ data) & 0xFFU];
     }
 
     bool good() { return crc == CRC_GOOD; }

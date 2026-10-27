@@ -305,10 +305,12 @@ void ProtobufAPI::handle_request_firmware_version(focstim_rpc_RequestFirmwareVer
     stm32.comment.arg = (char*)comment;
     stm32.comment.funcs.encode = encode_string;
 
-#if defined(BOARD_FOCSTIM_V4)
-    message.message.response.result.response_firmware_version.has_esp32_firmware_version = true;
-    esp32_firmware_version(&message.message.response.result.response_firmware_version.esp32_firmware_version);
-#endif
+    // TODO: with old versions of the ESP32 firmware, this causes an I2C bus hang.
+    // the simple workaround is to not request the esp32 version...
+// #if defined(BOARD_FOCSTIM_V4)
+//     message.message.response.result.response_firmware_version.has_esp32_firmware_version = true;
+//     esp32_firmware_version(&message.message.response.result.response_firmware_version.esp32_firmware_version);
+// #endif
 
     transmit_message(message);
 }

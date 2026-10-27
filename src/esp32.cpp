@@ -24,7 +24,7 @@ ESP32Version ESP32::version()
 {
     uint8_t buffer[3] = {0, 0, 0};
     i2cReadBytes(ESP32_COMMAND_FWVERSION, buffer, 3);
-	if (buffer[0] == -1 && buffer[1] == -1 && buffer[2] == -1) {
+	if (buffer[0] == 255 && buffer[1] == 255 && buffer[2] == 255) {
 		return ESP32Version{0, 0, 0};
 	}
 	return ESP32Version{
